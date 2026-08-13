@@ -1,0 +1,8 @@
+{
+  "version": "1.2.2",
+  "build": 7,
+  "notes": "新增屏幕录制、在线检查更新、官网与关于页链接。",
+  "downloadURL": "https://github.com/linux503/Flare/releases/latest",
+  "minOS": "14.0",
+  "publishedAt": "2026-08-14"
+}

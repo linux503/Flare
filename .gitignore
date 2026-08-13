@@ -1,0 +1,8 @@
+.build/
+.build-universal/
+dist/
+.DS_Store
+*.swp
+xcuserdata/
+DerivedData/
+Resources/tmpicons/
