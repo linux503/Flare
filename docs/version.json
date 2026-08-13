@@ -1,7 +1,7 @@
 {
-  "version": "1.2.2",
-  "build": 7,
-  "notes": "新增屏幕录制、在线检查更新、官网与关于页链接。",
+  "version": "1.2.3",
+  "build": 8,
+  "notes": "录制独立菜单与面板；支持倒计时、暂停、排除本应用窗口、帧率选项。",
   "downloadURL": "https://github.com/linux503/Flare/releases/latest",
   "minOS": "14.0",
   "publishedAt": "2026-08-14"
