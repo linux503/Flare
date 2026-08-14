@@ -239,19 +239,20 @@ struct WindowOpacitySlider: View {
 
 struct HistoryThumbnailView: View {
     let item: HistoryItem
-    var height: CGFloat = 110
+    var height: CGFloat? = 110
+    var aspectRatio: CGFloat? = nil
     @Environment(\.flareTheme) private var theme
 
     @State private var image: NSImage?
 
     var body: some View {
-        Group {
+        let thumb = Group {
             if let image {
                 Image(nsImage: image)
                     .resizable()
                     .aspectRatio(contentMode: .fill)
             } else {
-                theme.fill
+                theme.fillStrong
                     .overlay {
                         ProgressView()
                             .controlSize(.small)
@@ -259,9 +260,21 @@ struct HistoryThumbnailView: View {
                     }
             }
         }
-        .frame(height: height)
-        .frame(maxWidth: .infinity)
-        .clipped()
+
+        Group {
+            if let aspectRatio {
+                Color.clear
+                    .aspectRatio(aspectRatio, contentMode: .fit)
+                    .frame(maxWidth: .infinity)
+                    .overlay { thumb }
+                    .clipped()
+            } else {
+                thumb
+                    .frame(maxWidth: .infinity)
+                    .frame(height: height ?? 110)
+                    .clipped()
+            }
+        }
         .task(id: item.id) {
             image = await HistoryStore.shared.thumbnailAsync(for: item)
         }

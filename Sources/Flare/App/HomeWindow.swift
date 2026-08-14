@@ -14,7 +14,7 @@ struct HomePane: View {
 
     var body: some View {
         ScrollView {
-            VStack(alignment: .leading, spacing: 24) {
+            VStack(alignment: .leading, spacing: 18) {
                 topBar
                 heroCapture
                 secondaryRail
@@ -89,29 +89,28 @@ struct HomePane: View {
         return Button {
             CaptureCoordinator.shared.startAreaCapture()
         } label: {
-            HStack(alignment: .center, spacing: 20) {
-                VStack(alignment: .leading, spacing: 8) {
+            HStack(alignment: .center, spacing: 16) {
+                VStack(alignment: .leading, spacing: 6) {
                     Text("区域截图")
-                        .font(.system(size: 22, weight: .bold, design: .rounded))
+                        .font(.system(size: 17, weight: .bold, design: .rounded))
                         .foregroundStyle(theme.textPrimary)
                     Text("拖选画面后确认导出 · 菜单栏单击也可开始")
-                        .font(.system(size: 12, weight: .medium))
+                        .font(.system(size: 11, weight: .medium))
                         .foregroundStyle(theme.textSecondary)
                         .fixedSize(horizontal: false, vertical: true)
                     Text(AppSettings.shared.shortcut(for: .area).displayString)
-                        .font(.system(size: 11, weight: .semibold, design: .rounded))
+                        .font(.system(size: 10, weight: .semibold, design: .rounded))
                         .foregroundStyle(theme.textMuted)
-                        .padding(.horizontal, 9)
-                        .padding(.vertical, 4)
+                        .padding(.horizontal, 7)
+                        .padding(.vertical, 3)
                         .background(theme.fillStrong)
-                        .clipShape(RoundedRectangle(cornerRadius: 6, style: .continuous))
-                        .padding(.top, 4)
+                        .clipShape(RoundedRectangle(cornerRadius: 5, style: .continuous))
                 }
                 Spacer(minLength: 8)
-                FlareBrandMark(size: 56, cornerRadius: 14)
+                FlareBrandMark(size: 40, cornerRadius: 10)
             }
-            .padding(22)
-            .frame(maxWidth: .infinity, minHeight: 132, alignment: .leading)
+            .padding(14)
+            .frame(maxWidth: .infinity, minHeight: 92, alignment: .leading)
             .background(
                 RoundedRectangle(cornerRadius: 18, style: .continuous)
                     .fill(theme.fill)
@@ -136,11 +135,11 @@ struct HomePane: View {
 
     private func railItem(_ title: String, _ glyph: SnapGlyph, _ action: HotKeyAction, run: @escaping () -> Void) -> some View {
         Button(action: run) {
-            HStack(spacing: 11) {
-                SnapIcon(glyph, size: .title, opacity: 0.9, tint: theme.textPrimary)
-                VStack(alignment: .leading, spacing: 3) {
+            HStack(spacing: 9) {
+                SnapIcon(glyph, size: .body, opacity: 0.9, tint: theme.textPrimary)
+                VStack(alignment: .leading, spacing: 2) {
                     Text(title)
-                        .font(.system(size: 13, weight: .semibold))
+                        .font(.system(size: 12, weight: .semibold))
                         .foregroundStyle(theme.textPrimary)
                     Text(AppSettings.shared.shortcut(for: action).displayString)
                         .font(.system(size: 10, weight: .medium, design: .rounded))
@@ -148,8 +147,8 @@ struct HomePane: View {
                 }
                 Spacer(minLength: 0)
             }
-            .padding(.horizontal, 13)
-            .padding(.vertical, 13)
+            .padding(.horizontal, 10)
+            .padding(.vertical, 9)
             .frame(maxWidth: .infinity, alignment: .leading)
             .background(
                 RoundedRectangle(cornerRadius: 12, style: .continuous)

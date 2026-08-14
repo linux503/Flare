@@ -43,31 +43,32 @@ struct DocumentsPane: View {
         Button {
             DocumentService.createAndReveal(kind, askWhere: true)
         } label: {
-            HStack(spacing: 16) {
-                SnapIconWell(kind.glyph, side: 52, iconSize: .title, cornerRadius: 13)
-                VStack(alignment: .leading, spacing: 4) {
+            HStack(spacing: 12) {
+                SnapIconWell(kind.glyph, side: 36, iconSize: .body, cornerRadius: 9)
+                VStack(alignment: .leading, spacing: 2) {
                     Text(kind.title)
-                        .font(.system(size: 15, weight: .semibold, design: .rounded))
+                        .font(.system(size: 13, weight: .semibold, design: .rounded))
                         .foregroundStyle(theme.textPrimary)
                     Text(kind.subtitle)
-                        .font(.system(size: 12))
+                        .font(.system(size: 11))
                         .foregroundStyle(theme.textMuted)
                 }
                 Spacer()
                 Text("创建")
-                    .font(.system(size: 12, weight: .semibold))
+                    .font(.system(size: 11, weight: .semibold))
                     .foregroundStyle(theme.inverseText)
-                    .padding(.horizontal, 12)
-                    .padding(.vertical, 7)
+                    .padding(.horizontal, 10)
+                    .padding(.vertical, 5)
                     .background(theme.inverseFill)
-                    .clipShape(RoundedRectangle(cornerRadius: 8, style: .continuous))
+                    .clipShape(RoundedRectangle(cornerRadius: 6, style: .continuous))
             }
-            .padding(16)
+            .padding(.horizontal, 12)
+            .padding(.vertical, 10)
             .background(
-                RoundedRectangle(cornerRadius: 16, style: .continuous)
+                RoundedRectangle(cornerRadius: 12, style: .continuous)
                     .fill(theme.fill)
                     .overlay(
-                        RoundedRectangle(cornerRadius: 16, style: .continuous)
+                        RoundedRectangle(cornerRadius: 12, style: .continuous)
                             .strokeBorder(theme.stroke, lineWidth: 1)
                     )
             )

@@ -14,25 +14,23 @@ struct HistoryPane: View {
     @ObservedObject private var store = HistoryStore.shared
     @Environment(\.flareTheme) private var theme
     @State private var confirmClear = false
-    private let columns = [GridItem(.adaptive(minimum: 196), spacing: 16)]
+    private let columns = Array(repeating: GridItem(.flexible(), spacing: 10), count: 3)
 
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
-            HStack(alignment: .firstTextBaseline) {
-                FlarePageHeader(
-                    title: "历史记录",
-                    subtitle: store.items.isEmpty ? "截图会出现在这里" : "共 \(store.items.count) 张 · 点击打开编辑"
-                ) {
-                    FlareSecondaryButton(title: "清空", glyph: .trash) {
-                        confirmClear = true
-                    }
-                    .disabled(store.items.isEmpty)
-                    .opacity(store.items.isEmpty ? 0.4 : 1)
+            FlarePageHeader(
+                title: "历史记录",
+                subtitle: store.items.isEmpty ? "截图会出现在这里" : "共 \(store.items.count) 张 · 点击打开编辑"
+            ) {
+                FlareSecondaryButton(title: "清空", glyph: .trash) {
+                    confirmClear = true
                 }
+                .disabled(store.items.isEmpty)
+                .opacity(store.items.isEmpty ? 0.4 : 1)
             }
             .padding(.horizontal, 28)
             .padding(.top, 40)
-            .padding(.bottom, 12)
+            .padding(.bottom, 8)
 
             if store.items.isEmpty {
                 VStack(spacing: 14) {
@@ -51,13 +49,13 @@ struct HistoryPane: View {
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
             } else {
                 ScrollView {
-                    LazyVGrid(columns: columns, spacing: 16) {
+                    LazyVGrid(columns: columns, spacing: 10) {
                         ForEach(store.items) { item in
                             HistoryCard(item: item)
                         }
                     }
-                    .padding(.horizontal, 32)
-                    .padding(.bottom, 32)
+                    .padding(.horizontal, 28)
+                    .padding(.bottom, 28)
                 }
             }
         }
@@ -80,40 +78,44 @@ struct HistoryCard: View {
     @Environment(\.flareTheme) private var theme
 
     var body: some View {
-        FlareHoverCard(cornerRadius: 16) {
-            VStack(alignment: .leading, spacing: 10) {
-                HistoryThumbnailView(item: item, height: 118)
-                    .clipShape(RoundedRectangle(cornerRadius: 11, style: .continuous))
+        FlareHoverCard(cornerRadius: 12) {
+            VStack(alignment: .leading, spacing: 0) {
+                HistoryThumbnailView(item: item, aspectRatio: 16 / 10)
+                    .clipShape(RoundedRectangle(cornerRadius: 8, style: .continuous))
+                    .padding(8)
+                    .padding(.bottom, 2)
                     .contentShape(Rectangle())
                     .onTapGesture { openEditor() }
 
-                Text(item.fileName)
-                    .font(.caption.weight(.medium))
-                    .foregroundStyle(theme.textPrimary)
-                    .lineLimit(1)
-                Text(item.createdAt.formatted(date: .abbreviated, time: .shortened))
-                    .font(.caption2)
-                    .foregroundStyle(theme.textMuted)
-
-                HStack(spacing: 8) {
-                    miniButton("编辑", .edit, openEditor)
-                    miniButton("复制", .copy) {
-                        if let image = store.image(for: item) {
-                            ImageExporter.copyToClipboard(image)
-                            ToastController.shared.show("已复制")
+                VStack(alignment: .leading, spacing: 6) {
+                    Text(item.fileName)
+                        .font(.system(size: 11, weight: .medium))
+                        .foregroundStyle(theme.textPrimary)
+                        .lineLimit(1)
+                        .truncationMode(.middle)
+                    HStack(spacing: 6) {
+                        Text(item.createdAt.formatted(.dateTime.month().day().hour().minute()))
+                            .font(.system(size: 10))
+                            .foregroundStyle(theme.textMuted)
+                            .lineLimit(1)
+                        Spacer(minLength: 4)
+                        iconButton(.edit, theme.textSecondary, openEditor)
+                        iconButton(.copy, theme.textSecondary) {
+                            if let image = store.image(for: item) {
+                                ImageExporter.copyToClipboard(image)
+                                ToastController.shared.show("已复制")
+                            }
+                        }
+                        iconButton(.trash, Color.red.opacity(0.75)) {
+                            store.delete(item)
+                            StatusBarController.shared?.reloadMenu()
                         }
                     }
-                    Spacer()
-                    Button {
-                        store.delete(item)
-                        StatusBarController.shared?.reloadMenu()
-                    } label: {
-                        SnapIcon(.trash, size: .caption, opacity: 1, tint: Color.red.opacity(0.8))
-                    }
-                    .buttonStyle(.plain)
                 }
+                .padding(.horizontal, 10)
+                .padding(.bottom, 10)
+                .frame(height: 48, alignment: .top)
             }
-            .padding(12)
         }
         .contextMenu {
             Button("编辑", action: openEditor)
@@ -141,19 +143,13 @@ struct HistoryCard: View {
         }
     }
 
-    private func miniButton(_ title: String, _ glyph: SnapGlyph, _ action: @escaping () -> Void) -> some View {
+    private func iconButton(_ glyph: SnapGlyph, _ tint: Color, _ action: @escaping () -> Void) -> some View {
         Button(action: action) {
-            HStack(spacing: 4) {
-                SnapIcon(glyph, size: .caption, opacity: 0.85)
-                Text(title)
-                    .font(.system(size: 10, weight: .medium))
-            }
-            .padding(.horizontal, 7)
-            .padding(.vertical, 4)
-            .background(theme.fillStrong)
-            .foregroundStyle(theme.textPrimary)
-            .clipShape(RoundedRectangle(cornerRadius: 5, style: .continuous))
+            SnapIcon(glyph, size: .caption, opacity: 1, tint: tint)
+                .frame(width: 18, height: 18)
+                .contentShape(Rectangle())
         }
         .buttonStyle(FlareChipButtonStyle())
+        .help(glyph == .edit ? "编辑" : glyph == .copy ? "复制" : "删除")
     }
 }

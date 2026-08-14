@@ -133,7 +133,7 @@ struct MainShellView: View {
 
             HStack(spacing: 0) {
                 sidebar(theme)
-                    .frame(width: 236)
+                    .frame(width: 208)
 
                 Rectangle()
                     .fill(theme.stroke.opacity(0.85))
@@ -189,47 +189,47 @@ struct MainShellView: View {
 
     private func sidebar(_ theme: FlarePalette) -> some View {
         VStack(alignment: .leading, spacing: 0) {
-            HStack(spacing: 12) {
-                FlareBrandMark(size: 40, cornerRadius: 10)
-                VStack(alignment: .leading, spacing: 3) {
+            HStack(spacing: 10) {
+                FlareBrandMark(size: 32, cornerRadius: 8)
+                VStack(alignment: .leading, spacing: 2) {
                     Text(FlareBrand.name)
-                        .font(.system(size: 17, weight: .bold, design: .rounded))
+                        .font(.system(size: 15, weight: .bold, design: .rounded))
                         .foregroundStyle(theme.textPrimary)
                     Text(FlareBrand.tagline)
-                        .font(.system(size: 12, weight: .medium))
+                        .font(.system(size: 11, weight: .medium))
                         .foregroundStyle(theme.textMuted)
                 }
             }
-            .padding(.leading, 20)
-            .padding(.trailing, 16)
-            .padding(.top, 46)
-            .padding(.bottom, 28)
+            .padding(.leading, 16)
+            .padding(.trailing, 12)
+            .padding(.top, 44)
+            .padding(.bottom, 18)
 
-            VStack(spacing: 5) {
+            VStack(spacing: 2) {
                 ForEach(MainTab.allCases) { tab in
                     Button {
                         select(tab)
                     } label: {
-                        HStack(spacing: 12) {
+                        HStack(spacing: 10) {
                             SnapIcon(
                                 tab.glyph,
-                                size: .title,
-                                opacity: model.tab == tab ? 1 : 0.6,
+                                size: .body,
+                                opacity: model.tab == tab ? 1 : 0.55,
                                 tint: model.tab == tab ? theme.textPrimary : theme.textMuted
                             )
                             Text(tab.title)
-                                .font(.system(size: 16, weight: model.tab == tab ? .semibold : .medium))
+                                .font(.system(size: 13, weight: model.tab == tab ? .semibold : .medium))
                             Spacer()
                             if model.tab == tab {
                                 Circle()
                                     .fill(theme.accent)
-                                    .frame(width: 6, height: 6)
+                                    .frame(width: 5, height: 5)
                             }
                         }
-                        .padding(.horizontal, 14)
-                        .padding(.vertical, 12)
+                        .padding(.horizontal, 10)
+                        .padding(.vertical, 7)
                         .background(
-                            RoundedRectangle(cornerRadius: 10, style: .continuous)
+                            RoundedRectangle(cornerRadius: 8, style: .continuous)
                                 .fill(model.tab == tab ? theme.fillStrong : Color.clear)
                         )
                         .foregroundStyle(model.tab == tab ? theme.textPrimary : theme.textSecondary)
@@ -237,7 +237,7 @@ struct MainShellView: View {
                     .buttonStyle(FlareChipButtonStyle())
                 }
             }
-            .padding(.horizontal, 12)
+            .padding(.horizontal, 10)
 
             Spacer()
 
