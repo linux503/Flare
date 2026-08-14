@@ -14,12 +14,10 @@
     .catch(() => {});
 
   const stage = document.querySelector("[data-parallax]");
-  if (!stage || window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+  const poster = stage && stage.querySelector(".hero-poster");
+  if (!stage || !poster) return;
+  if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
   if (window.matchMedia("(pointer: coarse)").matches) return;
-
-  const mount = stage.querySelector(".stage-mount");
-  const marquee = stage.querySelector(".marquee");
-  const shot = stage.querySelector(".shot");
 
   let raf = 0;
   let tx = 0;
@@ -28,13 +26,9 @@
   let cy = 0;
 
   const tick = () => {
-    cx += (tx - cx) * 0.08;
-    cy += (ty - cy) * 0.08;
-    if (mount) mount.style.transform = `translate3d(${cx * -12}px, ${cy * -8}px, 0)`;
-    if (marquee) marquee.style.transform = `translate3d(${cx * 10}px, ${cy * 6}px, 0)`;
-    if (shot) {
-      shot.style.transform = `translate(calc(-50% + ${cx * 18}px), calc(-54% + ${cy * 12}px))`;
-    }
+    cx += (tx - cx) * 0.07;
+    cy += (ty - cy) * 0.07;
+    poster.style.transform = `scale(1.06) translate3d(${cx * 14}px, ${cy * 10}px, 0)`;
     raf = requestAnimationFrame(tick);
   };
 
@@ -47,7 +41,6 @@
     },
     { passive: true }
   );
-
   stage.addEventListener("pointerleave", () => {
     tx = 0;
     ty = 0;

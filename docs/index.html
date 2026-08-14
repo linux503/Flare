@@ -9,6 +9,8 @@
   <meta property="og:description" content="原生 macOS 截图与屏幕录制。菜单栏单击即截，支持 Apple Silicon 与 Intel。" />
   <meta property="og:type" content="website" />
   <meta property="og:url" content="https://linux503.github.io/Flare/" />
+  <meta property="og:image" content="https://linux503.github.io/Flare/hero-poster.jpg" />
+  <meta name="twitter:card" content="summary_large_image" />
   <link rel="icon" href="logo.png" />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
@@ -34,51 +36,20 @@
   </header>
 
   <main>
-    <!-- 首屏：品牌 + 一句 + CTA + 全幅画面，同一构图 -->
     <section class="hero">
       <div class="hero-stage" data-parallax>
-        <div class="stage-sky"></div>
-        <div class="stage-mount"></div>
+        <picture>
+          <img
+            class="hero-poster"
+            src="hero-poster.jpg"
+            width="1600"
+            height="1067"
+            alt="Flare Pro 截图选区示意：暗色桌面上的选区框与工具条"
+            decoding="async"
+            fetchpriority="high"
+          />
+        </picture>
         <div class="stage-vignette"></div>
-
-        <div class="chrome-bar">
-          <div class="chrome-left">
-            <i class="dot"></i>
-            <span>Flare Pro</span>
-            <span class="soft">截图</span>
-            <span class="soft">录制</span>
-          </div>
-          <div class="chrome-right">
-            <span class="clock">9:41</span>
-            <span class="flare-mark" title="菜单栏"></span>
-          </div>
-        </div>
-
-        <div class="marquee" data-depth="0.04">
-          <div class="window ghost w1"></div>
-          <div class="window ghost w2"></div>
-          <div class="window solid w3">
-            <div class="win-top"><b></b><b></b><b></b></div>
-            <div class="win-body"></div>
-          </div>
-        </div>
-
-        <div class="shot" data-depth="0.08">
-          <div class="shot-frame">
-            <span class="handle tl"></span><span class="handle tr"></span>
-            <span class="handle bl"></span><span class="handlehandle br"></span>
-            <span class="size">1280 × 800</span>
-          </div>
-          <div class="shot-bar">
-            <button type="button" tabindex="-1">编辑</button>
-            <button type="button" tabindex="-1">复制</button>
-            <button type="button" tabindex="-1">保存</button>
-            <button type="button" tabindex="-1">OCR</button>
-            <button type="button" class="accent" tabindex="-1">钉图</button>
-          </div>
-        </div>
-
-        <div class="cursor" aria-hidden="true"></div>
       </div>
 
       <div class="hero-copy">
