@@ -1,6 +1,4 @@
 (() => {
-  const downloadBtn = document.getElementById("download-btn");
-
   fetch("./version.json", { cache: "no-store" })
     .then((r) => (r.ok ? r.json() : null))
     .then((data) => {
@@ -8,7 +6,11 @@
       document.querySelectorAll("[data-app-version]").forEach((el) => {
         el.textContent = `v${data.version}`;
       });
-      if (downloadBtn && data.downloadURL) downloadBtn.href = data.downloadURL;
+      const dmg = data.downloadURL
+        || `https://github.com/linux503/Flare/releases/download/v${data.version}/Flare-Pro-${data.version}-Universal.dmg`;
+      document.querySelectorAll("[data-download]").forEach((el) => {
+        el.setAttribute("href", dmg);
+      });
     })
     .catch(() => {});
 
