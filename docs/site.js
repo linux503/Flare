@@ -13,38 +13,61 @@
     })
     .catch(() => {});
 
-  const stage = document.querySelector("[data-parallax]");
-  const poster = stage && stage.querySelector(".hero-poster");
-  if (!stage || !poster) return;
-  if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
-  if (window.matchMedia("(pointer: coarse)").matches) return;
+  const root = document.querySelector("[data-carousel]");
+  if (!root) return;
 
-  let raf = 0;
-  let tx = 0;
-  let ty = 0;
-  let cx = 0;
-  let cy = 0;
+  const slides = Array.from(root.querySelectorAll(".slide"));
+  const dots = Array.from(root.querySelectorAll(".dot"));
+  const caption = root.querySelector("[data-caption]");
+  const captions = ["截图 · 框选即得", "录屏 · 一键开录", "标注 · 改完就走"];
+  let index = 0;
+  let timer = 0;
+  const reduce = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+  const interval = 5200;
 
-  const tick = () => {
-    cx += (tx - cx) * 0.07;
-    cy += (ty - cy) * 0.07;
-    poster.style.transform = `scale(1.06) translate3d(${cx * 14}px, ${cy * 10}px, 0)`;
-    raf = requestAnimationFrame(tick);
+  const go = (next) => {
+    index = (next + slides.length) % slides.length;
+    slides.forEach((s, i) => s.classList.toggle("is-active", i === index));
+    dots.forEach((d, i) => {
+      const on = i === index;
+      d.classList.toggle("is-active", on);
+      d.setAttribute("aria-selected", on ? "true" : "false");
+    });
+    if (caption) caption.textContent = captions[index] || "";
   };
 
-  stage.addEventListener(
-    "pointermove",
-    (e) => {
-      const r = stage.getBoundingClientRect();
-      tx = (e.clientX - r.left) / r.width - 0.5;
-      ty = (e.clientY - r.top) / r.height - 0.5;
-    },
-    { passive: true }
-  );
-  stage.addEventListener("pointerleave", () => {
-    tx = 0;
-    ty = 0;
+  const stop = () => {
+    if (timer) window.clearInterval(timer);
+    timer = 0;
+  };
+
+  const start = () => {
+    if (reduce || slides.length < 2) return;
+    stop();
+    timer = window.setInterval(() => go(index + 1), interval);
+  };
+
+  dots.forEach((dot) => {
+    dot.addEventListener("click", () => {
+      const i = Number(dot.getAttribute("data-goto") || "0");
+      go(i);
+      start();
+    });
   });
 
-  raf = requestAnimationFrame(tick);
+  root.addEventListener("pointerenter", stop);
+  root.addEventListener("pointerleave", start);
+
+  document.addEventListener("keydown", (e) => {
+    if (e.key === "ArrowRight") {
+      go(index + 1);
+      start();
+    } else if (e.key === "ArrowLeft") {
+      go(index - 1);
+      start();
+    }
+  });
+
+  go(0);
+  start();
 })();
