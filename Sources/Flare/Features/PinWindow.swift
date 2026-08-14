@@ -49,6 +49,7 @@ final class PinnedImageWindow: NSObject {
         imageView = NSImageView(frame: NSRect(origin: .zero, size: frameSize))
         imageView.image = image
         imageView.imageScaling = .scaleProportionallyUpOrDown
+        imageView.autoresizingMask = [.width, .height]
         imageView.wantsLayer = true
         imageView.layer?.cornerRadius = 10
         imageView.layer?.masksToBounds = true
@@ -57,6 +58,7 @@ final class PinnedImageWindow: NSObject {
         root.addSubview(imageView)
 
         toolbar = NSView(frame: NSRect(x: 8, y: frameSize.height - 36, width: 96, height: 28))
+        toolbar.autoresizingMask = [.minYMargin]
         toolbar.wantsLayer = true
         // 固定深色底 + 白图标，避免霜白主题下 ink 变浅导致白字看不见
         toolbar.layer?.backgroundColor = NSColor.black.withAlphaComponent(0.72).cgColor

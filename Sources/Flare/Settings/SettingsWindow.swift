@@ -145,7 +145,7 @@ struct SettingsPane: View {
                     }
                 }
 
-                settingsBlock(title: "权限", subtitle: "打开开关后必须重启；请只授权「应用程序」里的副本") {
+                settingsBlock(title: "权限", subtitle: "授权一次即可；打开开关后若仍不能截图，点重启") {
                     VStack(alignment: .leading, spacing: 10) {
                         HStack {
                             Text("屏幕录制")
@@ -158,7 +158,7 @@ struct SettingsPane: View {
                         }
                         FlareSecondaryButton(title: "检查并修复权限", glyph: .permission) {
                             Permissions.promptScreenCaptureFromUser()
-                            Task { await refreshPermissionLabel() }
+                            refreshPermissionLabel()
                         }
                         FlareSecondaryButton(title: "打开系统设置", glyph: .settings) {
                             Permissions.openScreenRecordingSettings()
@@ -227,9 +227,9 @@ struct SettingsPane: View {
             .foregroundStyle(theme.textPrimary)
         }
         .onAppear { reloadShortcuts() }
-        .task { await refreshPermissionLabel() }
+        .task { refreshPermissionLabel() }
         .onReceive(NotificationCenter.default.publisher(for: .flarePermissionChanged)) { _ in
-            Task { await refreshPermissionLabel() }
+            refreshPermissionLabel()
         }
     }
 
@@ -288,20 +288,20 @@ struct SettingsPane: View {
         }
     }
 
-    private func refreshPermissionLabel() async {
-        let state = await Permissions.strictState()
-        await MainActor.run {
-            switch state {
-            case .granted:
-                permissionLabel = "已就绪"
-                permissionOK = true
-            case .needsRelaunch:
-                permissionLabel = "需重启生效"
-                permissionOK = false
-            case .denied, .unknown:
-                permissionLabel = "未授权"
-                permissionOK = false
-            }
+    private func refreshPermissionLabel() {
+        switch Permissions.currentState() {
+        case .granted:
+            permissionLabel = "已就绪"
+            permissionOK = true
+        case .needsRelaunch:
+            permissionLabel = "需重启生效"
+            permissionOK = false
+        case .unknown:
+            permissionLabel = "检查中…"
+            permissionOK = false
+        case .denied:
+            permissionLabel = "未授权"
+            permissionOK = false
         }
     }
 

@@ -12,6 +12,7 @@ enum SnapGlyph: String, CaseIterable {
     case pause
     case play
     case stop
+    case mic
     case history
     case settings
     case documents
@@ -68,6 +69,7 @@ enum SnapGlyph: String, CaseIterable {
         case .pause: return "pause.circle"
         case .play: return "play.circle"
         case .stop: return "stop.circle"
+        case .mic: return "mic"
         case .history: return "clock.arrow.circlepath"
         case .settings: return "gearshape"
         case .documents: return "doc.badge.plus"

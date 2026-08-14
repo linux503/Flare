@@ -10,6 +10,7 @@ final class RecordingHUDController {
     private weak var pauseButton: NSButton?
     private weak var pulseDot: NSView?
     private var keyMonitor: Any?
+    private var globalKeyMonitor: Any?
     private var pulseTimer: Timer?
 
     private init() {}
@@ -31,8 +32,10 @@ final class RecordingHUDController {
         window.backgroundColor = .clear
         window.level = .statusBar
         window.hasShadow = true
+        window.sharingType = .none
         window.collectionBehavior = [.canJoinAllSpaces, .fullScreenAuxiliary, .stationary]
         window.isMovableByWindowBackground = true
+        window.hidesOnDeactivate = false
 
         let root = NSView(frame: NSRect(origin: .zero, size: size))
         root.wantsLayer = true
@@ -82,17 +85,11 @@ final class RecordingHUDController {
         self.window = window
 
         keyMonitor = NSEvent.addLocalMonitorForEvents(matching: .keyDown) { event in
-            if event.keyCode == 53 { // Esc
-                ScreenRecorder.shared.stop()
-                return nil
-            }
-            if event.modifierFlags.contains(.command),
-               event.charactersIgnoringModifiers?.lowercased() == "p" {
-                ScreenRecorder.shared.togglePause()
-                RecordingHUDController.shared.syncPauseTitle()
-                return nil
-            }
+            if RecordingHUDController.handleRecordingKey(event) { return nil }
             return event
+        }
+        globalKeyMonitor = NSEvent.addGlobalMonitorForEvents(matching: .keyDown) { event in
+            _ = RecordingHUDController.handleRecordingKey(event)
         }
 
         pulseTimer = Timer.scheduledTimer(withTimeInterval: 0.8, repeats: true) { [weak self] _ in
@@ -131,12 +128,24 @@ final class RecordingHUDController {
             NSEvent.removeMonitor(keyMonitor)
             self.keyMonitor = nil
         }
+        if let globalKeyMonitor {
+            NSEvent.removeMonitor(globalKeyMonitor)
+            self.globalKeyMonitor = nil
+        }
         window?.orderOut(nil)
         window = nil
         timeLabel = nil
         statusLabel = nil
         pauseButton = nil
         pulseDot = nil
+    }
+
+    private static func handleRecordingKey(_ event: NSEvent) -> Bool {
+        if event.keyCode == 53 {
+            ScreenRecorder.shared.stop()
+            return true
+        }
+        return false
     }
 
     private func syncPauseTitle() {

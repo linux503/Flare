@@ -21,7 +21,7 @@ struct HistoryPane: View {
             HStack(alignment: .firstTextBaseline) {
                 FlarePageHeader(
                     title: "历史记录",
-                    subtitle: store.items.isEmpty ? "截图会出现在这里" : "共 \(store.items.count) 张 · 双击打开编辑"
+                    subtitle: store.items.isEmpty ? "截图会出现在这里" : "共 \(store.items.count) 张 · 点击打开编辑"
                 ) {
                     FlareSecondaryButton(title: "清空", glyph: .trash) {
                         confirmClear = true
@@ -84,7 +84,8 @@ struct HistoryCard: View {
             VStack(alignment: .leading, spacing: 10) {
                 HistoryThumbnailView(item: item, height: 118)
                     .clipShape(RoundedRectangle(cornerRadius: 11, style: .continuous))
-                    .onTapGesture(count: 2) { openEditor() }
+                    .contentShape(Rectangle())
+                    .onTapGesture { openEditor() }
 
                 Text(item.fileName)
                     .font(.caption.weight(.medium))

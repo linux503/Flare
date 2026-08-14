@@ -97,13 +97,7 @@ fi
 
 xattr -cr "$APP_DIR" 2>/dev/null || true
 
-if command -v codesign >/dev/null; then
-  echo "==> Ad-hoc codesign (stable identifier)..."
-  codesign --force --deep --sign - \
-    --identifier "app.flare.screenshot" \
-    --entitlements "$ROOT/Resources/Flare.entitlements" \
-    "$APP_DIR" || true
-fi
+"$ROOT/Scripts/codesign_app.sh" "$APP_DIR"
 
 echo "==> Done: $APP_DIR"
 lipo -info "$MACOS/$BIN_NAME" || true

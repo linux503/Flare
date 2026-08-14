@@ -28,9 +28,9 @@ struct HomePane: View {
             .padding(.top, 40)
             .padding(.bottom, 32)
         }
-        .task { await refreshPermission() }
+        .task { refreshPermission() }
         .onReceive(NotificationCenter.default.publisher(for: .flarePermissionChanged)) { _ in
-            Task { await refreshPermission() }
+            refreshPermission()
         }
         .onReceive(NotificationCenter.default.publisher(for: .flareSettingsChanged)) { _ in
             shortcutTick &+= 1
@@ -242,20 +242,20 @@ struct HomePane: View {
         }
     }
 
-    private func refreshPermission() async {
-        let state = await Permissions.strictState()
-        await MainActor.run {
-            switch state {
+    private func refreshPermission() {
+        switch Permissions.currentState() {
             case .granted:
                 permissionOK = true
                 permissionLabel = "已就绪"
             case .needsRelaunch:
                 permissionOK = false
                 permissionLabel = "需重启"
-            case .denied, .unknown:
+            case .unknown:
+                permissionOK = nil
+                permissionLabel = "检查中"
+            case .denied:
                 permissionOK = false
                 permissionLabel = "需授权"
-            }
         }
     }
 }

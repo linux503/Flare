@@ -42,6 +42,7 @@ final class ToastController {
             panel.backgroundColor = .clear
             panel.level = .statusBar
             panel.hasShadow = true
+            panel.sharingType = .none
             panel.ignoresMouseEvents = true
             panel.collectionBehavior = [.canJoinAllSpaces, .fullScreenAuxiliary, .transient]
 

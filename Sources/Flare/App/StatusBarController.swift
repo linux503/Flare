@@ -60,9 +60,10 @@ final class StatusBarController: NSObject {
         let recording = ScreenRecorder.shared.isRecording || ScreenRecorder.shared.isCountingDown
         if recording {
             button.image = FlareBrand.statusBarRecordingSymbol()
+            let clock = String(format: "%02d:%02d", ScreenRecorder.shared.elapsedSeconds / 60, ScreenRecorder.shared.elapsedSeconds % 60)
             let t = ScreenRecorder.shared.isPaused
-                ? "录屏已暂停"
-                : (ScreenRecorder.shared.isCountingDown ? "录屏倒计时" : "正在录屏")
+                ? "录屏已暂停 \(clock)"
+                : (ScreenRecorder.shared.isCountingDown ? "录屏倒计时" : "正在录屏 \(clock)")
             button.toolTip = "\(FlareBrand.name) — \(t) · 单击停止 · 右键菜单"
         } else {
             button.image = FlareBrand.statusBarSymbol()

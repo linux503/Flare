@@ -41,6 +41,7 @@ final class CaptureOverlayController {
         window.ignoresMouseEvents = false
         window.acceptsMouseMovedEvents = true
         window.hasShadow = false
+        window.sharingType = .none
         window.setFrame(screenFrame, display: true)
 
         let root = NSView(frame: NSRect(origin: .zero, size: screenFrame.size))
@@ -209,28 +210,6 @@ final class CaptureOverlayView: NSView {
         if mode == .area, AppSettings.shared.showMagnifier, frozenSelection == nil, dragSession == nil {
             drawMagnifier(at: mouseLocation)
         }
-
-        drawHint()
-    }
-
-    private func drawHint() {
-        let text: String
-        if mode == .window {
-            text = "点击窗口截图 · Esc 取消"
-        } else if frozenSelection != nil {
-            text = "双击复制到剪贴板 · 空格确认 · ⌘C 复制 · Esc 重选"
-        } else {
-            text = "拖拽选区 · 松手后选择操作 · Esc 取消"
-        }
-        let attrs: [NSAttributedString.Key: Any] = [
-            .font: NSFont.systemFont(ofSize: 13, weight: .medium),
-            .foregroundColor: NSColor.white
-        ]
-        let size = (text as NSString).size(withAttributes: attrs)
-        let rect = CGRect(x: (bounds.width - size.width) / 2 - 14, y: 28, width: size.width + 28, height: size.height + 14)
-        NSColor.black.withAlphaComponent(0.55).setFill()
-        NSBezierPath(roundedRect: rect, xRadius: 10, yRadius: 10).fill()
-        (text as NSString).draw(at: CGPoint(x: rect.minX + 14, y: rect.minY + 7), withAttributes: attrs)
     }
 
     private func drawSizeLabel(for rect: CGRect) {

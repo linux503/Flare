@@ -154,10 +154,16 @@ final class AppSettings {
         set { defaults.set(newValue.rawValue, forKey: "recordQuality"); notify() }
     }
 
-    /// 录制系统声音（需 macOS 14+ ScreenCaptureKit 音频）
-    var recordSystemAudio: Bool {
-        get { defaults.object(forKey: "recordSystemAudio") as? Bool ?? true }
-        set { defaults.set(newValue, forKey: "recordSystemAudio"); notify() }
+    /// 录屏声音：默认关闭。可选系统声音、麦克风，或两者。
+    var recordAudioSource: RecordAudioSource {
+        get {
+            if let raw = defaults.string(forKey: "recordAudioSource"),
+               let value = RecordAudioSource(rawValue: raw) {
+                return value
+            }
+            return .off
+        }
+        set { defaults.set(newValue.rawValue, forKey: "recordAudioSource"); notify() }
     }
 
     // MARK: - Hotkeys
@@ -333,6 +339,36 @@ enum AfterCaptureAction: String, CaseIterable, Identifiable {
         case .clipboard: return "复制到剪贴板"
         case .save: return "保存到文件"
         case .pin: return "钉在屏幕上"
+        }
+    }
+}
+
+enum RecordAudioSource: String, CaseIterable, Identifiable {
+    case off
+    case system
+    case microphone
+    case both
+
+    var id: String { rawValue }
+
+    var displayName: String {
+        switch self {
+        case .off: return "关闭"
+        case .system: return "系统声音"
+        case .microphone: return "麦克风"
+        case .both: return "系统 + 麦克风"
+        }
+    }
+
+    var capturesSystem: Bool { self == .system || self == .both }
+    var capturesMicrophone: Bool { self == .microphone || self == .both }
+
+    var toastHint: String {
+        switch self {
+        case .off: return ""
+        case .system: return " · 系统声音"
+        case .microphone: return " · 麦克风"
+        case .both: return " · 系统+麦克风"
         }
     }
 }

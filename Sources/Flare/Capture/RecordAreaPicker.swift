@@ -12,6 +12,10 @@ enum RecordAreaPicker {
         onPicked: @escaping (Selection) -> Void,
         onCancel: @escaping () -> Void
     ) {
+        guard Permissions.prepareForCapture() else {
+            onCancel()
+            return
+        }
         Task {
             do {
                 let frames = try await ScreenCapturer.captureAllDisplays()

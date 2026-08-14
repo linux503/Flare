@@ -6,3 +6,4 @@ dist/
 xcuserdata/
 DerivedData/
 Resources/tmpicons/
+.codesign-identity

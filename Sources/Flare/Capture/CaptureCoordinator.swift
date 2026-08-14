@@ -33,6 +33,7 @@ final class CaptureCoordinator: ObservableObject {
     }
 
     func startDelayedCapture(seconds: Int) {
+        guard Permissions.prepareForCapture() else { return }
         guard !isCapturing else { return }
         if ScreenRecorder.shared.isRecording {
             ToastController.shared.show("请先停止录屏")
@@ -68,13 +69,13 @@ final class CaptureCoordinator: ObservableObject {
     }
 
     private func beginCapture(_ work: @escaping () async throws -> Void) {
+        guard Permissions.prepareForCapture() else { return }
         guard !isCapturing else { return }
         if ScreenRecorder.shared.isRecording {
             ToastController.shared.show("请先停止录屏")
             return
         }
 
-        // 直接尝试截屏；权限问题在失败时再提示（避免 preflight 误报连环弹窗）
         isCapturing = true
         hideFlareWindows()
         DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {

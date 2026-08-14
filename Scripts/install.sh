@@ -29,10 +29,7 @@ chmod +x "$DEST/Contents/MacOS/$BIN_NAME"
 
 xattr -cr "$DEST" 2>/dev/null || true
 
-codesign --force --deep --sign - \
-  --identifier "app.flare.screenshot" \
-  --entitlements "$ROOT/Resources/Flare.entitlements" \
-  "$DEST"
+"$ROOT/Scripts/codesign_app.sh" "$DEST"
 
 # 清掉「自动重启已用过」粘性标记，避免权限修好后仍无法自动重启
 defaults delete app.flare.screenshot flareDidAutoRelaunchForTCC 2>/dev/null || true
@@ -40,11 +37,12 @@ defaults delete app.flare.screenshot flareDidAutoRelaunchForTCC 2>/dev/null || t
 echo ""
 echo "✅ 已安装: $DEST"
 echo ""
-echo "请完成屏幕录制授权（macOS 15+ 叫「屏幕与系统音频录制」）："
+echo "请完成屏幕录制授权（仅首次，或签名身份变更后）："
 echo "  1. 系统设置 → 隐私与安全性 → 屏幕与系统音频录制"
 echo "  2. 打开 Flare Pro（若有灰色旧条目：先 − 删除，再重新勾选）"
-echo "  3. 必须完全退出再打开（打开开关后同一进程内截不了）"
+echo "  3. 打开开关后回到应用，会自动重启生效"
 echo "  4. 请只运行本路径：$DEST（不要用 dist/ 里的副本）"
+echo "  5. 之后用同一台 Mac 重新 install，一般不必再授权"
 echo ""
 
 open "x-apple.systempreferences:com.apple.preference.security?Privacy_ScreenCapture" 2>/dev/null || true

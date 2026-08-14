@@ -56,6 +56,14 @@ plutil -extract LSMinimumSystemVersion raw "$APP/Contents/Info.plist" | grep -q 
 [[ -f "$APP/Contents/Resources/StatusBarIcon.png" ]] && ok "状态栏图标已打包" || bad "缺少状态栏图标"
 [[ -f "$APP/Contents/Resources/FlareIcon.png" ]] && ok "Logo PNG 已打包" || bad "缺少 Logo PNG"
 codesign -v "$APP" 2>/dev/null && ok "代码签名有效" || bad "签名无效"
+SIGN_DUMP="$(codesign -dv --verbose=2 "$APP" 2>&1 || true)"
+if echo "$SIGN_DUMP" | grep -q "Signature=adhoc"; then
+  bad "仍是 ad-hoc 签名（每次安装都会丢屏幕录制权限）"
+elif echo "$SIGN_DUMP" | grep -qE "Authority=Apple Development|Authority=Developer ID"; then
+  ok "使用稳定开发者签名（TCC 可跨构建保留）"
+else
+  skip "未识别的签名类型"
+fi
 
 section "3. Intel (x86_64) 切片冒烟"
 X86_SLICE="/tmp/FlarePro-x86_64-slice"

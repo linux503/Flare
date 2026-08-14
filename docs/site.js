@@ -1,12 +1,13 @@
 (() => {
-  const versionLabel = document.getElementById("version-chip");
   const downloadBtn = document.getElementById("download-btn");
 
   fetch("./version.json", { cache: "no-store" })
     .then((r) => (r.ok ? r.json() : null))
     .then((data) => {
       if (!data || !data.version) return;
-      if (versionLabel) versionLabel.textContent = `v${data.version}`;
+      document.querySelectorAll("[data-app-version]").forEach((el) => {
+        el.textContent = `v${data.version}`;
+      });
       if (downloadBtn && data.downloadURL) downloadBtn.href = data.downloadURL;
     })
     .catch(() => {});

@@ -68,7 +68,7 @@ final class HomeWindowController {
             window.center()
             window.setFrameAutosaveName("FlareHome")
             window.isReleasedWhenClosed = false
-            window.minSize = NSSize(width: 840, height: 580)
+            window.minSize = NSSize(width: 880, height: 580)
             window.animationBehavior = .documentWindow
             self.window = window
             applyWindowChrome()
@@ -133,7 +133,7 @@ struct MainShellView: View {
 
             HStack(spacing: 0) {
                 sidebar(theme)
-                    .frame(width: 200)
+                    .frame(width: 236)
 
                 Rectangle()
                     .fill(theme.stroke.opacity(0.85))
@@ -172,7 +172,7 @@ struct MainShellView: View {
         }
         .environment(\.flareTheme, theme)
         .preferredColorScheme(theme.preferredColorScheme)
-        .frame(minWidth: 840, minHeight: 580)
+        .frame(minWidth: 880, minHeight: 580)
         .sheet(item: $model.permissionSheet) { state in
             PermissionView(preflightGranted: state.preflight, captureWorks: state.works)
                 .environment(\.flareTheme, theme)
@@ -189,47 +189,47 @@ struct MainShellView: View {
 
     private func sidebar(_ theme: FlarePalette) -> some View {
         VStack(alignment: .leading, spacing: 0) {
-            HStack(spacing: 11) {
-                FlareBrandMark(size: 34, cornerRadius: 9)
-                VStack(alignment: .leading, spacing: 2) {
+            HStack(spacing: 12) {
+                FlareBrandMark(size: 40, cornerRadius: 10)
+                VStack(alignment: .leading, spacing: 3) {
                     Text(FlareBrand.name)
-                        .font(.system(size: 14, weight: .bold, design: .rounded))
+                        .font(.system(size: 17, weight: .bold, design: .rounded))
                         .foregroundStyle(theme.textPrimary)
                     Text(FlareBrand.tagline)
-                        .font(.system(size: 10, weight: .medium))
+                        .font(.system(size: 12, weight: .medium))
                         .foregroundStyle(theme.textMuted)
                 }
             }
-            .padding(.leading, 18)
-            .padding(.trailing, 14)
+            .padding(.leading, 20)
+            .padding(.trailing, 16)
             .padding(.top, 46)
-            .padding(.bottom, 26)
+            .padding(.bottom, 28)
 
-            VStack(spacing: 3) {
+            VStack(spacing: 5) {
                 ForEach(MainTab.allCases) { tab in
                     Button {
                         select(tab)
                     } label: {
-                        HStack(spacing: 10) {
+                        HStack(spacing: 12) {
                             SnapIcon(
                                 tab.glyph,
-                                size: .menu,
+                                size: .title,
                                 opacity: model.tab == tab ? 1 : 0.6,
                                 tint: model.tab == tab ? theme.textPrimary : theme.textMuted
                             )
                             Text(tab.title)
-                                .font(.system(size: 13, weight: model.tab == tab ? .semibold : .medium))
+                                .font(.system(size: 16, weight: model.tab == tab ? .semibold : .medium))
                             Spacer()
                             if model.tab == tab {
                                 Circle()
                                     .fill(theme.accent)
-                                    .frame(width: 5, height: 5)
+                                    .frame(width: 6, height: 6)
                             }
                         }
-                        .padding(.horizontal, 12)
-                        .padding(.vertical, 9)
+                        .padding(.horizontal, 14)
+                        .padding(.vertical, 12)
                         .background(
-                            RoundedRectangle(cornerRadius: 9, style: .continuous)
+                            RoundedRectangle(cornerRadius: 10, style: .continuous)
                                 .fill(model.tab == tab ? theme.fillStrong : Color.clear)
                         )
                         .foregroundStyle(model.tab == tab ? theme.textPrimary : theme.textSecondary)
@@ -243,14 +243,14 @@ struct MainShellView: View {
 
             VStack(alignment: .leading, spacing: 6) {
                 Text(themeController.kind.title)
-                    .font(.system(size: 10, weight: .semibold))
+                    .font(.system(size: 12, weight: .semibold))
                     .foregroundStyle(theme.textMuted)
                 Text("v\(FlareBrand.version)")
-                    .font(.system(size: 10, weight: .medium, design: .monospaced))
+                    .font(.system(size: 12, weight: .medium, design: .monospaced))
                     .foregroundStyle(theme.textMuted.opacity(0.85))
             }
-            .padding(.horizontal, 22)
-            .padding(.bottom, 18)
+            .padding(.horizontal, 24)
+            .padding(.bottom, 20)
         }
         .background {
             ZStack {

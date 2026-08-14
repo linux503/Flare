@@ -7,7 +7,7 @@ struct RecordPane: View {
     @State private var showCursor = AppSettings.shared.recordShowCursor
     @State private var excludeFlare = AppSettings.shared.recordExcludeFlare
     @State private var hideWindows = AppSettings.shared.recordHideFlareWindows
-    @State private var systemAudio = AppSettings.shared.recordSystemAudio
+    @State private var audioSource = AppSettings.shared.recordAudioSource
     @State private var countdown = AppSettings.shared.recordCountdownSeconds
     @State private var fps = AppSettings.shared.recordFPS
     @State private var recordMode = AppSettings.shared.recordMode
@@ -120,56 +120,25 @@ struct RecordPane: View {
     }
 
     private var optionsBlock: some View {
-        VStack(alignment: .leading, spacing: 12) {
+        VStack(alignment: .leading, spacing: 0) {
             Text("录制选项")
                 .font(.system(size: 13, weight: .semibold))
                 .foregroundStyle(theme.textSecondary)
+                .padding(.bottom, 14)
 
-            pickerRow("默认范围", selection: $recordMode, options: RecordCaptureMode.allCases, label: \.displayName) { mode in
-                AppSettings.shared.recordMode = mode
-            }
-
-            pickerRow("清晰度", selection: $quality, options: RecordQualityPreset.allCases, label: \.displayName) { preset in
-                AppSettings.shared.recordQuality = preset
-            }
-
-            toggleRow("录制系统声音", $systemAudio) {
-                AppSettings.shared.recordSystemAudio = $0
-            }
-
-            toggleRow("显示鼠标指针", $showCursor) {
-                AppSettings.shared.recordShowCursor = $0
-            }
-            toggleRow("排除 Flare 窗口", $excludeFlare) {
-                AppSettings.shared.recordExcludeFlare = $0
-            }
-            toggleRow("开始时隐藏 Flare 窗口", $hideWindows) {
-                AppSettings.shared.recordHideFlareWindows = $0
-            }
-
-            HStack {
-                Text("开始前倒计时")
-                    .font(.system(size: 12, weight: .medium))
-                    .foregroundStyle(theme.textPrimary)
-                Spacer()
-                Picker("", selection: $countdown) {
-                    Text("关闭").tag(0)
-                    Text("3 秒").tag(3)
-                    Text("5 秒").tag(5)
-                    Text("10 秒").tag(10)
-                }
-                .labelsHidden()
-                .frame(width: 100)
-                .onChange(of: countdown) { _, v in
-                    AppSettings.shared.recordCountdownSeconds = v
+            optionRow("默认范围") {
+                menuPicker($recordMode, RecordCaptureMode.allCases, \.displayName) {
+                    AppSettings.shared.recordMode = $0
                 }
             }
-
-            HStack {
-                Text("帧率")
-                    .font(.system(size: 12, weight: .medium))
-                    .foregroundStyle(theme.textPrimary)
-                Spacer()
+            rowDivider
+            optionRow("清晰度") {
+                menuPicker($quality, RecordQualityPreset.allCases, \.displayName) {
+                    AppSettings.shared.recordQuality = $0
+                }
+            }
+            rowDivider
+            optionRow("帧率") {
                 Picker("", selection: $fps) {
                     Text("15 FPS").tag(15)
                     Text("24 FPS").tag(24)
@@ -177,13 +146,48 @@ struct RecordPane: View {
                     Text("60 FPS").tag(60)
                 }
                 .labelsHidden()
-                .frame(width: 100)
+                .pickerStyle(.menu)
                 .onChange(of: fps) { _, v in
                     AppSettings.shared.recordFPS = v
                 }
             }
+            rowDivider
+            optionRow("声音") {
+                menuPicker($audioSource, RecordAudioSource.allCases, \.displayName) {
+                    AppSettings.shared.recordAudioSource = $0
+                }
+            }
+            rowDivider
+            optionRow("开始前倒计时") {
+                Picker("", selection: $countdown) {
+                    Text("关闭").tag(0)
+                    Text("3 秒").tag(3)
+                    Text("5 秒").tag(5)
+                    Text("10 秒").tag(10)
+                }
+                .labelsHidden()
+                .pickerStyle(.menu)
+                .onChange(of: countdown) { _, v in
+                    AppSettings.shared.recordCountdownSeconds = v
+                }
+            }
+
+            groupDivider
+
+            optionRow("显示鼠标指针") {
+                alignedToggle($showCursor) { AppSettings.shared.recordShowCursor = $0 }
+            }
+            rowDivider
+            optionRow("排除 Flare 窗口") {
+                alignedToggle($excludeFlare) { AppSettings.shared.recordExcludeFlare = $0 }
+            }
+            rowDivider
+            optionRow("开始时隐藏窗口") {
+                alignedToggle($hideWindows) { AppSettings.shared.recordHideFlareWindows = $0 }
+            }
         }
-        .padding(16)
+        .padding(.horizontal, 18)
+        .padding(.vertical, 16)
         .background(
             RoundedRectangle(cornerRadius: 14, style: .continuous)
                 .fill(theme.fill)
@@ -226,7 +230,7 @@ struct RecordPane: View {
     private var statusSubtitle: String {
         if recorder.isCountingDown { return "按 Esc 可取消" }
         if recorder.isRecording {
-            let audio = AppSettings.shared.recordSystemAudio ? " · 含系统声音" : ""
+            let audio = AppSettings.shared.recordAudioSource.toastHint
             return "浮动条可停止 · MOV\(audio)"
         }
         return "全屏录当前显示器，或框选区域录制"
@@ -246,42 +250,62 @@ struct RecordPane: View {
         }
     }
 
-    private func toggleRow(_ title: String, _ binding: Binding<Bool>, onChange: @escaping (Bool) -> Void) -> some View {
-        Toggle(isOn: Binding(
-            get: { binding.wrappedValue },
-            set: { binding.wrappedValue = $0; onChange($0) }
-        )) {
-            Text(title)
-                .font(.system(size: 12, weight: .medium))
-                .foregroundStyle(theme.textPrimary)
-        }
-        .toggleStyle(.switch)
-        .tint(theme.accent)
+    private var rowDivider: some View {
+        Rectangle()
+            .fill(theme.stroke)
+            .frame(height: 1)
+            .padding(.vertical, 6)
     }
 
-    private func pickerRow<T: Hashable & Identifiable>(
-        _ title: String,
-        selection: Binding<T>,
-        options: [T],
-        label keyPath: KeyPath<T, String>,
+    private var groupDivider: some View {
+        Rectangle()
+            .fill(theme.strokeStrong.opacity(0.85))
+            .frame(height: 1)
+            .padding(.vertical, 10)
+    }
+
+    private func optionRow<Control: View>(_ title: String, @ViewBuilder control: () -> Control) -> some View {
+        HStack(alignment: .center, spacing: 16) {
+            Text(title)
+                .font(.system(size: 13, weight: .medium))
+                .foregroundStyle(theme.textPrimary)
+                .frame(width: 132, alignment: .leading)
+            Spacer(minLength: 8)
+            control()
+                .frame(width: 168, alignment: .trailing)
+        }
+        .frame(minHeight: 30)
+    }
+
+    private func alignedToggle(_ binding: Binding<Bool>, onChange: @escaping (Bool) -> Void) -> some View {
+        HStack {
+            Spacer(minLength: 0)
+            Toggle("", isOn: Binding(
+                get: { binding.wrappedValue },
+                set: { binding.wrappedValue = $0; onChange($0) }
+            ))
+            .labelsHidden()
+            .toggleStyle(.switch)
+            .tint(theme.accent)
+        }
+    }
+
+    private func menuPicker<T: Hashable & Identifiable>(
+        _ selection: Binding<T>,
+        _ options: [T],
+        _ keyPath: KeyPath<T, String>,
         onChange: @escaping (T) -> Void
     ) -> some View {
-        HStack {
-            Text(title)
-                .font(.system(size: 12, weight: .medium))
-                .foregroundStyle(theme.textPrimary)
-            Spacer()
-            Picker("", selection: Binding(
-                get: { selection.wrappedValue },
-                set: { selection.wrappedValue = $0; onChange($0) }
-            )) {
-                ForEach(options) { option in
-                    Text(option[keyPath: keyPath]).tag(option)
-                }
+        Picker("", selection: Binding(
+            get: { selection.wrappedValue },
+            set: { selection.wrappedValue = $0; onChange($0) }
+        )) {
+            ForEach(options) { option in
+                Text(option[keyPath: keyPath]).tag(option)
             }
-            .labelsHidden()
-            .frame(width: 148)
         }
+        .labelsHidden()
+        .pickerStyle(.menu)
     }
 
     private func format(_ seconds: Int) -> String {

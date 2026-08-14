@@ -15,7 +15,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@500;600;700;800&family=Noto+Sans+SC:wght@400;500;600;700&display=swap" rel="stylesheet" />
-  <link rel="stylesheet" href="styles.css" />
+  <link rel="stylesheet" href="styles.css?v=9" />
   <link rel="stylesheet" href="more-apps.css?v=7" />
 </head>
 <body>
@@ -73,7 +73,10 @@
         <h1>一拍即得</h1>
         <p class="subtitle">原生 macOS 截图与屏幕录制。菜单栏单击就能截，独立菜单就能录，标注和 OCR 都在顺手的位置。</p>
         <div class="hero-actions">
-          <a class="btn primary" href="#get">免费下载</a>
+          <div class="dl-stack">
+            <a class="btn primary" href="#get">免费下载</a>
+            <span class="dl-ver" data-app-version>v1.2.5</span>
+          </div>
           <a class="btn soft" href="https://github.com/linux503/Flare" target="_blank" rel="noopener">查看源码</a>
         </div>
       </div>
@@ -128,9 +131,9 @@
         <p>顶部「录制」菜单、主面板录制页、状态栏红点。全屏/区域、系统声音、清晰度可调，导出 H.264 MOV。</p>
         <ul>
           <li>快捷键 <code>⌘⌥R</code> 开始或停止</li>
-          <li>区域录屏、系统声音、流畅/高清/超清</li>
+          <li>区域录屏；声音可选关闭 / 系统 / 麦克风</li>
           <li>倒计时、帧率、光标、排除 Flare 窗口</li>
-          <li>悬浮计时条，录制中可一键停止</li>
+          <li>悬浮计时条不会进入成片</li>
         </ul>
       </div>
       <figure><img src="poster-record.jpg?v=8" alt="录屏展示" loading="lazy" width="1536" height="1024" /></figure>
@@ -187,12 +190,14 @@
           <h2>下载 Flare Pro</h2>
           <p>免费使用。Universal Binary，同时支持 Apple Silicon 与 Intel。需要 macOS 14 或更高。</p>
           <div class="chips">
-            <span id="version-chip">v1.2.4</span>
             <span>Universal</span>
             <span>开源可构建</span>
           </div>
           <div class="hero-actions">
-            <a class="btn primary" id="download-btn" href="https://github.com/linux503/Flare/releases/latest">下载最新版</a>
+            <div class="dl-stack">
+              <a class="btn primary" id="download-btn" href="https://github.com/linux503/Flare/releases/latest">下载最新版</a>
+              <span class="dl-ver" data-app-version>v1.2.5</span>
+            </div>
             <a class="btn soft" href="https://github.com/linux503/Flare/releases" target="_blank" rel="noopener">全部版本</a>
           </div>
         </div>
@@ -224,7 +229,7 @@
     </div>
   </footer>
 
-  <script src="site.js"></script>
+  <script src="site.js?v=9"></script>
   <script src="more-apps.js?v=6" defer></script>
 </body>
 </html>

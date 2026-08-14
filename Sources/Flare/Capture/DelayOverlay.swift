@@ -38,6 +38,7 @@ final class DelayOverlayController {
         window.backgroundColor = .clear
         window.level = .floating
         window.hasShadow = true
+        window.sharingType = .none
         window.collectionBehavior = [.canJoinAllSpaces, .fullScreenAuxiliary]
         window.isMovableByWindowBackground = true
         window.alphaValue = 0

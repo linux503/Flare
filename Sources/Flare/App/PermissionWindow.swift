@@ -14,7 +14,6 @@ final class PermissionWindowController {
     }
 
     func close() {
-        Permissions.stopPolling()
         HomeWindowController.shared.dismissPermissionSheet()
     }
 }
@@ -104,9 +103,12 @@ struct PermissionView: View {
                         .fixedSize(horizontal: false, vertical: true)
                 }
 
-                Text("重新编译/安装后系统可能当成新应用：必须删除旧条目再重新勾选。")
-                    .font(.caption)
-                    .foregroundStyle(theme.textMuted)
+                if Permissions.isAdHocSigned() {
+                    Text("当前是临时签名：每次重新安装系统都会当成新应用，必须删除旧条目再勾选。请用 Scripts/install.sh 以开发者证书签名。")
+                        .font(.caption)
+                        .foregroundStyle(theme.warning)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
 
                 Spacer(minLength: 0)
 
@@ -142,9 +144,6 @@ struct PermissionView: View {
             applyState(Permissions.currentState())
             Permissions.startPolling()
         }
-        .onDisappear {
-            Permissions.stopPolling()
-        }
         .onReceive(NotificationCenter.default.publisher(for: .flarePermissionChanged)) { note in
             let state = (note.userInfo?["state"] as? String) ?? ""
             livePreflight = Permissions.hasScreenRecordingPermission
@@ -170,16 +169,20 @@ struct PermissionView: View {
             liveReady = false
             needsRelaunch = true
             statusText = "权限已打开，请重启生效"
-        case .denied, .unknown:
+        case .denied:
             livePreflight = false
             liveReady = false
             needsRelaunch = false
             statusText = "请在系统设置中打开 \(FlareBrand.name) 的屏幕录制开关"
+        case .unknown:
+            livePreflight = true
+            liveReady = false
+            needsRelaunch = false
+            statusText = "正在确认权限…"
         }
     }
 
     private func dismissSheet() {
-        Permissions.stopPolling()
         dismiss()
         PermissionWindowController.shared.close()
     }
@@ -234,7 +237,6 @@ struct PermissionView: View {
     private func requestAndCheck() {
         checking = true
         statusText = ""
-        _ = Permissions.requestScreenRecordingPermission()
         Task {
             try? await Task.sleep(nanoseconds: 450_000_000)
             let ok = await Permissions.verifyAccessSilently()

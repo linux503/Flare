@@ -1,7 +1,7 @@
 {
-  "version": "1.2.4",
-  "build": 9,
-  "notes": "区域/全屏录屏、系统声音与清晰度预设；权限提示优化；菜单栏图标更清晰。",
+  "version": "1.2.5",
+  "build": 10,
+  "notes": "录屏声音可选关闭 / 系统 / 麦克风；权限一次授权即可；截图去掉底部提示。",
   "downloadURL": "https://github.com/linux503/Flare/releases/latest",
   "minOS": "14.0",
   "publishedAt": "2026-08-14"
