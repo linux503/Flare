@@ -4,222 +4,183 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Flare Pro — 一拍即得</title>
-  <meta name="description" content="Flare Pro：原生 macOS 截图与屏幕录制。菜单栏单击截图，独立录制菜单，标注 OCR、钉图历史、暂停倒计时。支持 Apple Silicon 与 Intel。" />
+  <meta name="description" content="Flare Pro 原生 macOS 截图与屏幕录制：菜单栏单击截图，独立录制菜单，标注 OCR、钉图历史。Universal，支持 Apple Silicon 与 Intel。" />
   <meta property="og:title" content="Flare Pro — 一拍即得" />
-  <meta property="og:description" content="原生 macOS 截图与录屏工具。快截、稳录、顺手标注。" />
-  <meta property="og:type" content="website" />
-  <meta property="og:url" content="https://linux503.github.io/Flare/" />
+  <meta property="og:description" content="快截、稳录、顺手标注。为 macOS 打造的原生屏幕工具。" />
   <meta property="og:image" content="https://linux503.github.io/Flare/hero-poster.jpg" />
-  <meta name="twitter:card" content="summary_large_image" />
+  <meta property="og:url" content="https://linux503.github.io/Flare/" />
   <link rel="icon" href="./favicon.ico" sizes="any" />
   <link rel="icon" type="image/png" href="./favicon-32.png" sizes="32x32" />
   <link rel="apple-touch-icon" href="./apple-touch-icon.png" />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@500;600;700;800&family=Noto+Sans+SC:wght@400;500;600;700&display=swap" rel="stylesheet" />
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@500;600;700;800&family=Noto+Sans+SC:wght@400;500;600;700&display=swap" rel="stylesheet" />
   <link rel="stylesheet" href="styles.css" />
 </head>
 <body>
-  <div class="bg" aria-hidden="true"></div>
-
-  <header class="nav">
-    <a class="logo" href="#">
+  <header class="site-header">
+    <a class="brand" href="#">
       <img src="logo.png" width="28" height="28" alt="" />
-      Flare Pro
+      <span>Flare Pro</span>
     </a>
-    <div class="nav-right">
-      <a href="#features">功能</a>
-      <a href="#guide">上手</a>
-      <a href="#download" class="nav-cta">下载</a>
-    </div>
+    <nav>
+      <a href="#shot">截图</a>
+      <a href="#rec">录屏</a>
+      <a href="#start">上手</a>
+      <a class="pill" href="#get">下载</a>
+    </nav>
   </header>
 
   <main>
-    <!-- 首屏 -->
     <section class="hero">
-      <div class="hero-text">
-        <p class="logo-mark">Flare Pro</p>
+      <div class="hero-inner">
+        <p class="brand-xl">Flare Pro</p>
         <h1>一拍即得</h1>
-        <p class="lead">原生 macOS 截图与屏幕录制。<br />单击菜单栏就能截，打开录制菜单就能录，标注和 OCR 都在顺手的位置。</p>
-        <div class="actions">
-          <a class="btn btn-main" href="#download">免费下载</a>
-          <a class="btn btn-line" href="https://github.com/linux503/Flare" target="_blank" rel="noopener">GitHub</a>
+        <p class="subtitle">原生 macOS 截图与屏幕录制。菜单栏单击就能截，独立菜单就能录，标注和 OCR 都在顺手的位置。</p>
+        <div class="hero-actions">
+          <a class="btn primary" href="#get">免费下载</a>
+          <a class="btn soft" href="https://github.com/linux503/Flare" target="_blank" rel="noopener">查看源码</a>
         </div>
-        <ul class="badges">
-          <li>macOS 14+</li>
-          <li>Universal</li>
-          <li>截图 + 录屏</li>
+      </div>
+
+      <div class="showcase" data-carousel>
+        <div class="stage">
+          <img class="on" src="poster-capture.jpg?v=8" alt="截图" data-i="0" width="1536" height="1024" />
+          <img src="poster-record.jpg?v=8" alt="录屏" data-i="1" width="1536" height="1024" />
+          <img src="poster-annotate.jpg?v=8" alt="标注" data-i="2" width="1536" height="1024" />
+        </div>
+        <div class="switcher">
+          <button type="button" class="on" data-goto="0"><b>截图</b><span>框选 · 窗口 · 全屏</span></button>
+          <button type="button" data-goto="1"><b>录屏</b><span>暂停 · 倒计时 · MOV</span></button>
+          <button type="button" data-goto="2"><b>标注</b><span>箭头 · 高亮 · OCR</span></button>
+        </div>
+      </div>
+    </section>
+
+    <section class="strip">
+      <article>
+        <h2>截得快</h2>
+        <p>单击菜单栏进入区域截图，确认后直接编辑、复制、保存或钉图。</p>
+      </article>
+      <article>
+        <h2>录得清</h2>
+        <p>独立录制菜单与面板，支持暂停、倒计时、排除本应用窗口。</p>
+      </article>
+      <article>
+        <h2>改得完</h2>
+        <p>标注、OCR、历史串在同一路径，截完就能说明问题。</p>
+      </article>
+    </section>
+
+    <section id="shot" class="chapter">
+      <div class="chapter-text">
+        <p class="tag green">Screenshot</p>
+        <h2>截图，为速度而生</h2>
+        <p>区域、窗口、全屏、延时。选区带放大镜与尺寸参考；空格或回车确认后，工具栏可直达下一步。</p>
+        <ul>
+          <li>默认快捷键 <code>⌘⌥5</code></li>
+          <li>右键菜单栏切换更多截图方式</li>
+          <li>历史记录随时回看最近截图</li>
         </ul>
       </div>
+      <figure><img src="poster-capture.jpg?v=8" alt="截图展示" loading="lazy" width="1536" height="1024" /></figure>
+    </section>
 
-      <div class="hero-visual" data-carousel>
-        <div class="viewport">
-          <img class="frame is-on" src="poster-capture.jpg?v=7" alt="截图选区" data-slide="0" width="1536" height="1024" />
-          <img class="frame" src="poster-record.jpg?v=7" alt="屏幕录制" data-slide="1" width="1536" height="1024" />
-          <img class="frame" src="poster-annotate.jpg?v=7" alt="标注编辑" data-slide="2" width="1536" height="1024" />
-        </div>
-        <div class="rail">
-          <button type="button" class="tab is-on" data-goto="0">
-            <strong>截图</strong>
-            <span>框选、窗口、全屏、延时</span>
-          </button>
-          <button type="button" class="tab" data-goto="1">
-            <strong>录屏</strong>
-            <span>暂停、倒计时、导出 MOV</span>
-          </button>
-          <button type="button" class="tab" data-goto="2">
-            <strong>标注</strong>
-            <span>箭头、高亮、OCR 识字</span>
-          </button>
-        </div>
+    <section id="rec" class="chapter flip">
+      <div class="chapter-text">
+        <p class="tag rose">Recording</p>
+        <h2>录屏，单独一整套</h2>
+        <p>顶部「录制」菜单、主面板录制页、状态栏红点。开始、暂停、停止、丢弃路径清楚，导出 H.264 MOV。</p>
+        <ul>
+          <li>快捷键 <code>⌘⌥R</code> 开始或停止</li>
+          <li>倒计时、帧率、光标、排除 Flare 窗口</li>
+          <li>悬浮计时条，录制中可一键停止</li>
+        </ul>
+      </div>
+      <figure><img src="poster-record.jpg?v=8" alt="录屏展示" loading="lazy" width="1536" height="1024" /></figure>
+    </section>
+
+    <section class="chapter">
+      <div class="chapter-text">
+        <p class="tag gold">Annotate</p>
+        <h2>标注与识字</h2>
+        <p>箭头、高亮、马赛克、序号用于快速说明；OCR 可导出文本。需要对照时，把图钉在桌面即可。</p>
+        <ul>
+          <li>编辑器内完成常用标注</li>
+          <li>OCR 导出 TXT</li>
+          <li>钉图 + 历史回看</li>
+        </ul>
+      </div>
+      <figure><img src="poster-annotate.jpg?v=8" alt="标注展示" loading="lazy" width="1536" height="1024" /></figure>
+    </section>
+
+    <section id="start" class="start">
+      <div class="start-head">
+        <p class="tag">上手</p>
+        <h2>三步开始用</h2>
+      </div>
+      <ol class="steps">
+        <li>
+          <span>1</span>
+          <h3>授权</h3>
+          <p>系统设置 → 隐私与安全性 → 屏幕与系统音频录制，打开 Flare Pro，然后完全退出再打开。</p>
+        </li>
+        <li>
+          <span>2</span>
+          <h3>截图</h3>
+          <p>单击菜单栏图标进入区域截图；右键可打开完整功能菜单。</p>
+        </li>
+        <li>
+          <span>3</span>
+          <h3>录屏</h3>
+          <p>用「录制」菜单或 <code>⌘⌥R</code>。需要时再进主面板调整录制选项。</p>
+        </li>
+      </ol>
+      <div class="shortcuts">
+        <div><kbd>菜单栏单击</kbd><span>区域截图</span></div>
+        <div><kbd>⌘⌥5</kbd><span>区域截图</span></div>
+        <div><kbd>⌘⌥R</kbd><span>录屏开关</span></div>
+        <div><kbd>⌘O</kbd><span>主面板</span></div>
       </div>
     </section>
 
-    <!-- 价值主张 -->
-    <section class="promise">
-      <div class="promise-item">
-        <h2>截得快</h2>
-        <p>菜单栏单击即进入区域截图，确认后直接编辑、复制、保存或钉图。</p>
-      </div>
-      <div class="promise-item">
-        <h2>录得稳</h2>
-        <p>独立「录制」菜单与面板，支持暂停、倒计时、排除本应用窗口。</p>
-      </div>
-      <div class="promise-item">
-        <h2>改得顺</h2>
-        <p>标注、OCR、历史记录串在同一条路径里，不必换工具。</p>
-      </div>
-    </section>
-
-    <!-- 功能详解 -->
-    <section id="features" class="features">
-      <header class="block-title">
-        <p class="kicker">功能</p>
-        <h2>截图是一半，录屏是另一半</h2>
-        <p>Flare Pro 把高频屏幕捕获收进一个 App：截图负责「瞬间」，录屏负责「过程」。</p>
-      </header>
-
-      <div class="feature-row">
-        <div class="feature-copy">
-          <p class="kicker kicker-azure">Screenshot</p>
-          <h3>截图工作区</h3>
-          <p>区域、窗口、全屏、延时四种方式。选区带放大镜与尺寸参考；确认后工具栏可直达编辑、复制、保存、OCR 或钉在桌面。</p>
-          <ul>
-            <li>默认快捷键 ⌘⌥5 区域截图</li>
-            <li>右键菜单栏可进入更多截图方式</li>
-            <li>历史记录保留最近截图，随时回看</li>
-          </ul>
-        </div>
-        <figure class="feature-shot">
-          <img src="poster-capture.jpg?v=7" alt="截图功能" loading="lazy" width="1536" height="1024" />
-        </figure>
-      </div>
-
-      <div class="feature-row reverse">
-        <div class="feature-copy">
-          <p class="kicker kicker-rose">Recording</p>
-          <h3>录屏工作区</h3>
-          <p>录制不再塞进截图菜单。顶部独立「录制」、主面板录制页、状态栏红点提示，开始 / 暂停 / 停止 / 丢弃路径清楚，导出 H.264 MOV。</p>
-          <ul>
-            <li>快捷键 ⌘⌥R 开始或停止</li>
-            <li>倒计时、帧率、光标、排除 Flare 窗口</li>
-            <li>录制中悬浮计时，状态栏可一键停止</li>
-          </ul>
-        </div>
-        <figure class="feature-shot">
-          <img src="poster-record.jpg?v=7" alt="录屏功能" loading="lazy" width="1536" height="1024" />
-        </figure>
-      </div>
-
-      <div class="feature-row">
-        <div class="feature-copy">
-          <p class="kicker kicker-amber">Annotate</p>
-          <h3>标注与识字</h3>
-          <p>箭头、高亮、马赛克、序号等工具用于快速说明问题；OCR 可把图中文字导出为文本。截完就能改完，不用另开编辑器。</p>
-          <ul>
-            <li>编辑器内完成常用标注</li>
-            <li>OCR 导出 TXT</li>
-            <li>钉图方便对照写文档</li>
-          </ul>
-        </div>
-        <figure class="feature-shot">
-          <img src="poster-annotate.jpg?v=7" alt="标注功能" loading="lazy" width="1536" height="1024" />
-        </figure>
-      </div>
-    </section>
-
-    <!-- 上手 -->
-    <section id="guide" class="guide">
-      <header class="block-title">
-        <p class="kicker">上手</p>
-        <h2>三分钟就会用</h2>
-      </header>
-      <div class="guide-grid">
-        <article>
-          <span>01</span>
-          <h3>授权屏幕录制</h3>
-          <p>系统设置 → 隐私与安全性 → 屏幕与系统音频录制，打开 Flare Pro，然后完全退出再启动。</p>
-        </article>
-        <article>
-          <span>02</span>
-          <h3>单击菜单栏截图</h3>
-          <p>左键单击图标进入区域截图；右键打开完整菜单，可切到录屏、历史与设置。</p>
-        </article>
-        <article>
-          <span>03</span>
-          <h3>需要时再录屏</h3>
-          <p>用顶部「录制」菜单或 ⌘⌥R 开始。录完保存到录屏文件夹，或在录制面板调整选项。</p>
-        </article>
-      </div>
-
-      <div class="keys">
-        <div><kbd>菜单栏单击</kbd><em>区域截图</em></div>
-        <div><kbd>⌘⌥5</kbd><em>区域截图</em></div>
-        <div><kbd>⌘⌥R</kbd><em>录屏开关</em></div>
-        <div><kbd>⌘O</kbd><em>主面板</em></div>
-        <div><kbd>空格 / 回车</kbd><em>确认选区</em></div>
-      </div>
-    </section>
-
-    <!-- 下载 -->
-    <section id="download" class="download">
-      <div class="download-box">
+    <section id="get" class="get">
+      <div class="get-card">
         <div>
-          <p class="kicker">Download</p>
+          <p class="tag">Download</p>
           <h2>下载 Flare Pro</h2>
-          <p class="lead-sm">免费使用。一份 Universal 安装包同时支持 Apple Silicon 与 Intel。需要 macOS 14 或更高版本。</p>
-          <div class="meta" id="meta-row">
+          <p>免费使用。Universal Binary，同时支持 Apple Silicon 与 Intel。需要 macOS 14 或更高。</p>
+          <div class="chips">
             <span id="version-chip">v1.2.3</span>
-            <span>Universal Binary</span>
+            <span>Universal</span>
             <span>开源可构建</span>
           </div>
-          <div class="actions">
-            <a class="btn btn-main" id="download-btn" href="https://github.com/linux503/Flare/releases/latest">下载最新版</a>
-            <a class="btn btn-line" href="https://github.com/linux503/Flare/releases" target="_blank" rel="noopener">全部版本</a>
+          <div class="hero-actions">
+            <a class="btn primary" id="download-btn" href="https://github.com/linux503/Flare/releases/latest">下载最新版</a>
+            <a class="btn soft" href="https://github.com/linux503/Flare/releases" target="_blank" rel="noopener">全部版本</a>
           </div>
         </div>
-        <div class="download-tips">
+        <aside>
           <h3>安装建议</h3>
           <ol>
-            <li>安装到 <code>/Applications/Flare Pro.app</code></li>
-            <li>授予屏幕录制权限后，务必完全退出再打开</li>
-            <li>若权限列表出现灰色旧条目，先删除再重新勾选</li>
+            <li>放到 <code>/Applications/Flare Pro.app</code></li>
+            <li>授权后务必完全退出再启动</li>
+            <li>灰色旧权限条目请先删除再勾选</li>
           </ol>
-          <p>源码与更新说明见 GitHub；应用内也可检查更新。</p>
-        </div>
+        </aside>
       </div>
     </section>
   </main>
 
-  <footer class="foot">
-    <div class="foot-brand">
+  <footer class="site-footer">
+    <div class="brand">
       <img src="logo.png" width="22" height="22" alt="" />
       <div>
         <strong>Flare Pro</strong>
-        <span>原生 macOS 截图与屏幕录制</span>
+        <em>原生 macOS 截图与屏幕录制</em>
       </div>
     </div>
-    <div class="foot-links">
+    <div class="links">
       <a href="https://github.com/linux503/Flare">GitHub</a>
       <a href="https://github.com/linux503/Flare/releases">Releases</a>
       <a href="version.json">version.json</a>

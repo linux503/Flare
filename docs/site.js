@@ -7,25 +7,23 @@
     .then((data) => {
       if (!data || !data.version) return;
       if (versionLabel) versionLabel.textContent = `v${data.version}`;
-      if (downloadBtn && data.downloadURL) {
-        downloadBtn.href = data.downloadURL;
-      }
+      if (downloadBtn && data.downloadURL) downloadBtn.href = data.downloadURL;
     })
     .catch(() => {});
 
   const root = document.querySelector("[data-carousel]");
   if (!root) return;
 
-  const frames = Array.from(root.querySelectorAll(".frame"));
-  const tabs = Array.from(root.querySelectorAll(".tab"));
+  const frames = Array.from(root.querySelectorAll(".stage img"));
+  const tabs = Array.from(root.querySelectorAll(".switcher button"));
   let index = 0;
   let timer = 0;
   const reduce = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
 
   const show = (i) => {
     index = (i + frames.length) % frames.length;
-    frames.forEach((el, n) => el.classList.toggle("is-on", n === index));
-    tabs.forEach((el, n) => el.classList.toggle("is-on", n === index));
+    frames.forEach((el, n) => el.classList.toggle("on", n === index));
+    tabs.forEach((el, n) => el.classList.toggle("on", n === index));
   };
 
   const stop = () => {
@@ -36,7 +34,7 @@
   const start = () => {
     if (reduce || frames.length < 2) return;
     stop();
-    timer = window.setInterval(() => show(index + 1), 5000);
+    timer = window.setInterval(() => show(index + 1), 4800);
   };
 
   tabs.forEach((tab) => {
