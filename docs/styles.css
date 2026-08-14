@@ -479,6 +479,7 @@ body {
 @media (max-width: 640px) {
   .switcher { grid-template-columns: 1fr; }
   .site-header nav a:not(.pill) { display: none; }
+  .site-header .more-apps { display: inline-flex; }
   .shortcuts { grid-template-columns: 1fr; }
 }
 

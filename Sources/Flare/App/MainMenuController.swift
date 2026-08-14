@@ -14,15 +14,16 @@ final class MainMenuController: NSObject {
 
         let appMenuItem = NSMenuItem()
         let appMenu = NSMenu()
-        appMenu.addItem(item("关于 \(FlareBrand.name)", #selector(showAbout), key: ""))
+        appMenu.addItem(item("关于 \(FlareBrand.name)", #selector(showAbout), key: "", glyph: .about))
         appMenu.addItem(.separator())
-        appMenu.addItem(item("偏好设置…", #selector(showSettings), key: ","))
+        appMenu.addItem(item("检查更新…", #selector(checkUpdate), key: "", glyph: .update))
+        appMenu.addItem(item("偏好设置…", #selector(showSettings), key: ",", glyph: .settings))
         appMenu.addItem(.separator())
         appMenu.addItem(item("隐藏 \(FlareBrand.name)", #selector(NSApplication.hide(_:)), key: "h", target: NSApp))
         appMenu.addItem(item("隐藏其他", #selector(NSApplication.hideOtherApplications(_:)), key: "h", modifiers: [.command, .option], target: NSApp))
         appMenu.addItem(item("显示全部", #selector(NSApplication.unhideAllApplications(_:)), key: "", target: NSApp))
         appMenu.addItem(.separator())
-        appMenu.addItem(item("退出 \(FlareBrand.name)", #selector(NSApplication.terminate(_:)), key: "q", target: NSApp))
+        appMenu.addItem(item("退出 \(FlareBrand.name)", #selector(NSApplication.terminate(_:)), key: "q", target: NSApp, glyph: .quit))
         appMenuItem.submenu = appMenu
         main.addItem(appMenuItem)
 
@@ -32,26 +33,51 @@ final class MainMenuController: NSObject {
             m.addItem(hotItem("区域截图", .area, #selector(captureArea)))
             m.addItem(hotItem("窗口截图", .window, #selector(captureWindow)))
             m.addItem(hotItem("全屏截图", .screen, #selector(captureScreen)))
-            m.addItem(hotItem("延时截图（3 秒）", .delay, #selector(captureDelay)))
+            m.addItem(hotItem("延时截图", .delay, #selector(captureDelay)))
             m.addItem(.separator())
-            let recordTitle = ScreenRecorder.shared.isRecording ? "停止录屏" : "屏幕录制"
-            m.addItem(hotItem(recordTitle, .record, #selector(toggleRecord)))
-            m.addItem(.separator())
-            m.addItem(item("打开主面板", #selector(showHome), key: "o", modifiers: [.command]))
+            m.addItem(item("打开主面板", #selector(showHome), key: "o", glyph: .home))
             m.addItem(hotItem("历史记录", .history, #selector(showHistory)))
+            m.addItem(.separator())
+            m.addItem(item("打开截图文件夹", #selector(openSaveFolder), key: "", glyph: .folder))
             return m
         }()
         main.addItem(captureItem)
 
+        let recordItem = NSMenuItem()
+        recordItem.submenu = {
+            let m = NSMenu(title: "录制")
+            let rec = ScreenRecorder.shared
+            if rec.isRecording {
+                if rec.isPaused {
+                    m.addItem(item("继续录屏", #selector(togglePauseRecord), key: "p", glyph: .play))
+                } else {
+                    m.addItem(item("暂停录屏", #selector(togglePauseRecord), key: "p", glyph: .pause))
+                }
+                m.addItem(hotItem("停止并保存", .record, #selector(stopRecord), glyph: .stop))
+                m.addItem(item("丢弃录屏", #selector(discardRecord), key: "", glyph: .trash))
+            } else if rec.isCountingDown {
+                m.addItem(item("取消倒计时", #selector(stopRecord), key: "", glyph: .close))
+            } else {
+                m.addItem(hotItem("开始录屏", .record, #selector(startRecord)))
+                m.addItem(item("立即开始", #selector(startRecordNow), key: "", glyph: .play))
+            }
+            m.addItem(.separator())
+            m.addItem(item("打开录制面板", #selector(showRecord), key: "r", modifiers: [.command, .shift], glyph: .record))
+            m.addItem(item("打开录屏文件夹", #selector(openRecordFolder), key: "", glyph: .folder))
+            return m
+        }()
+        main.addItem(recordItem)
+
         let newItem = NSMenuItem()
         newItem.submenu = {
             let m = NSMenu(title: "新建")
-            m.addItem(item("文本 TXT…", #selector(createTXT), key: "n", modifiers: [.command, .shift]))
-            m.addItem(item("Word 文档…", #selector(createWord), key: ""))
-            m.addItem(item("PPT 演示文稿…", #selector(createPPT), key: ""))
-            m.addItem(item("表格 Excel…", #selector(createSpreadsheet), key: ""))
+            m.addItem(item("文本 TXT…", #selector(createTXT), key: "n", modifiers: [.command, .shift], glyph: .txt))
+            m.addItem(item("Word 文档…", #selector(createWord), key: "", glyph: .word))
+            m.addItem(item("PPT 演示文稿…", #selector(createPPT), key: "", glyph: .powerpoint))
+            m.addItem(item("表格 Excel…", #selector(createSpreadsheet), key: "", glyph: .spreadsheet))
             m.addItem(.separator())
-            m.addItem(item("打开新建面板", #selector(showDocuments), key: "d", modifiers: [.command, .shift]))
+            m.addItem(item("打开新建面板", #selector(showDocuments), key: "d", modifiers: [.command, .shift], glyph: .documents))
+            m.addItem(item("打开文档文件夹", #selector(openDocumentFolder), key: "", glyph: .folder))
             return m
         }()
         main.addItem(newItem)
@@ -67,14 +93,11 @@ final class MainMenuController: NSObject {
 
         let helpItem = NSMenuItem()
         let helpMenu = NSMenu(title: "帮助")
-        helpMenu.addItem(item("屏幕录制权限…", #selector(openPermission), key: ""))
-        helpMenu.addItem(item("检查更新…", #selector(checkUpdate), key: ""))
+        helpMenu.addItem(item("屏幕录制权限…", #selector(openPermission), key: "", glyph: .permission))
+        helpMenu.addItem(item("检查更新…", #selector(checkUpdate), key: "", glyph: .update))
         helpMenu.addItem(.separator())
-        helpMenu.addItem(item("官方网站", #selector(openWebsite), key: ""))
-        helpMenu.addItem(item("GitHub 仓库", #selector(openGitHub), key: ""))
-        helpMenu.addItem(.separator())
-        helpMenu.addItem(item("打开截图文件夹", #selector(openSaveFolder), key: ""))
-        helpMenu.addItem(item("打开文档文件夹", #selector(openDocumentFolder), key: ""))
+        helpMenu.addItem(item("官方网站", #selector(openWebsite), key: "", glyph: .link))
+        helpMenu.addItem(item("GitHub 仓库", #selector(openGitHub), key: "", glyph: .link))
         helpItem.submenu = helpMenu
         main.addItem(helpItem)
 
@@ -82,12 +105,13 @@ final class MainMenuController: NSObject {
         main.items.first?.submenu?.title = FlareBrand.name
     }
 
-    private func hotItem(_ title: String, _ action: HotKeyAction, _ selector: Selector) -> NSMenuItem {
-        let sc = AppSettings.shared.shortcut(for: action)
-        let i = NSMenuItem(title: "\(title)    \(sc.displayString)", action: selector, keyEquivalent: sc.menuKeyEquivalent)
-        i.keyEquivalentModifierMask = sc.menuKeyEquivalent.isEmpty ? [] : sc.nsModifierFlags
-        i.target = self
-        return i
+    private func hotItem(
+        _ title: String,
+        _ action: HotKeyAction,
+        _ selector: Selector,
+        glyph: SnapGlyph? = nil
+    ) -> NSMenuItem {
+        FlareMenu.hotItem(title, actionKey: action, glyph: glyph, target: self, action: selector)
     }
 
     private func item(
@@ -95,12 +119,17 @@ final class MainMenuController: NSObject {
         _ action: Selector,
         key: String,
         modifiers: NSEvent.ModifierFlags = [.command],
-        target: AnyObject? = nil
+        target: AnyObject? = nil,
+        glyph: SnapGlyph? = nil
     ) -> NSMenuItem {
-        let i = NSMenuItem(title: title, action: action, keyEquivalent: key)
-        i.keyEquivalentModifierMask = key.isEmpty ? [] : modifiers
-        i.target = target ?? self
-        return i
+        FlareMenu.item(
+            title,
+            glyph: glyph,
+            key: key,
+            modifiers: modifiers,
+            target: target ?? self,
+            action: action
+        )
     }
 
     @objc private func showAbout() { HomeWindowController.shared.showAbout() }
@@ -112,7 +141,13 @@ final class MainMenuController: NSObject {
     @objc private func captureWindow() { CaptureCoordinator.shared.startWindowCapture() }
     @objc private func captureScreen() { CaptureCoordinator.shared.startFullScreenCapture() }
     @objc private func captureDelay() { CaptureCoordinator.shared.startDelayedCapture(seconds: 3) }
-    @objc private func toggleRecord() { ScreenRecorder.shared.toggle() }
+    @objc private func startRecord() { ScreenRecorder.shared.start() }
+    @objc private func startRecordNow() { ScreenRecorder.shared.start(countdown: false) }
+    @objc private func stopRecord() { ScreenRecorder.shared.stop() }
+    @objc private func discardRecord() { ScreenRecorder.shared.cancelAndDiscard() }
+    @objc private func togglePauseRecord() { ScreenRecorder.shared.togglePause() }
+    @objc private func showRecord() { HomeWindowController.shared.showRecord() }
+    @objc private func openRecordFolder() { ScreenRecorder.shared.openRecordingsFolder() }
     @objc private func openPermission() {
         Permissions.openScreenRecordingSettings()
     }

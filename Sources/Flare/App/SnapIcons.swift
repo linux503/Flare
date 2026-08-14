@@ -9,6 +9,9 @@ enum SnapGlyph: String, CaseIterable {
     case screen
     case delay
     case record
+    case pause
+    case play
+    case stop
     case history
     case settings
     case documents
@@ -37,6 +40,9 @@ enum SnapGlyph: String, CaseIterable {
     case undo
     case redo
     case stroke
+    case link
+    case update
+    case about
     // 标注工具
     case toolSelect
     case toolPen
@@ -59,6 +65,9 @@ enum SnapGlyph: String, CaseIterable {
         case .screen: return "display"
         case .delay: return "timer"
         case .record: return "record.circle"
+        case .pause: return "pause.circle"
+        case .play: return "play.circle"
+        case .stop: return "stop.circle"
         case .history: return "clock.arrow.circlepath"
         case .settings: return "gearshape"
         case .documents: return "doc.badge.plus"
@@ -86,6 +95,9 @@ enum SnapGlyph: String, CaseIterable {
         case .undo: return "arrow.uturn.backward"
         case .redo: return "arrow.uturn.forward"
         case .stroke: return "pencil.tip"
+        case .link: return "link"
+        case .update: return "arrow.down.circle"
+        case .about: return "info.circle"
         case .toolSelect: return "arrow.up.left.and.arrow.down.right"
         case .toolPen: return "pencil.tip"
         case .toolHighlight: return "highlighter"
@@ -217,6 +229,21 @@ extension FlareBrand {
             }
         }
         return menuSymbol(.brand, pointSize: 14)
+    }
+
+    /// 录屏中：红色录制点（非 template，保证菜单栏可见）
+    static func statusBarRecordingSymbol() -> NSImage? {
+        let size = NSSize(width: 18, height: 18)
+        let image = NSImage(size: size)
+        image.lockFocus()
+        NSColor.clear.setFill()
+        NSBezierPath(rect: NSRect(origin: .zero, size: size)).fill()
+        NSColor.systemRed.setFill()
+        let inset: CGFloat = 4
+        NSBezierPath(ovalIn: NSRect(x: inset, y: inset, width: size.width - inset * 2, height: size.height - inset * 2)).fill()
+        image.unlockFocus()
+        image.isTemplate = false
+        return image
     }
 
     private static func prepareStatusBarImage(_ source: NSImage) -> NSImage {

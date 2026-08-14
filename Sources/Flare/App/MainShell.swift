@@ -2,11 +2,12 @@ import AppKit
 import SwiftUI
 
 enum MainTab: String, CaseIterable, Identifiable {
-    case home, documents, history, settings
+    case home, record, documents, history, settings
     var id: String { rawValue }
     var title: String {
         switch self {
         case .home: return "截图"
+        case .record: return "录制"
         case .documents: return "新建"
         case .history: return "历史"
         case .settings: return "设置"
@@ -15,6 +16,7 @@ enum MainTab: String, CaseIterable, Identifiable {
     var glyph: SnapGlyph {
         switch self {
         case .home: return .area
+        case .record: return .record
         case .documents: return .documents
         case .history: return .history
         case .settings: return .settings
@@ -92,6 +94,7 @@ final class HomeWindowController {
     func showSettings() { show(tab: .settings) }
     func showHistory() { show(tab: .history) }
     func showDocuments() { show(tab: .documents) }
+    func showRecord() { show(tab: .record) }
 
     func presentPermissionSheet(preflight: Bool, works: Bool) {
         show(tab: .home)
@@ -145,6 +148,10 @@ struct MainShellView: View {
                         )
                         .flareTabTransition()
                         .id(MainTab.home)
+                    case .record:
+                        RecordPane()
+                            .flareTabTransition()
+                            .id(MainTab.record)
                     case .documents:
                         DocumentsPane()
                             .flareTabTransition()

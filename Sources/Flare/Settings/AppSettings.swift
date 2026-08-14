@@ -88,6 +88,54 @@ final class AppSettings {
         }
     }
 
+    // MARK: - Recording
+
+    var recordDirectory: URL {
+        get {
+            if let path = defaults.string(forKey: "recordDirectory"), !path.isEmpty {
+                return URL(fileURLWithPath: path)
+            }
+            return FileManager.default.urls(for: .moviesDirectory, in: .userDomainMask)[0]
+                .appendingPathComponent("Flare", isDirectory: true)
+        }
+        set {
+            defaults.set(newValue.path, forKey: "recordDirectory")
+            notify()
+        }
+    }
+
+    var recordShowCursor: Bool {
+        get { defaults.object(forKey: "recordShowCursor") as? Bool ?? true }
+        set { defaults.set(newValue, forKey: "recordShowCursor"); notify() }
+    }
+
+    var recordExcludeFlare: Bool {
+        get { defaults.object(forKey: "recordExcludeFlare") as? Bool ?? true }
+        set { defaults.set(newValue, forKey: "recordExcludeFlare"); notify() }
+    }
+
+    var recordHideFlareWindows: Bool {
+        get { defaults.object(forKey: "recordHideFlareWindows") as? Bool ?? true }
+        set { defaults.set(newValue, forKey: "recordHideFlareWindows"); notify() }
+    }
+
+    /// 开始录屏前倒计时秒数；0 = 立即开始
+    var recordCountdownSeconds: Int {
+        get {
+            let v = defaults.object(forKey: "recordCountdownSeconds") as? Int ?? 3
+            return min(10, max(0, v))
+        }
+        set { defaults.set(min(10, max(0, newValue)), forKey: "recordCountdownSeconds"); notify() }
+    }
+
+    var recordFPS: Int {
+        get {
+            let v = defaults.object(forKey: "recordFPS") as? Int ?? 30
+            return [15, 24, 30, 60].contains(v) ? v : 30
+        }
+        set { defaults.set(newValue, forKey: "recordFPS"); notify() }
+    }
+
     // MARK: - Hotkeys
 
     func shortcut(for action: HotKeyAction) -> HotKeyShortcut {
@@ -231,6 +279,7 @@ final class AppSettings {
         }
         try? FileManager.default.createDirectory(at: saveDirectory, withIntermediateDirectories: true)
         try? FileManager.default.createDirectory(at: documentDirectory, withIntermediateDirectories: true)
+        try? FileManager.default.createDirectory(at: recordDirectory, withIntermediateDirectories: true)
     }
 
     private func notify() {

@@ -7,7 +7,6 @@ struct HomePane: View {
 
     @ObservedObject private var store = HistoryStore.shared
     @ObservedObject private var capture = CaptureCoordinator.shared
-    @ObservedObject private var recorder = ScreenRecorder.shared
     @Environment(\.flareTheme) private var theme
     @State private var permissionOK: Bool? = nil
     @State private var permissionLabel = "检查中"
@@ -128,67 +127,11 @@ struct HomePane: View {
 
     private var secondaryRail: some View {
         let _ = shortcutTick
-        return VStack(spacing: 10) {
-            HStack(spacing: 10) {
-                railItem("窗口", .window, .window) { CaptureCoordinator.shared.startWindowCapture() }
-                railItem("全屏", .screen, .screen) { CaptureCoordinator.shared.startFullScreenCapture() }
-                railItem("延时 3s", .delay, .delay) { CaptureCoordinator.shared.startDelayedCapture(seconds: 3) }
-            }
-            recordRail
+        return HStack(spacing: 10) {
+            railItem("窗口", .window, .window) { CaptureCoordinator.shared.startWindowCapture() }
+            railItem("全屏", .screen, .screen) { CaptureCoordinator.shared.startFullScreenCapture() }
+            railItem("延时 3s", .delay, .delay) { CaptureCoordinator.shared.startDelayedCapture(seconds: 3) }
         }
-    }
-
-    private var recordRail: some View {
-        let recording = recorder.isRecording
-        let title = recording ? "停止录屏 · \(formatElapsed(recorder.elapsedSeconds))" : "屏幕录制"
-        let hint = recording ? "再次点击或 ⌘⌥R 结束" : AppSettings.shared.shortcut(for: .record).displayString
-        return Button {
-            ScreenRecorder.shared.toggle()
-        } label: {
-            HStack(spacing: 11) {
-                SnapIcon(
-                    .record,
-                    size: .title,
-                    opacity: 0.95,
-                    tint: recording ? Color.red : theme.textPrimary
-                )
-                VStack(alignment: .leading, spacing: 3) {
-                    Text(title)
-                        .font(.system(size: 13, weight: .semibold))
-                        .foregroundStyle(theme.textPrimary)
-                    Text(hint)
-                        .font(.system(size: 10, weight: .medium, design: .rounded))
-                        .foregroundStyle(theme.textMuted)
-                }
-                Spacer(minLength: 0)
-                if recording {
-                    Text("停止")
-                        .font(.system(size: 11, weight: .semibold))
-                        .foregroundStyle(theme.inverseText)
-                        .padding(.horizontal, 10)
-                        .padding(.vertical, 5)
-                        .background(Color.red.opacity(0.9))
-                        .clipShape(RoundedRectangle(cornerRadius: 6, style: .continuous))
-                }
-            }
-            .padding(.horizontal, 13)
-            .padding(.vertical, 13)
-            .frame(maxWidth: .infinity, alignment: .leading)
-            .background(
-                RoundedRectangle(cornerRadius: 12, style: .continuous)
-                    .fill(theme.fill)
-                    .overlay(
-                        RoundedRectangle(cornerRadius: 12, style: .continuous)
-                            .strokeBorder(recording ? Color.red.opacity(0.45) : theme.stroke, lineWidth: 1)
-                    )
-            )
-        }
-        .buttonStyle(FlareCardButtonStyle(enabled: true))
-        .disabled(capture.isCapturing)
-    }
-
-    private func formatElapsed(_ seconds: Int) -> String {
-        String(format: "%02d:%02d", seconds / 60, seconds % 60)
     }
 
     private func railItem(_ title: String, _ glyph: SnapGlyph, _ action: HotKeyAction, run: @escaping () -> Void) -> some View {
@@ -228,12 +171,22 @@ struct HomePane: View {
                 Text("更快开始")
                     .font(.system(size: 13, weight: .semibold))
                     .foregroundStyle(theme.textPrimary)
-                Text("菜单栏图标单击 = 区域截图；可在设置中切换黑白主题与窗口透明度。")
+                Text("菜单栏图标单击 = 区域截图；侧栏「录制」可屏幕录制；设置里可切换主题。")
                     .font(.system(size: 11))
                     .foregroundStyle(theme.textMuted)
                     .fixedSize(horizontal: false, vertical: true)
             }
             Spacer(minLength: 8)
+            Button("去录制") {
+                HomeWindowController.shared.showRecord()
+            }
+                .font(.system(size: 11, weight: .semibold))
+                .foregroundStyle(theme.textPrimary)
+                .buttonStyle(.plain)
+                .padding(.horizontal, 10)
+                .padding(.vertical, 5)
+                .background(theme.fillStrong)
+                .clipShape(RoundedRectangle(cornerRadius: 6, style: .continuous))
             Button("设置", action: onOpenSettings)
                 .font(.system(size: 11, weight: .semibold))
                 .foregroundStyle(theme.textPrimary)

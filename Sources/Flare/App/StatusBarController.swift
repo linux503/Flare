@@ -46,13 +46,27 @@ final class StatusBarController: NSObject {
             button.sendAction(on: [.leftMouseUp, .rightMouseUp])
         }
 
-        // 不常驻挂 menu，保证左键可直接截图
         item.menu = nil
         StatusBarController.shared = self
     }
 
     func reloadMenu() {
-        // 菜单按需弹出，无需预挂
+        refreshRecordingAppearance()
+    }
+
+    func refreshRecordingAppearance() {
+        guard let button = item.button else { return }
+        let recording = ScreenRecorder.shared.isRecording || ScreenRecorder.shared.isCountingDown
+        if recording {
+            button.image = FlareBrand.statusBarRecordingSymbol()
+            let t = ScreenRecorder.shared.isPaused
+                ? "录屏已暂停"
+                : (ScreenRecorder.shared.isCountingDown ? "录屏倒计时" : "正在录屏")
+            button.toolTip = "\(FlareBrand.name) — \(t) · 单击停止 · 右键菜单"
+        } else {
+            button.image = FlareBrand.statusBarSymbol()
+            button.toolTip = "\(FlareBrand.name) — 单击截图 · 右键菜单"
+        }
     }
 
     @objc private func statusButtonClicked(_ sender: Any?) {
@@ -62,6 +76,8 @@ final class StatusBarController: NSObject {
         }
         if event.type == .rightMouseUp || event.modifierFlags.contains(.control) {
             popMenu()
+        } else if ScreenRecorder.shared.isRecording || ScreenRecorder.shared.isCountingDown {
+            ScreenRecorder.shared.stop()
         } else {
             onCaptureArea()
         }
@@ -77,118 +93,136 @@ final class StatusBarController: NSObject {
     private func buildMenu() -> NSMenu {
         let menu = NSMenu()
         menu.autoenablesItems = false
+        menu.minimumWidth = 248
 
-        let header = NSMenuItem(title: "\(FlareBrand.name)  ·  \(FlareBrand.tagline)", action: nil, keyEquivalent: "")
-        header.isEnabled = false
-        menu.addItem(header)
-        menu.addItem(.separator())
+        menu.addItem(FlareMenu.brandHeader(subtitle: FlareMenu.recordingSubtitle()))
+        menu.addItem(FlareMenu.separator())
 
-        menu.addItem(makeHot("区域截图", .area, .area, #selector(captureArea)))
-        menu.addItem(makeHot("窗口截图", .window, .window, #selector(captureWindow)))
-        menu.addItem(makeHot("全屏截图", .screen, .screen, #selector(captureScreen)))
-        menu.addItem(makeHot("延时 3 秒", .delay, .delay, #selector(captureDelay)))
-        let recordTitle = ScreenRecorder.shared.isRecording ? "停止录屏" : "屏幕录制"
-        menu.addItem(makeHot(recordTitle, .record, .record, #selector(toggleRecord)))
-        menu.addItem(.separator())
+        menu.addItem(FlareMenu.section("截图"))
+        menu.addItem(hot("区域截图", .area, #selector(captureArea)))
+        menu.addItem(hot("窗口截图", .window, #selector(captureWindow)))
+        menu.addItem(hot("全屏截图", .screen, #selector(captureScreen)))
+        menu.addItem(hot("延时 3 秒", .delay, #selector(captureDelay)))
+        menu.addItem(FlareMenu.separator())
 
-        menu.addItem(make("打开主面板", .home, "o", [.command], #selector(showHome)))
-        menu.addItem(makeHot("历史记录", .history, .history, #selector(showHistory)))
+        menu.addItem(FlareMenu.section("录制"))
+        appendRecordingItems(to: menu)
+        menu.addItem(FlareMenu.separator())
 
-        let recent = Array(HistoryStore.shared.items.prefix(3))
-        if !recent.isEmpty {
-            menu.addItem(.separator())
-            let recentHeader = NSMenuItem(title: "最近截图", action: nil, keyEquivalent: "")
-            recentHeader.isEnabled = false
-            menu.addItem(recentHeader)
-            for (idx, entry) in recent.enumerated() {
-                let mi = NSMenuItem(title: "  \(entry.fileName)", action: #selector(openRecent(_:)), keyEquivalent: "")
-                mi.tag = idx
-                mi.target = self
-                if let thumb = HistoryStore.shared.thumbnail(for: entry) {
-                    let icon = thumb.copy() as? NSImage ?? thumb
-                    icon.size = NSSize(width: 18, height: 18)
-                    mi.image = icon
-                }
-                menu.addItem(mi)
-            }
-        }
+        menu.addItem(FlareMenu.section("面板"))
+        menu.addItem(item("打开主面板", .home, "o", [.command], #selector(showHome)))
+        menu.addItem(hot("历史记录", .history, #selector(showHistory)))
+        menu.addItem(item("录制面板", .record, "r", [.command, .shift], #selector(showRecordPane)))
+        appendRecent(to: menu)
+        menu.addItem(FlareMenu.separator())
 
-        menu.addItem(.separator())
-        let docsHeader = NSMenuItem(title: "新建文档", action: nil, keyEquivalent: "")
-        docsHeader.isEnabled = false
-        menu.addItem(docsHeader)
-        menu.addItem(make("文本 TXT…", .txt, "n", [.command, .shift], #selector(createTXT)))
-        menu.addItem(make("Word 文档…", .word, "", [], #selector(createWord)))
-        menu.addItem(make("PPT 演示文稿…", .powerpoint, "", [], #selector(createPPT)))
-        menu.addItem(make("表格 Excel…", .spreadsheet, "", [], #selector(createSpreadsheet)))
-        menu.addItem(make("打开新建面板", .documents, "d", [.command, .shift], #selector(showDocuments)))
-        menu.addItem(.separator())
-        menu.addItem(make("偏好设置…", .settings, ",", [.command], #selector(showSettings)))
-        menu.addItem(make("退出 \(FlareBrand.name)", .quit, "q", [.command], #selector(quit)))
+        let docs = NSMenuItem(title: "新建文档", action: nil, keyEquivalent: "")
+        docs.image = FlareBrand.menuSymbol(.documents)
+        docs.submenu = documentsSubmenu()
+        menu.addItem(docs)
+        menu.addItem(FlareMenu.separator())
+
+        menu.addItem(item("偏好设置…", .settings, ",", [.command], #selector(showSettings)))
+        menu.addItem(item("退出 \(FlareBrand.name)", .quit, "q", [.command], #selector(quit)))
 
         return menu
     }
 
-    private func makeHot(
-        _ title: String,
-        _ glyph: SnapGlyph,
-        _ actionKey: HotKeyAction,
-        _ action: Selector
-    ) -> NSMenuItem {
-        let sc = AppSettings.shared.shortcut(for: actionKey)
-        let item = NSMenuItem(
-            title: "\(title)    \(sc.displayString)",
-            action: action,
-            keyEquivalent: sc.menuKeyEquivalent
-        )
-        item.keyEquivalentModifierMask = sc.menuKeyEquivalent.isEmpty ? [] : sc.nsModifierFlags
-        item.target = self
-        item.image = FlareBrand.menuSymbol(glyph)
-        item.isEnabled = true
-        return item
+    private func appendRecordingItems(to menu: NSMenu) {
+        let rec = ScreenRecorder.shared
+        if rec.isRecording {
+            menu.addItem(item(
+                rec.isPaused ? "继续录屏" : "暂停录屏",
+                rec.isPaused ? .play : .pause,
+                "p", [.command],
+                #selector(togglePauseRecord)
+            ))
+            menu.addItem(hot("停止并保存", .record, #selector(stopRecord), glyph: .stop))
+            menu.addItem(item("丢弃录屏", .trash, "", [], #selector(discardRecord)))
+        } else if rec.isCountingDown {
+            menu.addItem(item("取消倒计时", .close, "", [], #selector(stopRecord)))
+        } else {
+            menu.addItem(hot("开始录屏", .record, #selector(startRecord)))
+            menu.addItem(item("立即开始", .play, "", [], #selector(startRecordNow)))
+        }
+        menu.addItem(item("打开录屏文件夹", .folder, "", [], #selector(openRecordFolder)))
     }
 
-    private func make(
+    private func appendRecent(to menu: NSMenu) {
+        let recent = Array(HistoryStore.shared.items.prefix(4))
+        guard !recent.isEmpty else { return }
+        menu.addItem(FlareMenu.separator())
+        menu.addItem(FlareMenu.section("最近"))
+        for (idx, entry) in recent.enumerated() {
+            let title = entry.fileName
+            let mi = NSMenuItem(title: title, action: #selector(openRecent(_:)), keyEquivalent: "")
+            mi.tag = idx
+            mi.target = self
+            mi.isEnabled = true
+            if let thumb = HistoryStore.shared.thumbnail(for: entry) {
+                mi.image = FlareMenu.recentThumbnail(thumb)
+            } else {
+                mi.image = FlareBrand.menuSymbol(.history)
+            }
+            menu.addItem(mi)
+        }
+    }
+
+    private func documentsSubmenu() -> NSMenu {
+        let m = NSMenu(title: "新建文档")
+        m.autoenablesItems = false
+        m.addItem(item("文本 TXT…", .txt, "n", [.command, .shift], #selector(createTXT)))
+        m.addItem(item("Word 文档…", .word, "", [], #selector(createWord)))
+        m.addItem(item("PPT 演示文稿…", .powerpoint, "", [], #selector(createPPT)))
+        m.addItem(item("表格 Excel…", .spreadsheet, "", [], #selector(createSpreadsheet)))
+        m.addItem(FlareMenu.separator())
+        m.addItem(item("打开新建面板", .documents, "d", [.command, .shift], #selector(showDocuments)))
+        return m
+    }
+
+    private func hot(
+        _ title: String,
+        _ actionKey: HotKeyAction,
+        _ action: Selector,
+        glyph: SnapGlyph? = nil
+    ) -> NSMenuItem {
+        FlareMenu.hotItem(title, actionKey: actionKey, glyph: glyph, target: self, action: action)
+    }
+
+    private func item(
         _ title: String,
         _ glyph: SnapGlyph,
         _ key: String,
         _ modifiers: NSEvent.ModifierFlags,
         _ action: Selector
     ) -> NSMenuItem {
-        let item = NSMenuItem(title: title, action: action, keyEquivalent: key)
-        item.keyEquivalentModifierMask = key.isEmpty ? [] : modifiers
-        item.target = self
-        item.image = FlareBrand.menuSymbol(glyph)
-        item.isEnabled = true
-        return item
+        FlareMenu.item(title, glyph: glyph, key: key, modifiers: modifiers, target: self, action: action)
     }
 
     @objc private func captureArea() { onCaptureArea() }
     @objc private func captureWindow() { onCaptureWindow() }
     @objc private func captureScreen() { onCaptureScreen() }
     @objc private func captureDelay() { onCaptureDelay() }
-    @objc private func toggleRecord() { ScreenRecorder.shared.toggle() }
+    @objc private func startRecord() { ScreenRecorder.shared.start() }
+    @objc private func startRecordNow() { ScreenRecorder.shared.start(countdown: false) }
+    @objc private func stopRecord() { ScreenRecorder.shared.stop() }
+    @objc private func discardRecord() { ScreenRecorder.shared.cancelAndDiscard() }
+    @objc private func togglePauseRecord() { ScreenRecorder.shared.togglePause() }
+    @objc private func showRecordPane() { HomeWindowController.shared.showRecord() }
+    @objc private func openRecordFolder() { ScreenRecorder.shared.openRecordingsFolder() }
     @objc private func showHistory() { onHistory() }
     @objc private func showSettings() { onSettings() }
     @objc private func showHome() { onHome() }
     @objc private func showDocuments() { onDocuments() }
     @objc private func quit() { onQuit() }
 
-    @objc private func createTXT() {
-        DocumentService.createAndReveal(.txt, askWhere: true)
-    }
-    @objc private func createWord() {
-        DocumentService.createAndReveal(.word, askWhere: true)
-    }
-    @objc private func createPPT() {
-        DocumentService.createAndReveal(.powerpoint, askWhere: true)
-    }
-    @objc private func createSpreadsheet() {
-        DocumentService.createAndReveal(.spreadsheet, askWhere: true)
-    }
+    @objc private func createTXT() { DocumentService.createAndReveal(.txt, askWhere: true) }
+    @objc private func createWord() { DocumentService.createAndReveal(.word, askWhere: true) }
+    @objc private func createPPT() { DocumentService.createAndReveal(.powerpoint, askWhere: true) }
+    @objc private func createSpreadsheet() { DocumentService.createAndReveal(.spreadsheet, askWhere: true) }
 
     @objc private func openRecent(_ sender: NSMenuItem) {
-        let items = Array(HistoryStore.shared.items.prefix(3))
+        let items = Array(HistoryStore.shared.items.prefix(4))
         guard items.indices.contains(sender.tag),
               let image = HistoryStore.shared.image(for: items[sender.tag]) else { return }
         EditorWindowController.shared.present(image: image)

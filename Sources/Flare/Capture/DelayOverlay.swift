@@ -153,6 +153,11 @@ final class DelayOverlayController {
         cancel?()
     }
 
+    /// 仅关闭倒计时 UI，不触发 onCancel（由外部自行收尾）
+    func cancelExternal() {
+        cleanup(keepCallbacks: false)
+    }
+
     private func cleanup(keepCallbacks: Bool) {
         timer?.invalidate()
         timer = nil
