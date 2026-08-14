@@ -12,112 +12,143 @@
   <link rel="icon" href="logo.png" />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link href="https://fonts.googleapis.com/css2?family=Instrument+Sans:ital,wght@0,400;0,500;0,600;0,700;1,400&family=Instrument+Serif:ital@0;1&display=swap" rel="stylesheet" />
+  <link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,600;12..96,700;12..96,800&family=Noto+Sans+SC:wght@400;500;600&display=swap" rel="stylesheet" />
   <link rel="stylesheet" href="styles.css" />
 </head>
 <body>
-  <div class="atmosphere" aria-hidden="true">
-    <div class="mesh"></div>
-    <div class="grain"></div>
+  <div class="fx" aria-hidden="true">
+    <div class="fx-veil"></div>
+    <div class="fx-grain"></div>
   </div>
 
   <header class="top">
     <a class="brand-lockup" href="#">
-      <img src="logo.png" width="28" height="28" alt="" />
+      <img src="logo.png" width="26" height="26" alt="" />
       <span>Flare Pro</span>
     </a>
     <nav>
-      <a href="#features">功能</a>
+      <a href="#craft">体验</a>
       <a href="#download">下载</a>
-      <a href="https://github.com/linux503/Flare" target="_blank" rel="noopener">GitHub</a>
+      <a class="nav-git" href="https://github.com/linux503/Flare" target="_blank" rel="noopener">GitHub</a>
     </nav>
   </header>
 
   <main>
+    <!-- 首屏：品牌 + 一句 + CTA + 全幅画面，同一构图 -->
     <section class="hero">
+      <div class="hero-stage" data-parallax>
+        <div class="stage-sky"></div>
+        <div class="stage-mount"></div>
+        <div class="stage-vignette"></div>
+
+        <div class="chrome-bar">
+          <div class="chrome-left">
+            <i class="dot"></i>
+            <span>Flare Pro</span>
+            <span class="soft">截图</span>
+            <span class="soft">录制</span>
+          </div>
+          <div class="chrome-right">
+            <span class="clock">9:41</span>
+            <span class="flare-mark" title="菜单栏"></span>
+          </div>
+        </div>
+
+        <div class="marquee" data-depth="0.04">
+          <div class="window ghost w1"></div>
+          <div class="window ghost w2"></div>
+          <div class="window solid w3">
+            <div class="win-top"><b></b><b></b><b></b></div>
+            <div class="win-body"></div>
+          </div>
+        </div>
+
+        <div class="shot" data-depth="0.08">
+          <div class="shot-frame">
+            <span class="handle tl"></span><span class="handle tr"></span>
+            <span class="handle bl"></span><span class="handlehandle br"></span>
+            <span class="size">1280 × 800</span>
+          </div>
+          <div class="shot-bar">
+            <button type="button" tabindex="-1">编辑</button>
+            <button type="button" tabindex="-1">复制</button>
+            <button type="button" tabindex="-1">保存</button>
+            <button type="button" tabindex="-1">OCR</button>
+            <button type="button" class="accent" tabindex="-1">钉图</button>
+          </div>
+        </div>
+
+        <div class="cursor" aria-hidden="true"></div>
+      </div>
+
       <div class="hero-copy">
         <p class="brand-hero">Flare Pro</p>
         <h1>一拍即得</h1>
-        <p class="lede">原生 macOS 截图与屏幕录制。菜单栏单击即截，标注、OCR、钉图、录屏，一气呵成。</p>
+        <p class="lede">原生 macOS 截图与屏幕录制。菜单栏单击即截，从选区到标注，干净利落。</p>
         <div class="cta">
-          <a class="btn primary" href="#download">免费下载</a>
-          <a class="btn ghost" href="https://github.com/linux503/Flare" target="_blank" rel="noopener">查看源码</a>
-        </div>
-      </div>
-
-      <div class="hero-plane" aria-hidden="true">
-        <div class="desk">
-          <div class="menubar">
-            <span class="apple"></span>
-            <span class="mb-item">Flare Pro</span>
-            <span class="mb-item dim">截图</span>
-            <span class="mb-item dim">录制</span>
-            <span class="mb-spacer"></span>
-            <span class="status-dot"></span>
-          </div>
-          <div class="desk-surface">
-            <div class="desk-wash"></div>
-            <div class="capture-region">
-              <div class="region-grid"></div>
-            </div>
-            <div class="capture-hud">
-              <span>编辑</span>
-              <span>复制</span>
-              <span>保存</span>
-              <span>OCR</span>
-            </div>
-          </div>
+          <a class="btn primary" href="#download">免费下载 macOS 版</a>
+          <a class="btn ghost" href="https://github.com/linux503/Flare" target="_blank" rel="noopener">源码</a>
         </div>
       </div>
     </section>
 
-    <section id="features" class="features">
-      <div class="section-head">
-        <h2>为截图而生，也为录屏而来</h2>
-        <p class="section-lede">少步骤、快反馈。从菜单栏到标注完成，尽量少点一次。</p>
+    <section id="craft" class="craft">
+      <div class="craft-intro">
+        <p class="eyebrow">体验</p>
+        <h2>少一步，就快一步</h2>
+        <p class="section-lede">为日常截图设计的路径：点一下开始，选完即走，需要时再深入编辑与录屏。</p>
       </div>
-      <ul class="feature-list">
+
+      <ol class="flow">
         <li>
-          <span class="feat-key">01</span>
-          <h3>区域 / 窗口 / 全屏</h3>
-          <p>拖选、取色放大镜、双击复制。选区工具栏一键编辑或钉图。</p>
+          <span class="flow-i">01</span>
+          <h3>单击菜单栏</h3>
+          <p>无需先开窗口。图标单击即进入区域截图。</p>
         </li>
         <li>
-          <span class="feat-key">02</span>
-          <h3>屏幕录制</h3>
-          <p>独立录制菜单与面板；倒计时、暂停、排除本应用；导出 H.264 MOV。</p>
+          <span class="flow-i">02</span>
+          <h3>框选瞬间完成</h3>
+          <p>空格、回车或双击确认。工具栏直达编辑、复制、钉图。</p>
         </li>
         <li>
-          <span class="feat-key">03</span>
-          <h3>标注与 OCR</h3>
-          <p>箭头、高亮、马赛克、序号；识字导出 TXT。</p>
+          <span class="flow-i">03</span>
+          <h3>标注 · OCR · 录屏</h3>
+          <p>箭头高亮马赛克；识字导出；独立录制菜单支持暂停与倒计时。</p>
         </li>
-        <li>
-          <span class="feat-key">04</span>
-          <h3>历史与新建文档</h3>
-          <p>最近截图随时回看；一键新建 TXT / Word / PPT / Excel。</p>
-        </li>
+      </ol>
+
+      <ul class="specs" aria-label="能力摘要">
+        <li><strong>截图</strong><span>区域 / 窗口 / 全屏 / 延时</span></li>
+        <li><strong>录制</strong><span>H.264 MOV · 暂停 · 排除本应用</span></li>
+        <li><strong>标注</strong><span>OCR · 钉图 · 历史回看</span></li>
+        <li><strong>文档</strong><span>TXT / Word / PPT / Excel</span></li>
       </ul>
     </section>
 
     <section id="download" class="download">
-      <div class="section-head">
-        <h2>下载 Flare Pro</h2>
-        <p class="section-lede">Universal Binary，同时支持 Apple Silicon 与 Intel。需要 macOS 14 或更高。</p>
+      <div class="dl-panel">
+        <p class="eyebrow">Download</p>
+        <h2>为 Mac 而生</h2>
+        <p class="section-lede">Universal Binary，Apple Silicon 与 Intel 同包。macOS 14 及以上。</p>
+        <div class="dl-meta">
+          <span id="version-chip">v1.2.3</span>
+          <span>Universal</span>
+          <span>macOS 14+</span>
+        </div>
+        <div class="download-row">
+          <a class="btn primary" id="download-btn" href="https://github.com/linux503/Flare/releases/latest">
+            下载最新版
+          </a>
+          <a class="btn ghost" href="https://github.com/linux503/Flare/releases" target="_blank" rel="noopener">Releases</a>
+        </div>
+        <p class="hint">首次使用请在「系统设置 → 隐私与安全性 → 屏幕与系统音频录制」授权 Flare Pro，然后完全退出再打开。</p>
       </div>
-      <div class="download-row">
-        <a class="btn primary" id="download-btn" href="https://github.com/linux503/Flare/releases/latest">
-          下载最新版
-          <small id="version-label">v1.2.3</small>
-        </a>
-        <a class="btn ghost" href="https://github.com/linux503/Flare/releases" target="_blank" rel="noopener">GitHub Releases</a>
-      </div>
-      <p class="hint">首次使用请在「系统设置 → 隐私与安全性 → 屏幕与系统音频录制」中授权 Flare Pro，然后完全退出再打开。</p>
     </section>
   </main>
 
   <footer>
     <div class="foot-brand">
+      <img src="logo.png" width="20" height="20" alt="" />
       <strong>Flare Pro</strong>
       <span>一拍即得</span>
     </div>
