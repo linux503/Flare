@@ -216,6 +216,11 @@ extension FlareBrand {
         return image.withSymbolConfiguration(mono) ?? image.withSymbolConfiguration(base)
     }
 
+    /// 菜单栏可用高度（随系统菜单栏厚度自适应，略留边距）
+    static var statusBarIconSide: CGFloat {
+        max(20, NSStatusBar.system.thickness - 1)
+    }
+
     /// 菜单栏图标：透明底品牌剪影（template，深浅菜单栏都清晰）
     static func statusBarSymbol() -> NSImage? {
         let names = ["StatusBarIcon", "FlareIcon"]
@@ -228,18 +233,19 @@ extension FlareBrand {
                 return prepareStatusBarImage(source)
             }
         }
-        return menuSymbol(.brand, pointSize: 14)
+        return menuSymbol(.brand, pointSize: statusBarIconSide - 4)
     }
 
     /// 录屏中：红色录制点（非 template，保证菜单栏可见）
     static func statusBarRecordingSymbol() -> NSImage? {
-        let size = NSSize(width: 18, height: 18)
+        let side = statusBarIconSide
+        let size = NSSize(width: side, height: side)
         let image = NSImage(size: size)
         image.lockFocus()
         NSColor.clear.setFill()
         NSBezierPath(rect: NSRect(origin: .zero, size: size)).fill()
         NSColor.systemRed.setFill()
-        let inset: CGFloat = 4
+        let inset = side * 0.22
         NSBezierPath(ovalIn: NSRect(x: inset, y: inset, width: size.width - inset * 2, height: size.height - inset * 2)).fill()
         image.unlockFocus()
         image.isTemplate = false
@@ -247,8 +253,15 @@ extension FlareBrand {
     }
 
     private static func prepareStatusBarImage(_ source: NSImage) -> NSImage {
-        let image = (source.copy() as? NSImage) ?? source
-        image.size = NSSize(width: 18, height: 18)
+        let side = statusBarIconSide
+        let dest = NSRect(x: 0, y: 0, width: side, height: side)
+        let image = NSImage(size: dest.size)
+        image.lockFocus()
+        if let ctx = NSGraphicsContext.current {
+            ctx.imageInterpolation = .high
+        }
+        source.draw(in: dest, from: NSRect(origin: .zero, size: source.size), operation: .sourceOver, fraction: 1)
+        image.unlockFocus()
         image.isTemplate = true
         return image
     }

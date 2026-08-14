@@ -55,7 +55,7 @@ struct HomePane: View {
 
     private var permissionBadge: some View {
         Button {
-            Permissions.ensureScreenCaptureReady(presentUI: true)
+            Permissions.promptScreenCaptureFromUser()
         } label: {
             HStack(spacing: 6) {
                 SnapIcon(

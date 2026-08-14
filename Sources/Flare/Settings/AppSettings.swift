@@ -136,6 +136,30 @@ final class AppSettings {
         set { defaults.set(newValue, forKey: "recordFPS"); notify() }
     }
 
+    /// 默认录屏范围：全屏 / 区域
+    var recordMode: RecordCaptureMode {
+        get {
+            let raw = defaults.string(forKey: "recordMode") ?? RecordCaptureMode.fullScreen.rawValue
+            return RecordCaptureMode(rawValue: raw) ?? .fullScreen
+        }
+        set { defaults.set(newValue.rawValue, forKey: "recordMode"); notify() }
+    }
+
+    /// 清晰度预设
+    var recordQuality: RecordQualityPreset {
+        get {
+            let raw = defaults.integer(forKey: "recordQuality")
+            return RecordQualityPreset(rawValue: raw) ?? .high
+        }
+        set { defaults.set(newValue.rawValue, forKey: "recordQuality"); notify() }
+    }
+
+    /// 录制系统声音（需 macOS 14+ ScreenCaptureKit 音频）
+    var recordSystemAudio: Bool {
+        get { defaults.object(forKey: "recordSystemAudio") as? Bool ?? true }
+        set { defaults.set(newValue, forKey: "recordSystemAudio"); notify() }
+    }
+
     // MARK: - Hotkeys
 
     func shortcut(for action: HotKeyAction) -> HotKeyShortcut {
@@ -309,6 +333,57 @@ enum AfterCaptureAction: String, CaseIterable, Identifiable {
         case .clipboard: return "复制到剪贴板"
         case .save: return "保存到文件"
         case .pin: return "钉在屏幕上"
+        }
+    }
+}
+
+enum RecordCaptureMode: String, CaseIterable, Identifiable {
+    case fullScreen
+    case area
+
+    var id: String { rawValue }
+
+    var displayName: String {
+        switch self {
+        case .fullScreen: return "全屏"
+        case .area: return "区域"
+        }
+    }
+}
+
+enum RecordQualityPreset: Int, CaseIterable, Identifiable {
+    case performance = 0
+    case standard = 1
+    case high = 2
+    case ultra = 3
+
+    var id: Int { rawValue }
+
+    var displayName: String {
+        switch self {
+        case .performance: return "流畅 720p"
+        case .standard: return "标准 1080p"
+        case .high: return "高清 原分辨率"
+        case .ultra: return "超清 高码率"
+        }
+    }
+
+    /// 相对原生分辨率的缩放（区域录屏时作用于选区尺寸）
+    var resolutionScale: CGFloat {
+        switch self {
+        case .performance: return 0.5
+        case .standard: return 0.75
+        case .high: return 1.0
+        case .ultra: return 1.0
+        }
+    }
+
+    var bitrateMultiplier: Double {
+        switch self {
+        case .performance: return 0.55
+        case .standard: return 0.85
+        case .high: return 1.0
+        case .ultra: return 1.65
         }
     }
 }

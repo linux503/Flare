@@ -40,6 +40,7 @@ final class StatusBarController: NSObject {
 
         if let button = item.button {
             button.image = FlareBrand.statusBarSymbol()
+            button.imageScaling = .scaleNone
             button.toolTip = "\(FlareBrand.name) — 单击截图 · 右键菜单"
             button.target = self
             button.action = #selector(statusButtonClicked(_:))
@@ -142,8 +143,9 @@ final class StatusBarController: NSObject {
         } else if rec.isCountingDown {
             menu.addItem(item("取消倒计时", .close, "", [], #selector(stopRecord)))
         } else {
-            menu.addItem(hot("开始录屏", .record, #selector(startRecord)))
-            menu.addItem(item("立即开始", .play, "", [], #selector(startRecordNow)))
+            menu.addItem(hot("全屏录屏", .screen, #selector(startRecordFull)))
+            menu.addItem(hot("区域录屏", .area, #selector(startRecordArea)))
+            menu.addItem(item("立即开始（全屏）", .play, "", [], #selector(startRecordNow)))
         }
         menu.addItem(item("打开录屏文件夹", .folder, "", [], #selector(openRecordFolder)))
     }
@@ -203,8 +205,9 @@ final class StatusBarController: NSObject {
     @objc private func captureWindow() { onCaptureWindow() }
     @objc private func captureScreen() { onCaptureScreen() }
     @objc private func captureDelay() { onCaptureDelay() }
-    @objc private func startRecord() { ScreenRecorder.shared.start() }
-    @objc private func startRecordNow() { ScreenRecorder.shared.start(countdown: false) }
+    @objc private func startRecordFull() { ScreenRecorder.shared.startFullScreen() }
+    @objc private func startRecordArea() { ScreenRecorder.shared.startArea() }
+    @objc private func startRecordNow() { ScreenRecorder.shared.startFullScreen(countdown: false) }
     @objc private func stopRecord() { ScreenRecorder.shared.stop() }
     @objc private func discardRecord() { ScreenRecorder.shared.cancelAndDiscard() }
     @objc private func togglePauseRecord() { ScreenRecorder.shared.togglePause() }

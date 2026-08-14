@@ -187,11 +187,13 @@ def render(size: int = 1024) -> bytes:
 def render_status_template(size: int = 128) -> bytes:
     """Transparent mark for menu-bar template tinting (light/dark menu bars)."""
     rgba = bytearray(size * size * 4)
+    # 0.86：图形更大、留白更少，菜单栏里更易辨认
+    mark_scale = 0.86
     for y in range(size):
         py = 1.0 - (y + 0.5) / size * 2
         for x in range(size):
             px = (x + 0.5) / size * 2 - 1
-            nx, ny = px * 1.08, py * 1.08
+            nx, ny = px * mark_scale, py * mark_scale
             iris = iris_mask(nx, ny)
             blades = aperture_blades(nx, ny)
             slash = flare_slash_mask(nx, ny)

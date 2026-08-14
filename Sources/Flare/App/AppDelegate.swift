@@ -18,6 +18,14 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             self?.bringToFront()
         }
 
+        NotificationCenter.default.addObserver(
+            forName: NSApplication.didBecomeActiveNotification,
+            object: nil,
+            queue: .main
+        ) { _ in
+            Task { await Permissions.verifyAccessSilently() }
+        }
+
         mainMenu = MainMenuController()
         mainMenu?.install()
 
@@ -46,7 +54,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         }
 
         DispatchQueue.main.asyncAfter(deadline: .now() + 0.25) {
-            // 已安装到 /Applications 却从 dist/Downloads 启动 → 切过去，否则 TCC 对不上
+            if CommandLine.arguments.contains("--relaunch") {
+                Permissions.resetSessionPromptFlags()
+            }
+
             if Permissions.relocateToApplicationsIfNeeded() {
                 return
             }
@@ -58,38 +69,25 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
                 HomeWindowController.shared.show()
             }
 
+            // 静默探测权限，不弹窗；用户从系统设置返回时会再次探测
             DispatchQueue.main.asyncAfter(deadline: .now() + 0.4) {
                 Task {
-                    Permissions.clearRelaunchFlag()
-                    let state = await Permissions.strictState()
+                    let ok = await Permissions.verifyAccessSilently()
                     await MainActor.run {
-                        let stateName: String = {
-                            switch state {
-                            case .granted: return "granted"
-                            case .needsRelaunch: return "needsRelaunch"
-                            case .denied: return "denied"
-                            case .unknown: return "unknown"
-                            }
-                        }()
+                        let state = ok ? PermissionState.granted : Permissions.currentState()
                         NotificationCenter.default.post(
                             name: .flarePermissionChanged,
                             object: nil,
                             userInfo: [
-                                "granted": state == .granted,
-                                "state": stateName,
+                                "granted": ok,
+                                "state": state == .granted ? "granted" : (state == .needsRelaunch ? "needsRelaunch" : "denied"),
                                 "announce": false
                             ]
                         )
-                        switch state {
-                        case .granted:
-                            if !first {
-                                ToastController.shared.show("\(FlareBrand.name) 已就绪 · 单击菜单栏截图")
-                            }
-                        case .needsRelaunch:
-                            Permissions.ensureScreenCaptureReady(presentUI: true)
-                        case .denied, .unknown:
-                            HomeWindowController.shared.show()
-                            Permissions.ensureScreenCaptureReady(presentUI: true)
+                        if ok, !first {
+                            ToastController.shared.show("\(FlareBrand.name) 已就绪 · 单击菜单栏截图")
+                        } else if !ok {
+                            Permissions.showReauthorizationHintIfNeeded()
                         }
                     }
                 }

@@ -157,15 +157,13 @@ struct SettingsPane: View {
                                 .foregroundStyle(permissionOK ? theme.success : theme.warning)
                         }
                         FlareSecondaryButton(title: "检查并修复权限", glyph: .permission) {
-                            Permissions.clearRelaunchFlag()
-                            Permissions.ensureScreenCaptureReady(presentUI: true)
+                            Permissions.promptScreenCaptureFromUser()
                             Task { await refreshPermissionLabel() }
                         }
                         FlareSecondaryButton(title: "打开系统设置", glyph: .settings) {
                             Permissions.openScreenRecordingSettings()
                         }
                         FlarePrimaryButton(title: "重启 \(FlareBrand.name)", glyph: .relaunch) {
-                            Permissions.clearRelaunchFlag()
                             Permissions.relaunchApp()
                         }
                         Text(Permissions.runningFromApplications()

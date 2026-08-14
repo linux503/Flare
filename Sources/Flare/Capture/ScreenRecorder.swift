@@ -16,6 +16,7 @@ final class ScreenRecorder: NSObject, ObservableObject {
     private var stream: SCStream?
     private var writer: AVAssetWriter?
     private var videoInput: AVAssetWriterInput?
+    private var audioInput: AVAssetWriterInput?
     private var adaptor: AVAssetWriterInputPixelBufferAdaptor?
     private var outputURL: URL?
     private var sessionStarted = false
@@ -27,7 +28,19 @@ final class ScreenRecorder: NSObject, ObservableObject {
     private var pausedAccumulated: TimeInterval = 0
     private var pauseWallClock: Date?
     private let writingQueue = DispatchQueue(label: "app.flare.recorder.write")
+    private let audioQueue = DispatchQueue(label: "app.flare.recorder.audio")
     private var pendingCountdown = false
+    private var pendingPlan: RecordPlan?
+    private var capturesSystemAudio = false
+
+    private struct RecordPlan {
+        let displayID: CGDirectDisplayID
+        let sourceRect: CGRect?
+        let displayScale: CGFloat
+        let pointWidth: CGFloat
+        let pointHeight: CGFloat
+        let isArea: Bool
+    }
 
     private override init() {
         super.init()
@@ -47,9 +60,42 @@ final class ScreenRecorder: NSObject, ObservableObject {
     }
 
     func start(countdown: Bool? = nil) {
+        switch AppSettings.shared.recordMode {
+        case .fullScreen:
+            startFullScreen(countdown: countdown)
+        case .area:
+            startArea(countdown: countdown)
+        }
+    }
+
+    func startFullScreen(countdown: Bool? = nil) {
+        pendingPlan = nil
         DispatchQueue.main.async {
             self.startOnMain(countdown: countdown)
         }
+    }
+
+    func startArea(countdown: Bool? = nil) {
+        guard !isRecording, !isCountingDown else { return }
+        guard !CaptureCoordinator.shared.isCapturing else {
+            ToastController.shared.show("请先结束截图再录屏")
+            return
+        }
+        RecordAreaPicker.pick(
+            onPicked: { [weak self] selection in
+                guard let self else { return }
+                self.pendingPlan = RecordPlan(
+                    displayID: selection.displayID,
+                    sourceRect: selection.sourceRect,
+                    displayScale: selection.scale,
+                    pointWidth: selection.sourceRect.width,
+                    pointHeight: selection.sourceRect.height,
+                    isArea: true
+                )
+                self.startOnMain(countdown: countdown)
+            },
+            onCancel: {}
+        )
     }
 
     func stop() {
@@ -99,10 +145,6 @@ final class ScreenRecorder: NSObject, ObservableObject {
             ToastController.shared.show("请先结束截图再录屏")
             return
         }
-        guard Permissions.canAttemptCapture() else {
-            Permissions.ensureScreenCaptureReady(presentUI: true)
-            return
-        }
 
         let useCountdown = countdown ?? (AppSettings.shared.recordCountdownSeconds > 0)
         let seconds = max(0, AppSettings.shared.recordCountdownSeconds)
@@ -116,7 +158,7 @@ final class ScreenRecorder: NSObject, ObservableObject {
                 try await beginRecording()
             } catch {
                 await MainActor.run {
-                    Permissions.handleCaptureFailure()
+                    Permissions.handleCaptureFailure(error: error)
                     ToastController.shared.show("无法开始录屏：\(error.localizedDescription)")
                     self.cleanup(failed: true)
                 }
@@ -139,7 +181,7 @@ final class ScreenRecorder: NSObject, ObservableObject {
                     try await self.beginRecording()
                 } catch {
                     await MainActor.run {
-                        Permissions.handleCaptureFailure()
+                        Permissions.handleCaptureFailure(error: error)
                         ToastController.shared.show("无法开始录屏：\(error.localizedDescription)")
                         self.cleanup(failed: true)
                         MainMenuController.shared?.reload()
@@ -163,21 +205,38 @@ final class ScreenRecorder: NSObject, ObservableObject {
 
     private func beginRecording() async throws {
         let content = try await SCShareableContent.excludingDesktopWindows(false, onScreenWindowsOnly: true)
-        let mouse = NSEvent.mouseLocation
-        let screen = NSScreen.screens.first { NSMouseInRect(mouse, $0.frame, false) } ?? NSScreen.main
-        let displayID = (screen?.deviceDescription[NSDeviceDescriptionKey("NSScreenNumber")] as? NSNumber)?.uint32Value
-            ?? CGMainDisplayID()
-        guard let display = content.displays.first(where: { $0.displayID == displayID }) ?? content.displays.first else {
+
+        let plan: RecordPlan
+        if let pending = pendingPlan {
+            plan = pending
+            pendingPlan = nil
+        } else {
+            let mouse = NSEvent.mouseLocation
+            let screen = NSScreen.screens.first { NSMouseInRect(mouse, $0.frame, false) } ?? NSScreen.main
+            let displayID = (screen?.deviceDescription[NSDeviceDescriptionKey("NSScreenNumber")] as? NSNumber)?.uint32Value
+                ?? CGMainDisplayID()
+            let scale = screen?.backingScaleFactor ?? 2.0
+            let pointW = screen?.frame.width ?? 1920
+            let pointH = screen?.frame.height ?? 1080
+            plan = RecordPlan(
+                displayID: displayID,
+                sourceRect: nil,
+                displayScale: scale,
+                pointWidth: pointW,
+                pointHeight: pointH,
+                isArea: false
+            )
+        }
+
+        guard let display = content.displays.first(where: { $0.displayID == plan.displayID }) ?? content.displays.first else {
             throw RecorderError.noDisplay
         }
 
-        let scale = screen?.backingScaleFactor ?? 2.0
-        let pointW = screen?.frame.width ?? CGFloat(display.width)
-        let pointH = screen?.frame.height ?? CGFloat(display.height)
-        let pixelW = max(Int((pointW * scale).rounded()), 2)
-        let pixelH = max(Int((pointH * scale).rounded()), 2)
-        let width = pixelW - (pixelW % 2)
-        let height = pixelH - (pixelH % 2)
+        let quality = AppSettings.shared.recordQuality
+        let rawPixelW = Int((plan.pointWidth * plan.displayScale * quality.resolutionScale).rounded())
+        let rawPixelH = Int((plan.pointHeight * plan.displayScale * quality.resolutionScale).rounded())
+        let width = evenDimension(rawPixelW)
+        let height = evenDimension(rawPixelH)
 
         let dir = recordingsDirectory
         try FileManager.default.createDirectory(at: dir, withIntermediateDirectories: true)
@@ -186,19 +245,22 @@ final class ScreenRecorder: NSObject, ObservableObject {
             f.dateFormat = "yyyy-MM-dd HH.mm.ss"
             return f.string(from: Date())
         }()
-        let url = dir.appendingPathComponent("\(FlareBrand.name) 录屏 \(stamp).mov")
+        let kind = plan.isArea ? "区域录屏" : "录屏"
+        let url = dir.appendingPathComponent("\(FlareBrand.name) \(kind) \(stamp).mov")
         if FileManager.default.fileExists(atPath: url.path) {
             try FileManager.default.removeItem(at: url)
         }
 
         let fps = AppSettings.shared.recordFPS
+        let baseBitrate = max(width * height * 3, 2_000_000)
+        let bitrate = Int(Double(baseBitrate) * quality.bitrateMultiplier)
         let writer = try AVAssetWriter(outputURL: url, fileType: .mov)
         let videoSettings: [String: Any] = [
             AVVideoCodecKey: AVVideoCodecType.h264,
             AVVideoWidthKey: width,
             AVVideoHeightKey: height,
             AVVideoCompressionPropertiesKey: [
-                AVVideoAverageBitRateKey: max(width * height * 3, 2_000_000),
+                AVVideoAverageBitRateKey: bitrate,
                 AVVideoProfileLevelKey: AVVideoProfileLevelH264HighAutoLevel,
                 AVVideoExpectedSourceFrameRateKey: fps
             ]
@@ -215,6 +277,23 @@ final class ScreenRecorder: NSObject, ObservableObject {
         )
         guard writer.canAdd(input) else { throw RecorderError.writerSetup }
         writer.add(input)
+
+        capturesSystemAudio = AppSettings.shared.recordSystemAudio
+        var audioTrack: AVAssetWriterInput?
+        if capturesSystemAudio {
+            let audioSettings: [String: Any] = [
+                AVFormatIDKey: kAudioFormatMPEG4AAC,
+                AVSampleRateKey: 48_000,
+                AVNumberOfChannelsKey: 2,
+                AVEncoderBitRateKey: 192_000
+            ]
+            let aInput = AVAssetWriterInput(mediaType: .audio, outputSettings: audioSettings)
+            aInput.expectsMediaDataInRealTime = true
+            guard writer.canAdd(aInput) else { throw RecorderError.writerSetup }
+            writer.add(aInput)
+            audioTrack = aInput
+        }
+
         guard writer.startWriting() else {
             throw writer.error ?? RecorderError.writerSetup
         }
@@ -222,6 +301,7 @@ final class ScreenRecorder: NSObject, ObservableObject {
         self.outputURL = url
         self.writer = writer
         self.videoInput = input
+        self.audioInput = audioTrack
         self.adaptor = adaptor
         self.sessionStarted = false
         self.firstPTS = nil
@@ -235,6 +315,9 @@ final class ScreenRecorder: NSObject, ObservableObject {
         }
         let filter = SCContentFilter(display: display, excludingWindows: excluded)
         let config = SCStreamConfiguration()
+        if let rect = plan.sourceRect {
+            config.sourceRect = rect
+        }
         config.width = width
         config.height = height
         config.scalesToFit = false
@@ -243,8 +326,9 @@ final class ScreenRecorder: NSObject, ObservableObject {
         config.pixelFormat = kCVPixelFormatType_32BGRA
         config.colorSpaceName = CGColorSpace.sRGB
         config.minimumFrameInterval = CMTime(value: 1, timescale: CMTimeScale(max(fps, 1)))
+        config.capturesAudio = capturesSystemAudio
+        config.excludesCurrentProcessAudio = AppSettings.shared.recordExcludeFlare
 
-        // 尽量不把本应用窗口录进去后，再隐藏主窗口
         await MainActor.run {
             if AppSettings.shared.recordHideFlareWindows {
                 NSApp.windows.filter { $0.isVisible && $0.level != .statusBar }.forEach { $0.orderOut(nil) }
@@ -253,6 +337,9 @@ final class ScreenRecorder: NSObject, ObservableObject {
 
         let stream = SCStream(filter: filter, configuration: config, delegate: self)
         try stream.addStreamOutput(self, type: .screen, sampleHandlerQueue: writingQueue)
+        if capturesSystemAudio {
+            try stream.addStreamOutput(self, type: .audio, sampleHandlerQueue: audioQueue)
+        }
         try await stream.startCapture()
         self.stream = stream
 
@@ -267,10 +354,16 @@ final class ScreenRecorder: NSObject, ObservableObject {
             Permissions.markCaptureSucceeded()
             RecordingHUDController.shared.show()
             self.startTimer()
-            ToastController.shared.show("录屏中 · ⌘⌥R 停止 · Esc 停止")
+            let audioHint = capturesSystemAudio ? " · 含系统声音" : ""
+            ToastController.shared.show("录屏中\(audioHint) · ⌘⌥R 停止 · Esc 停止")
             StatusBarController.shared?.refreshRecordingAppearance()
             MainMenuController.shared?.reload()
         }
+    }
+
+    private func evenDimension(_ value: Int) -> Int {
+        let v = max(2, value)
+        return v - (v % 2)
     }
 
     private func pauseRecording() {
@@ -319,6 +412,7 @@ final class ScreenRecorder: NSObject, ObservableObject {
         let finishResult: (URL?, Bool, Error?) = await withCheckedContinuation { cont in
             writingQueue.async {
                 self.videoInput?.markAsFinished()
+                self.audioInput?.markAsFinished()
                 guard let writer = self.writer else {
                     cont.resume(returning: (self.outputURL, false, nil))
                     return
@@ -362,7 +456,9 @@ final class ScreenRecorder: NSObject, ObservableObject {
         stream = nil
         writer = nil
         videoInput = nil
+        audioInput = nil
         adaptor = nil
+        capturesSystemAudio = false
         sessionStarted = false
         firstPTS = nil
         startedAt = nil
@@ -425,8 +521,18 @@ extension ScreenRecorder: SCStreamOutput {
         didOutputSampleBuffer sampleBuffer: CMSampleBuffer,
         of type: SCStreamOutputType
     ) {
-        guard type == .screen, sampleBuffer.isValid else { return }
-        // 暂停时丢弃帧，视频时间线连续压缩（不插入黑场）
+        switch type {
+        case .screen:
+            appendVideoSample(sampleBuffer)
+        case .audio:
+            appendAudioSample(sampleBuffer)
+        default:
+            break
+        }
+    }
+
+    private func appendVideoSample(_ sampleBuffer: CMSampleBuffer) {
+        guard sampleBuffer.isValid else { return }
         if isPaused { return }
         guard let input = videoInput, let writer = writer, let adaptor = adaptor else { return }
         guard writer.status == .writing else { return }
@@ -452,5 +558,13 @@ extension ScreenRecorder: SCStreamOutput {
             pts = CMTimeSubtract(pts, first)
         }
         _ = adaptor.append(pixelBuffer, withPresentationTime: pts)
+    }
+
+    private func appendAudioSample(_ sampleBuffer: CMSampleBuffer) {
+        guard capturesSystemAudio, sampleBuffer.isValid, !isPaused else { return }
+        guard let input = audioInput, let writer = writer else { return }
+        guard writer.status == .writing, sessionStarted else { return }
+        guard input.isReadyForMoreMediaData else { return }
+        input.append(sampleBuffer)
     }
 }

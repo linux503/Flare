@@ -7,8 +7,11 @@ struct RecordPane: View {
     @State private var showCursor = AppSettings.shared.recordShowCursor
     @State private var excludeFlare = AppSettings.shared.recordExcludeFlare
     @State private var hideWindows = AppSettings.shared.recordHideFlareWindows
+    @State private var systemAudio = AppSettings.shared.recordSystemAudio
     @State private var countdown = AppSettings.shared.recordCountdownSeconds
     @State private var fps = AppSettings.shared.recordFPS
+    @State private var recordMode = AppSettings.shared.recordMode
+    @State private var quality = AppSettings.shared.recordQuality
     @State private var recordPath = AppSettings.shared.recordDirectory.path
 
     var body: some View {
@@ -18,7 +21,7 @@ struct RecordPane: View {
                     title: "屏幕录制",
                     subtitle: recorder.isRecording
                         ? (recorder.isPaused ? "已暂停 · \(format(recorder.elapsedSeconds))" : "录制中 · \(format(recorder.elapsedSeconds))")
-                        : "全屏录制为 H.264 MOV，快捷键 \(AppSettings.shared.shortcut(for: .record).displayString)"
+                        : "全屏 / 区域 · H.264 MOV · 快捷键 \(AppSettings.shared.shortcut(for: .record).displayString)"
                 )
 
                 heroCard
@@ -81,11 +84,18 @@ struct RecordPane: View {
                         ScreenRecorder.shared.stop()
                     }
                 } else {
-                    FlarePrimaryButton(title: "开始录屏", glyph: .record) {
-                        ScreenRecorder.shared.start()
+                    FlarePrimaryButton(title: "全屏录屏", glyph: .screen) {
+                        ScreenRecorder.shared.startFullScreen()
                     }
-                    FlareSecondaryButton(title: "立即开始", glyph: .screen) {
-                        ScreenRecorder.shared.start(countdown: false)
+                    FlareSecondaryButton(title: "区域录屏", glyph: .area) {
+                        ScreenRecorder.shared.startArea()
+                    }
+                    FlareSecondaryButton(title: "立即开始", glyph: .play) {
+                        if recordMode == .area {
+                            ScreenRecorder.shared.startArea(countdown: false)
+                        } else {
+                            ScreenRecorder.shared.startFullScreen(countdown: false)
+                        }
                     }
                 }
             }
@@ -114,6 +124,18 @@ struct RecordPane: View {
             Text("录制选项")
                 .font(.system(size: 13, weight: .semibold))
                 .foregroundStyle(theme.textSecondary)
+
+            pickerRow("默认范围", selection: $recordMode, options: RecordCaptureMode.allCases, label: \.displayName) { mode in
+                AppSettings.shared.recordMode = mode
+            }
+
+            pickerRow("清晰度", selection: $quality, options: RecordQualityPreset.allCases, label: \.displayName) { preset in
+                AppSettings.shared.recordQuality = preset
+            }
+
+            toggleRow("录制系统声音", $systemAudio) {
+                AppSettings.shared.recordSystemAudio = $0
+            }
 
             toggleRow("显示鼠标指针", $showCursor) {
                 AppSettings.shared.recordShowCursor = $0
@@ -203,8 +225,11 @@ struct RecordPane: View {
 
     private var statusSubtitle: String {
         if recorder.isCountingDown { return "按 Esc 可取消" }
-        if recorder.isRecording { return "浮动条也可停止 · 文件保存为 MOV" }
-        return "录制当前鼠标所在显示器"
+        if recorder.isRecording {
+            let audio = AppSettings.shared.recordSystemAudio ? " · 含系统声音" : ""
+            return "浮动条可停止 · MOV\(audio)"
+        }
+        return "全屏录当前显示器，或框选区域录制"
     }
 
     private func tipChip(_ key: String, _ label: String) -> some View {
@@ -232,6 +257,31 @@ struct RecordPane: View {
         }
         .toggleStyle(.switch)
         .tint(theme.accent)
+    }
+
+    private func pickerRow<T: Hashable & Identifiable>(
+        _ title: String,
+        selection: Binding<T>,
+        options: [T],
+        label keyPath: KeyPath<T, String>,
+        onChange: @escaping (T) -> Void
+    ) -> some View {
+        HStack {
+            Text(title)
+                .font(.system(size: 12, weight: .medium))
+                .foregroundStyle(theme.textPrimary)
+            Spacer()
+            Picker("", selection: Binding(
+                get: { selection.wrappedValue },
+                set: { selection.wrappedValue = $0; onChange($0) }
+            )) {
+                ForEach(options) { option in
+                    Text(option[keyPath: keyPath]).tag(option)
+                }
+            }
+            .labelsHidden()
+            .frame(width: 148)
+        }
     }
 
     private func format(_ seconds: Int) -> String {

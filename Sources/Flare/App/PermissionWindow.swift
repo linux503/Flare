@@ -41,12 +41,12 @@ struct PermissionView: View {
                 HStack(spacing: 12) {
                     SnapIconWell(.permission, side: 44, iconSize: .hero, cornerRadius: 12)
                     VStack(alignment: .leading, spacing: 4) {
-                        Text(needsRelaunch ? "权限已打开，需要重启" : "无法截取屏幕")
+                        Text(needsRelaunch ? "权限已打开，需要重启" : (Permissions.needsReauthorizationAfterUpdate() ? "需要重新授权" : "无法截取屏幕"))
                             .font(.system(size: 22, weight: .bold, design: .serif))
                             .foregroundStyle(theme.textPrimary)
                         Text(needsRelaunch
                              ? "系统已授权，但必须完全重启后 ScreenCaptureKit 才会生效"
-                             : "\(FlareBrand.name) 需要「屏幕录制」权限才能工作")
+                             : Permissions.permissionIssueSummary())
                             .font(.subheadline)
                             .foregroundStyle(theme.textSecondary)
                     }
@@ -92,7 +92,19 @@ struct PermissionView: View {
                         .foregroundStyle(theme.accent)
                 }
 
-                Text("重新编译/安装后系统可能当成新应用：关掉开关再打开，或点「−」移除后重新勾选。")
+                Text(Permissions.diagnosticDetails())
+                    .font(.caption2)
+                    .foregroundStyle(theme.textMuted)
+                    .fixedSize(horizontal: false, vertical: true)
+
+                if Permissions.needsReauthorizationAfterUpdate() {
+                    Text("若系统设置里已有开关：先点 − 删除所有 Flare Pro，再重新打开开关，然后 ⌘Q 完全退出并重启本应用。")
+                        .font(.caption)
+                        .foregroundStyle(theme.warning)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
+
+                Text("重新编译/安装后系统可能当成新应用：必须删除旧条目再重新勾选。")
                     .font(.caption)
                     .foregroundStyle(theme.textMuted)
 
@@ -100,7 +112,6 @@ struct PermissionView: View {
 
                 HStack(spacing: 10) {
                     Button {
-                        Permissions.clearRelaunchFlag()
                         Permissions.openScreenRecordingSettings()
                     } label: {
                         labelButton("打开系统设置", .settings, primary: !needsRelaunch)
@@ -116,7 +127,6 @@ struct PermissionView: View {
                     .disabled(checking)
 
                     Button {
-                        Permissions.clearRelaunchFlag()
                         Permissions.relaunchApp()
                     } label: {
                         labelButton("重启 \(FlareBrand.name)", .relaunch, primary: needsRelaunch)
@@ -130,11 +140,7 @@ struct PermissionView: View {
             livePreflight = preflightGranted
             liveReady = captureWorks
             applyState(Permissions.currentState())
-            Permissions.clearRelaunchFlag()
             Permissions.startPolling()
-            if !preflightGranted {
-                Permissions.openScreenRecordingSettings()
-            }
         }
         .onDisappear {
             Permissions.stopPolling()
@@ -228,10 +234,10 @@ struct PermissionView: View {
     private func requestAndCheck() {
         checking = true
         statusText = ""
-        Permissions.clearRelaunchFlag()
         _ = Permissions.requestScreenRecordingPermission()
         Task {
             try? await Task.sleep(nanoseconds: 450_000_000)
+            let ok = await Permissions.verifyAccessSilently()
             let state = await Permissions.strictState()
             await MainActor.run {
                 checking = false
@@ -240,17 +246,12 @@ struct PermissionView: View {
                 case .granted:
                     ToastController.shared.show("授权成功")
                     dismissSheet()
-                    NotificationCenter.default.post(
-                        name: .flarePermissionChanged,
-                        object: nil,
-                        userInfo: ["granted": true, "state": "granted", "announce": true]
-                    )
                 case .needsRelaunch:
-                    statusText = "权限已打开，正在重启…"
-                    Permissions.relaunchApp()
+                    statusText = "权限已打开，请完全退出后重新打开 Flare Pro"
                 case .denied, .unknown:
-                    statusText = "仍未授权：请打开开关（若已开过，先关掉再开）"
-                    Permissions.openScreenRecordingSettings()
+                    statusText = ok
+                        ? "请再试一次截图"
+                        : "仍未授权：请打开开关（若有灰色旧条目，先 − 删除再勾选）"
                 }
             }
         }

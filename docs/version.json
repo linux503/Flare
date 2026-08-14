@@ -1,7 +1,7 @@
 {
-  "version": "1.2.3",
-  "build": 8,
-  "notes": "录制独立菜单与面板；支持倒计时、暂停、排除本应用窗口、帧率选项。",
+  "version": "1.2.4",
+  "build": 9,
+  "notes": "区域/全屏录屏、系统声音与清晰度预设；权限提示优化；菜单栏图标更清晰。",
   "downloadURL": "https://github.com/linux503/Flare/releases/latest",
   "minOS": "14.0",
   "publishedAt": "2026-08-14"

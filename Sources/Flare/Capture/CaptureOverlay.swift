@@ -4,6 +4,7 @@ import QuartzCore
 enum CaptureMode {
     case area
     case window
+    case recordArea
 }
 
 /// 选区确认后的去向（工具栏按钮可覆盖默认设置）
@@ -20,6 +21,7 @@ final class CaptureOverlayController {
     var onCancel: (() -> Void)?
     var onAreaSelected: ((CGImage, CGFloat, CaptureFinishAction) -> Void)?
     var onWindowSelected: ((CGWindowID) -> Void)?
+    var onRecordAreaConfirmed: ((CGRect) -> Void)?
 
     private let window: NSWindow
     private let overlayView: CaptureOverlayView
@@ -66,6 +68,9 @@ final class CaptureOverlayController {
         overlay.onWindowSelected = { [weak self] id in
             self?.onWindowSelected?(id)
         }
+        overlay.onRecordAreaConfirmed = { [weak self] rect in
+            self?.onRecordAreaConfirmed?(rect)
+        }
     }
 
     func show() {
@@ -88,6 +93,7 @@ final class CaptureOverlayView: NSView {
     var onCancel: (() -> Void)?
     var onAreaSelected: ((CGImage, CGFloat, CaptureFinishAction) -> Void)?
     var onWindowSelected: ((CGWindowID) -> Void)?
+    var onRecordAreaConfirmed: ((CGRect) -> Void)?
 
     private enum Handle: CaseIterable {
         case n, s, e, w, ne, nw, se, sw
@@ -111,6 +117,8 @@ final class CaptureOverlayView: NSView {
     private let captured: CapturedFrame
     private let mode: CaptureMode
     private let windows: [WindowCapturer.WindowInfo]
+
+    private var isAreaLike: Bool { mode == .area || mode == .recordArea }
 
     private var dragSession: DragSession?
     private var frozenSelection: CGRect?
@@ -479,7 +487,7 @@ final class CaptureOverlayView: NSView {
         if let frozen = frozenSelection {
             // 仅用系统 clickCount，避免拖选松手后的单击被误判为双击
             if event.clickCount >= 2, frozen.insetBy(dx: -6, dy: -6).contains(point) {
-                commitSelection(.clipboard)
+                if mode == .recordArea { commitRecordArea() } else { commitSelection(.clipboard) }
                 return
             }
 
@@ -503,7 +511,7 @@ final class CaptureOverlayView: NSView {
     }
 
     override func mouseDragged(with event: NSEvent) {
-        guard mode == .area else { return }
+        guard isAreaLike else { return }
         let point = convert(event.locationInWindow, from: nil)
         mouseLocation = point
         switch dragSession {
@@ -524,7 +532,7 @@ final class CaptureOverlayView: NSView {
     }
 
     override func mouseUp(with event: NSEvent) {
-        guard mode == .area, !didComplete else { return }
+        guard isAreaLike, !didComplete else { return }
         let point = convert(event.locationInWindow, from: nil)
         mouseLocation = point
 
@@ -581,7 +589,7 @@ final class CaptureOverlayView: NSView {
             return
         }
 
-        if frozenSelection != nil {
+        if frozenSelection != nil, mode == .area {
             let chars = event.charactersIgnoringModifiers ?? ""
             if event.modifierFlags.contains(.command) {
                 switch chars {
@@ -595,9 +603,13 @@ final class CaptureOverlayView: NSView {
             }
         }
 
-        // Return / keypad Enter / Space → 默认设置动作
+        // Return / keypad Enter / Space
         if event.keyCode == 36 || event.keyCode == 76 || event.keyCode == 49 {
-            commitSelection(.useSettings)
+            if mode == .recordArea {
+                commitRecordArea()
+            } else {
+                commitSelection(.useSettings)
+            }
             return
         }
 
@@ -635,6 +647,13 @@ final class CaptureOverlayView: NSView {
 
     // MARK: - Commit
 
+    private func commitRecordArea() {
+        guard !didComplete, let rect = frozenSelection ?? activeSelectionRect(), rect.width > 4, rect.height > 4 else { return }
+        hideActionBar()
+        didComplete = true
+        onRecordAreaConfirmed?(rect)
+    }
+
     private func commitSelection(_ action: CaptureFinishAction) {
         guard !didComplete, let rect = frozenSelection ?? activeSelectionRect(), rect.width > 4, rect.height > 4 else { return }
         hideActionBar()
@@ -662,6 +681,19 @@ final class CaptureOverlayView: NSView {
             bar.layer?.cornerCurve = .continuous
         }
 
+        if mode == .recordArea {
+            let start = makeBarButton(title: "开始录屏", glyph: .record, primary: true) { [weak self] in
+                self?.commitRecordArea()
+            }
+            start.toolTip = "录制当前选区 (回车)"
+            bar.addArrangedSubview(start)
+
+            let cancel = makeBarButton(title: "取消", glyph: .close, primary: false) { [weak self] in
+                self?.barCancel()
+            }
+            cancel.toolTip = "退出 (Esc)"
+            bar.addArrangedSubview(cancel)
+        } else {
         let preferred = AppSettings.shared.afterCaptureAction
         let items: [(String, SnapGlyph, CaptureFinishAction, String)] = [
             ("编辑", .edit, .editor, "打开标注编辑器 (⌘E / 回车默认视设置)"),
@@ -702,6 +734,7 @@ final class CaptureOverlayView: NSView {
         }
         cancel.toolTip = "退出截图"
         bar.addArrangedSubview(cancel)
+        }
 
         bar.translatesAutoresizingMaskIntoConstraints = false
         addSubview(bar)

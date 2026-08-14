@@ -38,10 +38,6 @@ final class CaptureCoordinator: ObservableObject {
             ToastController.shared.show("请先停止录屏")
             return
         }
-        guard Permissions.canAttemptCapture() else {
-            Permissions.ensureScreenCaptureReady(presentUI: true)
-            return
-        }
         isCapturing = true
         hideFlareWindows()
         DelayOverlayController.shared.start(seconds: seconds) { [weak self] in
@@ -55,7 +51,7 @@ final class CaptureCoordinator: ObservableObject {
                     await MainActor.run {
                         self.restoreFlareWindows()
                         self.isCapturing = false
-                        Permissions.handleCaptureFailure()
+                        Permissions.handleCaptureFailure(error: error)
                     }
                 }
             }
@@ -78,12 +74,7 @@ final class CaptureCoordinator: ObservableObject {
             return
         }
 
-        // 已勾选屏幕录制就直接截，不再每次先弹探测窗
-        guard Permissions.canAttemptCapture() else {
-            Permissions.ensureScreenCaptureReady(presentUI: true)
-            return
-        }
-
+        // 直接尝试截屏；权限问题在失败时再提示（避免 preflight 误报连环弹窗）
         isCapturing = true
         hideFlareWindows()
         DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
@@ -95,7 +86,7 @@ final class CaptureCoordinator: ObservableObject {
                     await MainActor.run {
                         self.restoreFlareWindows()
                         self.isCapturing = false
-                        Permissions.handleCaptureFailure()
+                        Permissions.handleCaptureFailure(error: error)
                     }
                 }
             }
@@ -151,7 +142,7 @@ final class CaptureCoordinator: ObservableObject {
                 await MainActor.run {
                     self.restoreFlareWindows()
                     self.isCapturing = false
-                    Permissions.handleCaptureFailure()
+                    Permissions.handleCaptureFailure(error: error)
                 }
             }
         }

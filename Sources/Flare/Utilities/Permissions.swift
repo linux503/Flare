@@ -3,29 +3,23 @@ import CoreGraphics
 import ScreenCaptureKit
 
 enum PermissionState: Equatable {
-    /// 从未授权 / 已拒绝 / 已撤销
     case denied
-    /// 本进程内刚勾选成功：ScreenCaptureKit 要等重启才生效
     case needsRelaunch
-    /// 启动时已有权限，可直接截屏
     case granted
     case unknown
 }
 
-/// 屏幕录制权限（kTCCServiceScreenCapture）
-///
-/// 硬规则：用户在本进程生命周期内刚打开开关时，ScreenCaptureKit **不会**立刻可用，
-/// 必须完全退出再启动。用 `hasObservedFalse` 区分「启动时已有权限」和「中途刚授权」。
+/// 屏幕录制权限：以 **实际能否截屏** 为准，不依赖易误判的 preflight 连环弹窗。
 enum Permissions {
-    private static let relaunchFlagKey = "flareDidAutoRelaunchForTCC"
     private static let applicationsPath = "/Applications/Flare Pro.app"
+    private static let everSucceededKey = "flareCaptureEverSucceeded"
+    private static let authorizedCDHashKey = "flareAuthorizedCDHash"
+    private static let reauthToastShownKey = "flareReauthToastShown"
 
-    /// 本进程内一旦截屏成功
-    private static var sessionCaptureOK = false
-    /// 是否在本进程中观察到过 preflight == false
-    private static var hasObservedFalse = !CGPreflightScreenCaptureAccess()
-    private static var lastUIPresentedAt: Date?
-    private static var relaunchScheduled = false
+    /// 本进程已确认可截屏（探测或截屏成功）
+    private static var sessionVerified = false
+    /// 本进程是否已展示过权限说明 sheet（仅用户主动点击时弹出）
+    private static var permissionUIShown = false
     private static var pollTimer: Timer?
 
     // MARK: - Public status
@@ -34,144 +28,150 @@ enum Permissions {
         CGPreflightScreenCaptureAccess()
     }
 
-    /// 仅当真正可截时为 true（中途刚授权不算）
-    static var isReadyForCapture: Bool {
-        if sessionCaptureOK { return true }
-        refreshObserved()
-        return hasScreenRecordingPermission && !hasObservedFalse
-    }
-
-    /// 是否允许开始截图流程
-    static func canAttemptCapture() -> Bool {
-        isReadyForCapture
-    }
+    /// 不再用 preflight 拦截截图流程——直接尝试，失败再提示。
+    static func canAttemptCapture() -> Bool { true }
 
     static func currentState() -> PermissionState {
-        refreshObserved()
-        if sessionCaptureOK { return .granted }
-        if hasScreenRecordingPermission {
-            return hasObservedFalse ? .needsRelaunch : .granted
-        }
+        if sessionVerified { return .granted }
+        if hasScreenRecordingPermission { return .needsRelaunch }
         return .denied
     }
 
-    /// 异步严格状态（设置页 / 诊断）；必要时用 SCK 复核
     static func strictState() async -> PermissionState {
-        let state = currentState()
-        if state == .granted {
-            // 启动时已授权：偶尔用探测确认（失败不降级为 denied，避免误报）
-            return .granted
-        }
-        if state == .needsRelaunch { return .needsRelaunch }
-
-        // denied：再探一次，兼容「系统已勾但 preflight 滞后」
-        if await probeScreenCaptureKit() {
-            sessionCaptureOK = true
-            hasObservedFalse = false
-            clearRelaunchFlag()
-            return .granted
-        }
+        if sessionVerified { return .granted }
+        if await verifyAccessSilently() { return .granted }
         return hasScreenRecordingPermission ? .needsRelaunch : .denied
     }
 
     static func markCaptureSucceeded() {
-        sessionCaptureOK = true
-        hasObservedFalse = false
-        clearRelaunchFlag()
+        markVerified()
     }
 
     @discardableResult
     static func requestScreenRecordingPermission() -> Bool {
-        let granted = CGRequestScreenCaptureAccess()
-        refreshObserved()
-        return granted
+        CGRequestScreenCaptureAccess()
+    }
+
+    // MARK: - Verify
+
+    /// 静默探测 ScreenCaptureKit；成功则标记已就绪。
+    @discardableResult
+    static func verifyAccessSilently() async -> Bool {
+        if sessionVerified { return true }
+        if await probeScreenCaptureKit() {
+            markVerified()
+            return true
+        }
+        return false
+    }
+
+    static func isPermissionError(_ error: Error) -> Bool {
+        let ns = error as NSError
+        if ns.domain == "com.apple.ScreenCaptureKit.SCStreamErrorDomain", ns.code == -3801 {
+            return true
+        }
+        let text = ns.localizedDescription.lowercased()
+        return text.contains("declined tcc") || text.contains("permission") && text.contains("capture")
     }
 
     // MARK: - Ensure / UI
 
-    static func ensureScreenCaptureReady(presentUI: Bool = true) {
+    static func ensureScreenCaptureReady(presentUI: Bool = true, force: Bool = false) {
         Task { @MainActor in
-            refreshObserved()
-            let state = currentState()
-            writeDiagnoseLog(state: state)
+            if await verifyAccessSilently() {
+                permissionUIShown = false
+                PermissionWindowController.shared.close()
+                ToastController.shared.show("屏幕录制已就绪")
+                postPermissionChanged()
+                return
+            }
 
-            NotificationCenter.default.post(
-                name: .flarePermissionChanged,
-                object: nil,
-                userInfo: [
-                    "granted": state == .granted,
-                    "state": stateLabel(state),
-                    "announce": false
-                ]
+            guard presentUI else { return }
+            presentPermissionGuidance(force: force)
+        }
+    }
+
+    static func handleCaptureFailure(error: Error? = nil) {
+        Task { @MainActor in
+            if sessionVerified {
+                ToastController.shared.show("操作失败，请重试")
+                return
+            }
+
+            if let error, !isPermissionError(error) {
+                ToastController.shared.show("操作失败，请重试")
+                return
+            }
+
+            if await verifyAccessSilently() {
+                ToastController.shared.show("请再试一次")
+                return
+            }
+
+            // 截图/录屏失败：只 Toast，不自动弹 sheet（避免「已授权仍连环弹窗」）
+            notifyPermissionIssue()
+        }
+    }
+
+    /// 应用更新或重装后 CDHash 变化，TCC 仍指向旧二进制
+    static func needsReauthorizationAfterUpdate() -> Bool {
+        guard !sessionVerified else { return false }
+        if savedCDHashMismatch() { return true }
+        return UserDefaults.standard.bool(forKey: everSucceededKey) && !hasScreenRecordingPermission
+    }
+
+    static func showReauthorizationHintIfNeeded() {
+        guard needsReauthorizationAfterUpdate() else { return }
+        guard !UserDefaults.standard.bool(forKey: reauthToastShownKey) else { return }
+        UserDefaults.standard.set(true, forKey: reauthToastShownKey)
+        ToastController.shared.show("Flare 已更新：请在系统设置删除旧的 Flare Pro，再重新勾选并重启")
+    }
+
+    static func permissionIssueSummary() -> String {
+        if savedCDHashMismatch() {
+            return "系统里的授权可能绑定了旧版本。请删除所有 Flare Pro 条目后，重新勾选当前应用。"
+        }
+        if UserDefaults.standard.bool(forKey: everSucceededKey), !hasScreenRecordingPermission {
+            return "之前曾授权成功，但当前版本未生效。请删除系统设置里的旧条目后重新勾选。"
+        }
+        return "请在系统设置 → 屏幕与系统音频录制 中打开 Flare Pro。"
+    }
+
+    static func diagnosticDetails() -> String {
+        var lines: [String] = []
+        lines.append("路径：\(Bundle.main.bundlePath)")
+        if let hash = codesignCDHash() {
+            lines.append("签名：\(hash.prefix(12))…")
+        }
+        lines.append("preflight：\(hasScreenRecordingPermission ? "是" : "否")")
+        return lines.joined(separator: "\n")
+    }
+
+    static func promptScreenCaptureFromUser() {
+        Task { @MainActor in
+            if await verifyAccessSilently() {
+                PermissionWindowController.shared.close()
+                ToastController.shared.show("屏幕录制已就绪")
+                return
+            }
+            permissionUIShown = true
+            PermissionWindowController.shared.show(
+                preflightGranted: hasScreenRecordingPermission,
+                captureWorks: false
             )
-
-            switch state {
-            case .granted:
-                return
-            case .needsRelaunch:
-                guard presentUI else { return }
-                // 权限已开但本进程不可用：自动重启（不依赖易坏的 sticky 永久标记）
-                scheduleRelaunch(message: "权限已打开，正在重启以生效…", force: false)
-            case .denied, .unknown:
-                // 弹系统授权框（若曾拒绝则无框，只返回 false）
-                if !hasScreenRecordingPermission {
-                    _ = requestScreenRecordingPermission()
-                    try? await Task.sleep(nanoseconds: 400_000_000)
-                    refreshObserved()
-                    let after = currentState()
-                    if after == .needsRelaunch {
-                        scheduleRelaunch(message: "权限已打开，正在重启以生效…", force: false)
-                        return
-                    }
-                    if after == .granted { return }
-                }
-                guard presentUI else { return }
-                if let last = lastUIPresentedAt, Date().timeIntervalSince(last) < 2 {
-                    return
-                }
-                lastUIPresentedAt = Date()
-                openScreenRecordingSettings()
-                PermissionWindowController.shared.show(
-                    preflightGranted: hasScreenRecordingPermission,
-                    captureWorks: false
-                )
-            }
         }
     }
 
-    static func handleCaptureFailure() {
-        Task { @MainActor in
-            if sessionCaptureOK {
-                ToastController.shared.show("截图失败，请重试")
-                return
-            }
-            refreshObserved()
-            // 失败后重新读 TCC
-            if !hasScreenRecordingPermission {
-                hasObservedFalse = true
-            }
-            let state = await strictState()
-            switch state {
-            case .granted:
-                sessionCaptureOK = true
-                ToastController.shared.show("截图失败，请重试")
-            case .needsRelaunch:
-                scheduleRelaunch(message: "权限已打开，正在重启以生效…", force: true)
-            case .denied, .unknown:
-                ensureScreenCaptureReady(presentUI: true)
-            }
-        }
-    }
-
-    static func promptScreenCaptureIfNeeded() {
-        ensureScreenCaptureReady(presentUI: true)
+    static func resetSessionPromptFlags() {
+        permissionUIShown = false
+        UserDefaults.standard.set(false, forKey: reauthToastShownKey)
     }
 
     static func hasScreenCaptureAccess() async -> Bool {
-        await strictState() == .granted
+        await verifyAccessSilently()
     }
 
-    // MARK: - Settings deep link
+    // MARK: - Settings
 
     static func openScreenRecordingSettings() {
         let candidates = [
@@ -184,14 +184,11 @@ enum Permissions {
         }
     }
 
-    // MARK: - Relaunch（必须用 NSWorkspace，且带 --relaunch）
+    // MARK: - App location
 
-    /// 始终优先重启到 /Applications，避免 dist/Downloads 与已授权副本 TCC 身份不一致
     static func preferredAppURL() -> URL {
         let apps = URL(fileURLWithPath: applicationsPath)
-        if FileManager.default.fileExists(atPath: apps.path) {
-            return apps
-        }
+        if FileManager.default.fileExists(atPath: apps.path) { return apps }
         return Bundle.main.bundleURL
     }
 
@@ -201,7 +198,6 @@ enum Permissions {
         return current == apps
     }
 
-    /// 若已安装到 /Applications 却从别处启动：切到 Applications 再开（权限只认那一份）
     @discardableResult
     static func relocateToApplicationsIfNeeded() -> Bool {
         let apps = URL(fileURLWithPath: applicationsPath)
@@ -209,121 +205,29 @@ enum Permissions {
         guard !runningFromApplications() else { return false }
 
         ToastController.shared.show("正在切换到「应用程序」中的 \(FlareBrand.name)…")
-        relaunchApp(at: apps, reason: "relocate")
+        relaunchApp(at: apps)
         return true
     }
 
     static func relaunchApp() {
-        relaunchApp(at: preferredAppURL(), reason: "manual")
+        relaunchApp(at: preferredAppURL())
     }
 
-    private static func relaunchApp(at appURL: URL, reason: String) {
-        appendLog("relaunch reason=\(reason) url=\(appURL.path) current=\(Bundle.main.bundlePath)")
-        clearRelaunchFlag()
+    static func clearRelaunchFlag() {}
 
-        let configuration = NSWorkspace.OpenConfiguration()
-        configuration.createsNewApplicationInstance = true
-        configuration.arguments = ["--relaunch"]
-        configuration.activates = true
-
-        NSWorkspace.shared.openApplication(at: appURL, configuration: configuration) { _, error in
-            DispatchQueue.main.async {
-                if let error {
-                    appendLog("relaunch failed: \(error.localizedDescription)")
-                    // 回退：修正后的 open 语法（路径，不要 -a）
-                    fallbackRelaunch(appURL: appURL)
-                    return
-                }
-                DispatchQueue.main.asyncAfter(deadline: .now() + 0.2) {
-                    NSApp.terminate(nil)
-                }
-            }
-        }
-    }
-
-    private static func fallbackRelaunch(appURL: URL) {
-        let pid = ProcessInfo.processInfo.processIdentifier
-        let escaped = appURL.path.replacingOccurrences(of: "'", with: "'\\''")
-        // 注意：对 .app 路径必须用 open -n 'path'，不能用 -a（-a 只认应用名）
-        let script = """
-        #!/bin/zsh
-        while kill -0 \(pid) 2>/dev/null; do sleep 0.05; done
-        sleep 0.35
-        /usr/bin/open -n '\(escaped)' --args --relaunch
-        """
-        let url = FileManager.default.temporaryDirectory.appendingPathComponent("flare-relaunch-\(pid).sh")
-        do {
-            try script.write(to: url, atomically: true, encoding: .utf8)
-            try FileManager.default.setAttributes([.posixPermissions: 0o755], ofItemAtPath: url.path)
-            let process = Process()
-            process.executableURL = URL(fileURLWithPath: "/bin/zsh")
-            process.arguments = [url.path]
-            try process.run()
-            DispatchQueue.main.asyncAfter(deadline: .now() + 0.15) {
-                NSApp.terminate(nil)
-            }
-        } catch {
-            appendLog("fallback relaunch failed: \(error)")
-            ToastController.shared.show("自动重启失败，请完全退出后从「应用程序」打开")
-            openScreenRecordingSettings()
-        }
-    }
-
-    private static func scheduleRelaunch(message: String, force: Bool) {
-        if relaunchScheduled {
-            ToastController.shared.show("请完全退出后重新打开 \(FlareBrand.name)")
-            return
-        }
-        // 旧 sticky 标记曾导致永远无法自动重启；仅在非 force 时作软提示
-        if !force, UserDefaults.standard.bool(forKey: relaunchFlagKey) {
-            ToastController.shared.show("权限已勾选，请点「重启 \(FlareBrand.name)」生效")
-            lastUIPresentedAt = Date()
-            PermissionWindowController.shared.show(
-                preflightGranted: true,
-                captureWorks: false
-            )
-            return
-        }
-        relaunchScheduled = true
-        UserDefaults.standard.set(true, forKey: relaunchFlagKey)
-        ToastController.shared.show(message)
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.6) {
-            relaunchApp()
-        }
-    }
-
-    static func clearRelaunchFlag() {
-        UserDefaults.standard.set(false, forKey: relaunchFlagKey)
-        relaunchScheduled = false
-    }
-
-    // MARK: - Polling（权限 sheet 打开时）
+    // MARK: - Polling（权限 sheet 打开时：用户去系统设置改开关）
 
     static func startPolling() {
         stopPolling()
-        let timer = Timer(timeInterval: 1.0, repeats: true) { _ in
+        let timer = Timer(timeInterval: 1.2, repeats: true) { _ in
             Task { @MainActor in
-                let before = currentState()
-                refreshObserved()
-                let after = currentState()
-                if before != after {
-                    NotificationCenter.default.post(
-                        name: .flarePermissionChanged,
-                        object: nil,
-                        userInfo: [
-                            "granted": after == .granted,
-                            "state": stateLabel(after),
-                            "announce": false
-                        ]
-                    )
-                }
-                if after == .needsRelaunch {
-                    stopPolling()
-                    scheduleRelaunch(message: "权限已打开，正在重启以生效…", force: true)
-                } else if after == .granted {
+                if await verifyAccessSilently() {
                     stopPolling()
                     PermissionWindowController.shared.close()
                     ToastController.shared.show("屏幕录制已就绪")
+                    postPermissionChanged()
+                } else {
+                    postPermissionChanged()
                 }
             }
         }
@@ -370,10 +274,10 @@ enum Permissions {
         lines.append("executable: \(Bundle.main.executablePath ?? "?")")
         lines.append("fromApplications: \(runningFromApplications())")
         lines.append("preflight: \(hasScreenRecordingPermission)")
-        lines.append("hasObservedFalse: \(hasObservedFalse)")
-        lines.append("sessionOK: \(sessionCaptureOK)")
+        lines.append("sessionVerified: \(sessionVerified)")
         lines.append("state: \(stateLabel(currentState()))")
         lines.append("cdhash: \(codesignCDHash() ?? "?")")
+        lines.append("everSucceeded: \(UserDefaults.standard.bool(forKey: everSucceededKey))")
 
         do {
             let content = try await SCShareableContent.excludingDesktopWindows(false, onScreenWindowsOnly: true)
@@ -386,8 +290,7 @@ enum Permissions {
                 config.showsCursor = false
                 let img = try await SCScreenshotManager.captureImage(contentFilter: filter, configuration: config)
                 lines.append("capture: OK \(img.width)x\(img.height)")
-                sessionCaptureOK = true
-                hasObservedFalse = false
+                markVerified()
             }
         } catch {
             lines.append("capture: FAIL \(error)")
@@ -400,9 +303,75 @@ enum Permissions {
 
     // MARK: - Private
 
-    private static func refreshObserved() {
-        let pre = hasScreenRecordingPermission
-        if !pre { hasObservedFalse = true }
+    private static func markVerified() {
+        sessionVerified = true
+        UserDefaults.standard.set(true, forKey: everSucceededKey)
+        UserDefaults.standard.set(false, forKey: reauthToastShownKey)
+        if let hash = codesignCDHash() {
+            UserDefaults.standard.set(hash, forKey: authorizedCDHashKey)
+        }
+        postPermissionChanged()
+        writeDiagnoseLog(state: .granted)
+    }
+
+    private static func savedCDHashMismatch() -> Bool {
+        guard let current = codesignCDHash(),
+              let saved = UserDefaults.standard.string(forKey: authorizedCDHashKey),
+              !saved.isEmpty else { return false }
+        return current != saved
+    }
+
+    private static func notifyPermissionIssue() {
+        if savedCDHashMismatch() || UserDefaults.standard.bool(forKey: everSucceededKey) {
+            ToastController.shared.show("权限需对当前版本重新授权：系统设置里 − 删除所有 Flare Pro，再勾选并 ⌘Q 重启")
+        } else {
+            ToastController.shared.show("需要屏幕录制权限（点主界面「需授权」查看步骤）")
+        }
+    }
+
+    private static func presentPermissionGuidance(force: Bool) {
+        if !force { return }
+        permissionUIShown = true
+        writeDiagnoseLog(state: currentState())
+        PermissionWindowController.shared.show(
+            preflightGranted: hasScreenRecordingPermission,
+            captureWorks: sessionVerified
+        )
+    }
+
+    private static func postPermissionChanged() {
+        let state = currentState()
+        NotificationCenter.default.post(
+            name: .flarePermissionChanged,
+            object: nil,
+            userInfo: [
+                "granted": state == .granted,
+                "state": stateLabel(state),
+                "announce": false
+            ]
+        )
+    }
+
+    private static func relaunchApp(at appURL: URL) {
+        appendLog("relaunch url=\(appURL.path) current=\(Bundle.main.bundlePath)")
+        let configuration = NSWorkspace.OpenConfiguration()
+        configuration.createsNewApplicationInstance = true
+        configuration.arguments = ["--relaunch"]
+        configuration.activates = true
+
+        NSWorkspace.shared.openApplication(at: appURL, configuration: configuration) { _, error in
+            DispatchQueue.main.async {
+                if let error {
+                    appendLog("relaunch failed: \(error.localizedDescription)")
+                    ToastController.shared.show("请手动完全退出后，从「应用程序」重新打开")
+                    openScreenRecordingSettings()
+                    return
+                }
+                DispatchQueue.main.asyncAfter(deadline: .now() + 0.2) {
+                    NSApp.terminate(nil)
+                }
+            }
+        }
     }
 
     private static func writeDiagnoseLog(state: PermissionState) {
@@ -411,8 +380,7 @@ enum Permissions {
         bundle: \(Bundle.main.bundlePath)
         fromApplications: \(runningFromApplications())
         preflight: \(hasScreenRecordingPermission)
-        hasObservedFalse: \(hasObservedFalse)
-        sessionOK: \(sessionCaptureOK)
+        sessionVerified: \(sessionVerified)
         state: \(stateLabel(state))
 
         """
@@ -438,7 +406,7 @@ enum Permissions {
     private static func codesignCDHash() -> String? {
         let task = Process()
         task.executableURL = URL(fileURLWithPath: "/usr/bin/codesign")
-        task.arguments = ["-dv", "--verbose=2", Bundle.main.bundlePath]
+        task.arguments = ["-dv", "--verbose=2", Bundle.main.bundleURL.path]
         let err = Pipe()
         task.standardError = err
         task.standardOutput = Pipe()

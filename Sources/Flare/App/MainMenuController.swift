@@ -58,8 +58,9 @@ final class MainMenuController: NSObject {
             } else if rec.isCountingDown {
                 m.addItem(item("取消倒计时", #selector(stopRecord), key: "", glyph: .close))
             } else {
-                m.addItem(hotItem("开始录屏", .record, #selector(startRecord)))
-                m.addItem(item("立即开始", #selector(startRecordNow), key: "", glyph: .play))
+                m.addItem(hotItem("全屏录屏", .screen, #selector(startRecordFull)))
+                m.addItem(hotItem("区域录屏", .area, #selector(startRecordArea)))
+                m.addItem(item("立即开始（全屏）", #selector(startRecordNow), key: "", glyph: .play))
             }
             m.addItem(.separator())
             m.addItem(item("打开录制面板", #selector(showRecord), key: "r", modifiers: [.command, .shift], glyph: .record))
@@ -141,8 +142,9 @@ final class MainMenuController: NSObject {
     @objc private func captureWindow() { CaptureCoordinator.shared.startWindowCapture() }
     @objc private func captureScreen() { CaptureCoordinator.shared.startFullScreenCapture() }
     @objc private func captureDelay() { CaptureCoordinator.shared.startDelayedCapture(seconds: 3) }
-    @objc private func startRecord() { ScreenRecorder.shared.start() }
-    @objc private func startRecordNow() { ScreenRecorder.shared.start(countdown: false) }
+    @objc private func startRecordFull() { ScreenRecorder.shared.startFullScreen() }
+    @objc private func startRecordArea() { ScreenRecorder.shared.startArea() }
+    @objc private func startRecordNow() { ScreenRecorder.shared.startFullScreen(countdown: false) }
     @objc private func stopRecord() { ScreenRecorder.shared.stop() }
     @objc private func discardRecord() { ScreenRecorder.shared.cancelAndDiscard() }
     @objc private func togglePauseRecord() { ScreenRecorder.shared.togglePause() }
