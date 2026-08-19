@@ -7,3 +7,7 @@ xcuserdata/
 DerivedData/
 Resources/tmpicons/
 .codesign-identity
+windows/**/bin/
+windows/**/obj/
+android/FlareAndroid/.gradle/
+android/FlareAndroid/**/build/

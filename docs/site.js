@@ -11,6 +11,16 @@
       document.querySelectorAll("[data-download]").forEach((el) => {
         el.setAttribute("href", dmg);
       });
+      if (data.windowsURL) {
+        document.querySelectorAll("[data-download-windows]").forEach((el) => {
+          el.setAttribute("href", data.windowsURL);
+        });
+      }
+      if (data.androidURL) {
+        document.querySelectorAll("[data-download-android]").forEach((el) => {
+          el.setAttribute("href", data.androidURL);
+        });
+      }
     })
     .catch(() => {});
 

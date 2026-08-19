@@ -445,6 +445,32 @@ body {
   padding: 6px 10px;
   background: var(--bg);
 }
+.platform-grid {
+  margin-top: 14px;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+}
+.platform-card {
+  text-decoration: none;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: var(--bg);
+  padding: 11px 12px;
+  display: grid;
+  gap: 3px;
+}
+.platform-card strong {
+  color: var(--ink);
+  font-size: 13px;
+}
+.platform-card span {
+  color: var(--muted);
+  font-size: 12px;
+}
+.platform-card:hover {
+  border-color: rgba(16,24,40,0.22);
+}
 .get-card aside {
   background: var(--bg);
   border: 1px solid var(--line);
@@ -511,6 +537,7 @@ body {
   .shortcuts {
     grid-template-columns: 1fr 1fr;
   }
+  .platform-grid { grid-template-columns: 1fr; }
 }
 
 @media (max-width: 640px) {
