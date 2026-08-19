@@ -16,9 +16,19 @@
           el.setAttribute("href", data.windowsURL);
         });
       }
+      if (data.windowsMsixURL) {
+        document.querySelectorAll("[data-download-windows-msix]").forEach((el) => {
+          el.setAttribute("href", data.windowsMsixURL);
+        });
+      }
       if (data.androidURL) {
         document.querySelectorAll("[data-download-android]").forEach((el) => {
           el.setAttribute("href", data.androidURL);
+        });
+      }
+      if (data.androidAabURL) {
+        document.querySelectorAll("[data-download-android-aab]").forEach((el) => {
+          el.setAttribute("href", data.androidAabURL);
         });
       }
     })

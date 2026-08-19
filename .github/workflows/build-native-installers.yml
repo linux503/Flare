@@ -1,0 +1,156 @@
+name: Build Native Installers
+
+on:
+  workflow_dispatch:
+  push:
+    tags:
+      - "v*"
+
+permissions:
+  contents: write
+
+jobs:
+  windows:
+    runs-on: windows-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: "8.0.x"
+
+      - name: Publish EXE
+        shell: pwsh
+        run: |
+          dotnet publish windows/FlareWpf/FlareWpf.csproj `
+            -c Release `
+            -r win-x64 `
+            -p:PublishSingleFile=true `
+            -p:SelfContained=true `
+            -o out/win-exe
+          Copy-Item out/win-exe/FlareWpf.exe out/Flare-Windows-x64.exe
+
+      - name: Build MSIX
+        shell: pwsh
+        run: |
+          New-Item -ItemType Directory -Force -Path out/msix | Out-Null
+          Copy-Item out/win-exe/FlareWpf.exe out/msix/FlareWpf.exe
+
+          @'
+          <?xml version="1.0" encoding="utf-8"?>
+          <Package xmlns="http://schemas.microsoft.com/appx/manifest/foundation/windows10"
+                   xmlns:uap="http://schemas.microsoft.com/appx/manifest/uap/windows10"
+                   xmlns:rescap="http://schemas.microsoft.com/appx/manifest/foundation/windows10/restrictedcapabilities"
+                   IgnorableNamespaces="uap rescap">
+            <Identity Name="linux503.FlareWpf" Publisher="CN=Flare" Version="1.0.0.0" />
+            <Properties>
+              <DisplayName>Flare Windows</DisplayName>
+              <PublisherDisplayName>linux503</PublisherDisplayName>
+              <Logo>Assets\StoreLogo.png</Logo>
+            </Properties>
+            <Resources>
+              <Resource Language="zh-cn" />
+            </Resources>
+            <Dependencies>
+              <TargetDeviceFamily Name="Windows.Desktop" MinVersion="10.0.17763.0" MaxVersionTested="10.0.22621.0" />
+            </Dependencies>
+            <Applications>
+              <Application Id="FlareWpf" Executable="FlareWpf.exe" EntryPoint="Windows.FullTrustApplication">
+                <uap:VisualElements DisplayName="Flare Windows"
+                                    Description="Flare Web Long Screenshot"
+                                    BackgroundColor="transparent"
+                                    Square150x150Logo="Assets\Logo.png"
+                                    Square44x44Logo="Assets\LogoSmall.png" />
+              </Application>
+            </Applications>
+            <Capabilities>
+              <Capability Name="internetClient" />
+              <rescap:Capability Name="runFullTrust" />
+            </Capabilities>
+          </Package>
+          '@ | Out-File -Encoding utf8 out/msix/AppxManifest.xml
+
+          New-Item -ItemType Directory -Force -Path out/msix/Assets | Out-Null
+          [IO.File]::WriteAllBytes("out/msix/Assets/Logo.png", [Convert]::FromBase64String("iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR4nGNgYAAAAAMAASsJTYQAAAAASUVORK5CYII="))
+          Copy-Item out/msix/Assets/Logo.png out/msix/Assets/LogoSmall.png
+          Copy-Item out/msix/Assets/Logo.png out/msix/Assets/StoreLogo.png
+
+          makeappx pack /d out/msix /p out/Flare-Windows-x64.msix /o
+
+      - name: Sign MSIX (self-signed)
+        shell: pwsh
+        run: |
+          $cert = New-SelfSignedCertificate -Type Custom -Subject "CN=Flare" -KeyUsage DigitalSignature -FriendlyName "Flare MSIX Cert" -CertStoreLocation "Cert:\CurrentUser\My"
+          $pwd = ConvertTo-SecureString -String "flare-msix" -AsPlainText -Force
+          Export-PfxCertificate -Cert $cert -FilePath out/Flare-Windows-msix.pfx -Password $pwd | Out-Null
+          Export-Certificate -Cert $cert -FilePath out/Flare-Windows-msix.cer | Out-Null
+          signtool sign /fd SHA256 /f out/Flare-Windows-msix.pfx /p flare-msix out/Flare-Windows-x64.msix
+
+      - name: Upload Windows artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: windows-installers
+          path: |
+            out/Flare-Windows-x64.exe
+            out/Flare-Windows-x64.msix
+            out/Flare-Windows-msix.cer
+
+  android:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+
+      - name: Setup Gradle
+        uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: "8.7"
+
+      - name: Build APK and AAB
+        run: |
+          gradle -p android/FlareAndroid :app:assembleRelease :app:bundleRelease
+          cp android/FlareAndroid/app/build/outputs/apk/release/*.apk Flare-Android.apk
+          cp android/FlareAndroid/app/build/outputs/bundle/release/*.aab Flare-Android.aab
+
+      - name: Upload Android artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: android-installers
+          path: |
+            Flare-Android.apk
+            Flare-Android.aab
+
+  release:
+    if: startsWith(github.ref, 'refs/tags/v')
+    needs: [windows, android]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Download Windows artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: windows-installers
+          path: out
+
+      - name: Download Android artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: android-installers
+          path: out
+
+      - name: Publish release assets
+        uses: softprops/action-gh-release@v2
+        with:
+          files: |
+            out/Flare-Windows-x64.exe
+            out/Flare-Windows-x64.msix
+            out/Flare-Windows-msix.cer
+            out/Flare-Android.apk
+            out/Flare-Android.aab
