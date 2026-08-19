@@ -34,6 +34,7 @@ final class MainMenuController: NSObject {
             m.addItem(hotItem("窗口截图", .window, #selector(captureWindow)))
             m.addItem(hotItem("全屏截图", .screen, #selector(captureScreen)))
             m.addItem(hotItem("延时截图", .delay, #selector(captureDelay)))
+            m.addItem(item("长截图", #selector(captureLong), key: "", modifiers: []))
             m.addItem(.separator())
             m.addItem(item("打开主面板", #selector(showHome), key: "o", glyph: .home))
             m.addItem(hotItem("历史记录", .history, #selector(showHistory)))
@@ -142,6 +143,7 @@ final class MainMenuController: NSObject {
     @objc private func captureWindow() { CaptureCoordinator.shared.startWindowCapture() }
     @objc private func captureScreen() { CaptureCoordinator.shared.startFullScreenCapture() }
     @objc private func captureDelay() { CaptureCoordinator.shared.startDelayedCapture(seconds: 3) }
+    @objc private func captureLong() { CaptureCoordinator.shared.startLongAreaCapture() }
     @objc private func startRecordFull() { ScreenRecorder.shared.startFullScreen() }
     @objc private func startRecordArea() { ScreenRecorder.shared.startArea() }
     @objc private func startRecordNow() { ScreenRecorder.shared.startFullScreen(countdown: false) }

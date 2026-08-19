@@ -45,7 +45,10 @@ enum ScreenCapturer {
         return frames
     }
 
-    static func captureDisplay(_ displayID: CGDirectDisplayID) async throws -> CapturedFrame {
+    static func captureDisplay(
+        _ displayID: CGDirectDisplayID,
+        excludeSelf: Bool = false
+    ) async throws -> CapturedFrame {
         let content = try await SCShareableContent.excludingDesktopWindows(false, onScreenWindowsOnly: true)
         guard let display = content.displays.first(where: { $0.displayID == displayID }) ?? content.displays.first else {
             throw CaptureError.noDisplay
@@ -61,7 +64,13 @@ enum ScreenCapturer {
         let pixelW = Int((pointBounds.width * scale).rounded())
         let pixelH = Int((pointBounds.height * scale).rounded())
 
-        let filter = SCContentFilter(display: display, excludingWindows: [])
+        let filter: SCContentFilter
+        if excludeSelf,
+           let app = content.applications.first(where: { $0.bundleIdentifier == Bundle.main.bundleIdentifier }) {
+            filter = SCContentFilter(display: display, excludingApplications: [app], exceptingWindows: [])
+        } else {
+            filter = SCContentFilter(display: display, excludingWindows: [])
+        }
         let config = SCStreamConfiguration()
         config.width = max(pixelW, 1)
         config.height = max(pixelH, 1)

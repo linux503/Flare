@@ -1,8 +1,8 @@
 {
-  "version": "1.2.6",
-  "build": 11,
-  "notes": "侧栏与截图选项更紧凑；历史记录三列对齐。",
-  "downloadURL": "https://github.com/linux503/Flare/releases/download/v1.2.6/Flare-Pro-1.2.6-Universal.dmg",
+  "version": "1.2.7",
+  "build": 12,
+  "notes": "新增长截图模式：自动滚动并拼接长图（按 Esc 可取消）。",
+  "downloadURL": "https://github.com/linux503/Flare/releases/download/v1.2.7/Flare-Pro-1.2.7-Universal.dmg",
   "minOS": "14.0",
   "publishedAt": "2026-08-14"
 }

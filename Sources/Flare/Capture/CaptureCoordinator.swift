@@ -18,6 +18,14 @@ final class CaptureCoordinator: ObservableObject {
         }
     }
 
+    /// 长截图：自动滚动 + 多段拼接
+    func startLongAreaCapture() {
+        beginCapture {
+            let frames = try await ScreenCapturer.captureAllDisplays()
+            await MainActor.run { self.presentLongOverlays(frames: frames) }
+        }
+    }
+
     func startWindowCapture() {
         beginCapture {
             let frames = try await ScreenCapturer.captureAllDisplays()
@@ -114,6 +122,24 @@ final class CaptureCoordinator: ObservableObject {
         }
     }
 
+    private func presentLongOverlays(frames: [CapturedFrame]) {
+        dismissOverlays()
+        overlayControllers = frames.map { frame in
+            let controller = CaptureOverlayController(frame: frame, mode: .longArea)
+            controller.onCancel = { [weak self] in self?.cancelCapture() }
+            controller.onLongAreaSelected = { [weak self] displayID, displayBounds, selectionRect, selectionScale in
+                self?.completeLongArea(
+                    displayID: displayID,
+                    displayBoundsInPoints: displayBounds,
+                    selectionRectInPoints: selectionRect,
+                    selectionScale: selectionScale
+                )
+            }
+            controller.show()
+            return controller
+        }
+    }
+
     private func presentWindowOverlays(frames: [CapturedFrame]) {
         dismissOverlays()
         let windows = WindowCapturer.listWindows()
@@ -131,6 +157,40 @@ final class CaptureCoordinator: ObservableObject {
     private func completeArea(cgImage: CGImage, scale: CGFloat, action: CaptureFinishAction) {
         dismissOverlays()
         finish(with: cgImage, scale: scale, action: action)
+    }
+
+    private func completeLongArea(
+        displayID: CGDirectDisplayID,
+        displayBoundsInPoints: CGRect,
+        selectionRectInPoints: CGRect,
+        selectionScale: CGFloat
+    ) {
+        dismissOverlays()
+        Task {
+            do {
+                let cgImage = try await LongScreenshot.capture(
+                    session: .init(
+                        displayID: displayID,
+                        displayBoundsInPoints: displayBoundsInPoints,
+                        selectionRectInPoints: selectionRectInPoints,
+                        displayScale: selectionScale
+                    )
+                )
+                await MainActor.run {
+                    self.finish(with: cgImage, scale: selectionScale)
+                }
+            } catch {
+                await MainActor.run {
+                    self.restoreFlareWindows()
+                    self.isCapturing = false
+                    if let err = error as? LongScreenshot.Error, err == .cancelled {
+                        ToastController.shared.show("已取消长截图")
+                    } else {
+                        Permissions.handleCaptureFailure(error: error)
+                    }
+                }
+            }
+        }
     }
 
     private func completeWindow(id: CGWindowID) {

@@ -4,6 +4,7 @@ import QuartzCore
 enum CaptureMode {
     case area
     case window
+    case longArea
     case recordArea
 }
 
@@ -20,6 +21,7 @@ enum CaptureFinishAction: Equatable {
 final class CaptureOverlayController {
     var onCancel: (() -> Void)?
     var onAreaSelected: ((CGImage, CGFloat, CaptureFinishAction) -> Void)?
+    var onLongAreaSelected: ((CGDirectDisplayID, CGRect, CGRect, CGFloat) -> Void)? // displayID, displayBounds, selectionRect, selectionScale
     var onWindowSelected: ((CGWindowID) -> Void)?
     var onRecordAreaConfirmed: ((CGRect) -> Void)?
 
@@ -66,6 +68,9 @@ final class CaptureOverlayController {
         overlay.onAreaSelected = { [weak self] image, scale, action in
             self?.onAreaSelected?(image, scale, action)
         }
+        overlay.onLongAreaSelected = { [weak self] displayID, displayBounds, selectionRect, scale in
+            self?.onLongAreaSelected?(displayID, displayBounds, selectionRect, scale)
+        }
         overlay.onWindowSelected = { [weak self] id in
             self?.onWindowSelected?(id)
         }
@@ -93,6 +98,7 @@ final class CaptureOverlayController {
 final class CaptureOverlayView: NSView {
     var onCancel: (() -> Void)?
     var onAreaSelected: ((CGImage, CGFloat, CaptureFinishAction) -> Void)?
+    var onLongAreaSelected: ((CGDirectDisplayID, CGRect, CGRect, CGFloat) -> Void)?
     var onWindowSelected: ((CGWindowID) -> Void)?
     var onRecordAreaConfirmed: ((CGRect) -> Void)?
 
@@ -119,7 +125,7 @@ final class CaptureOverlayView: NSView {
     private let mode: CaptureMode
     private let windows: [WindowCapturer.WindowInfo]
 
-    private var isAreaLike: Bool { mode == .area || mode == .recordArea }
+    private var isAreaLike: Bool { mode == .area || mode == .longArea || mode == .recordArea }
 
     private var dragSession: DragSession?
     private var frozenSelection: CGRect?
@@ -207,7 +213,7 @@ final class CaptureOverlayView: NSView {
             drawBadge(label, near: local)
         }
 
-        if mode == .area, AppSettings.shared.showMagnifier, frozenSelection == nil, dragSession == nil {
+        if (mode == .area || mode == .longArea), AppSettings.shared.showMagnifier, frozenSelection == nil, dragSession == nil {
             drawMagnifier(at: mouseLocation)
         }
     }
@@ -466,7 +472,9 @@ final class CaptureOverlayView: NSView {
         if let frozen = frozenSelection {
             // 仅用系统 clickCount，避免拖选松手后的单击被误判为双击
             if event.clickCount >= 2, frozen.insetBy(dx: -6, dy: -6).contains(point) {
-                if mode == .recordArea { commitRecordArea() } else { commitSelection(.clipboard) }
+                if mode == .recordArea { commitRecordArea() }
+                else if mode == .longArea { commitLongSelection() }
+                else { commitSelection(.clipboard) }
                 return
             }
 
@@ -586,6 +594,8 @@ final class CaptureOverlayView: NSView {
         if event.keyCode == 36 || event.keyCode == 76 || event.keyCode == 49 {
             if mode == .recordArea {
                 commitRecordArea()
+            } else if mode == .longArea {
+                commitLongSelection()
             } else {
                 commitSelection(.useSettings)
             }
@@ -633,6 +643,18 @@ final class CaptureOverlayView: NSView {
         onRecordAreaConfirmed?(rect)
     }
 
+    private func commitLongSelection() {
+        guard !didComplete,
+              let rect = frozenSelection ?? activeSelectionRect(),
+              rect.width > 4,
+              rect.height > 4
+        else { return }
+        hideActionBar()
+        didComplete = true
+        // 把“选择框”交给上层：上层负责自动滚动与拼接
+        onLongAreaSelected?(captured.displayID, captured.bounds, rect, captured.scale)
+    }
+
     private func commitSelection(_ action: CaptureFinishAction) {
         guard !didComplete, let rect = frozenSelection ?? activeSelectionRect(), rect.width > 4, rect.height > 4 else { return }
         hideActionBar()
@@ -672,6 +694,33 @@ final class CaptureOverlayView: NSView {
             }
             cancel.toolTip = "退出 (Esc)"
             bar.addArrangedSubview(cancel)
+        } else if mode == .longArea {
+            let start = makeBarButton(title: "开始长截图", glyph: .screen, primary: true) { [weak self] in
+                self?.commitLongSelection()
+            }
+            start.toolTip = "自动滚动并拼接长图 (回车)"
+            bar.addArrangedSubview(start)
+
+            let cancel = makeBarButton(title: "取消", glyph: .close, primary: false) { [weak self] in
+                self?.barCancel()
+            }
+            cancel.toolTip = "退出 (Esc)"
+            bar.addArrangedSubview(cancel)
+
+            let divider = NSView(frame: NSRect(x: 0, y: 0, width: 1, height: 22))
+            divider.wantsLayer = true
+            divider.layer?.backgroundColor = NSColor.white.withAlphaComponent(0.18).cgColor
+            divider.translatesAutoresizingMaskIntoConstraints = false
+            divider.widthAnchor.constraint(equalToConstant: 1).isActive = true
+            divider.heightAnchor.constraint(equalToConstant: 22).isActive = true
+            bar.addArrangedSubview(divider)
+
+            let again = makeBarButton(title: "重选", glyph: nil, primary: false) { [weak self] in
+                self?.barReselect()
+            }
+            again.toolTip = "清除选区重新框选 (Esc)"
+            bar.addArrangedSubview(again)
+
         } else {
         let preferred = AppSettings.shared.afterCaptureAction
         let items: [(String, SnapGlyph, CaptureFinishAction, String)] = [
@@ -693,14 +742,6 @@ final class CaptureOverlayView: NSView {
             button.toolTip = tip
             bar.addArrangedSubview(button)
         }
-
-        let divider = NSView(frame: NSRect(x: 0, y: 0, width: 1, height: 22))
-        divider.wantsLayer = true
-        divider.layer?.backgroundColor = NSColor.white.withAlphaComponent(0.18).cgColor
-        divider.translatesAutoresizingMaskIntoConstraints = false
-        divider.widthAnchor.constraint(equalToConstant: 1).isActive = true
-        divider.heightAnchor.constraint(equalToConstant: 22).isActive = true
-        bar.addArrangedSubview(divider)
 
         let again = makeBarButton(title: "重选", glyph: nil, primary: false) { [weak self] in
             self?.barReselect()
