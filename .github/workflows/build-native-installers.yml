@@ -77,7 +77,9 @@ jobs:
           Copy-Item out/msix/Assets/Logo.png out/msix/Assets/LogoSmall.png
           Copy-Item out/msix/Assets/Logo.png out/msix/Assets/StoreLogo.png
 
-          makeappx pack /d out/msix /p out/Flare-Windows-x64.msix /o
+          $makeappx = Get-ChildItem "C:\Program Files (x86)\Windows Kits\10\bin" -Recurse -Filter makeappx.exe | Select-Object -First 1
+          if (-not $makeappx) { throw "makeappx.exe not found" }
+          & $makeappx.FullName pack /d out/msix /p out/Flare-Windows-x64.msix /o
 
       - name: Sign MSIX (self-signed)
         shell: pwsh
@@ -86,7 +88,9 @@ jobs:
           $pwd = ConvertTo-SecureString -String "flare-msix" -AsPlainText -Force
           Export-PfxCertificate -Cert $cert -FilePath out/Flare-Windows-msix.pfx -Password $pwd | Out-Null
           Export-Certificate -Cert $cert -FilePath out/Flare-Windows-msix.cer | Out-Null
-          signtool sign /fd SHA256 /f out/Flare-Windows-msix.pfx /p flare-msix out/Flare-Windows-x64.msix
+          $signtool = Get-ChildItem "C:\Program Files (x86)\Windows Kits\10\bin" -Recurse -Filter signtool.exe | Select-Object -First 1
+          if (-not $signtool) { throw "signtool.exe not found" }
+          & $signtool.FullName sign /fd SHA256 /f out/Flare-Windows-msix.pfx /p flare-msix out/Flare-Windows-x64.msix
 
       - name: Upload Windows artifacts
         uses: actions/upload-artifact@v4
