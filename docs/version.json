@@ -1,7 +1,7 @@
 {
   "version": "1.2.7",
   "build": 12,
-  "notes": "新增长截图模式；新增 Windows WPF 与 Android Compose 原生工程（网页长截图）。",
+  "notes": "支持 macOS、Windows EXE 与 Android APK。macOS 含长截图；Windows / Android 可网页长截图。",
   "downloadURL": "https://github.com/linux503/Flare/releases/download/v1.2.7/Flare-Pro-1.2.7-Universal.dmg",
   "windowsURL": "https://github.com/linux503/Flare/releases/latest/download/Flare-Windows-x64.exe",
   "androidURL": "https://github.com/linux503/Flare/releases/latest/download/Flare-Android.apk",

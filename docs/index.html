@@ -4,9 +4,9 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Flare Pro — 一拍即得</title>
-  <meta name="description" content="Flare Pro 原生 macOS 截图与屏幕录制：菜单栏单击截图，独立录制菜单，标注 OCR、钉图历史。Universal，支持 Apple Silicon 与 Intel。" />
+  <meta name="description" content="Flare Pro 支持 macOS、Windows 与 Android：macOS 原生截图录屏，Windows EXE 与 Android APK 可做网页长截图。" />
   <meta property="og:title" content="Flare Pro — 一拍即得" />
-  <meta property="og:description" content="快截、稳录、顺手标注。为 macOS 打造的原生屏幕工具。" />
+  <meta property="og:description" content="macOS 原生截图录屏，Windows EXE 与 Android APK 支持网页长截图。" />
   <meta property="og:image" content="https://linux503.github.io/Flare/hero-poster.jpg" />
   <meta property="og:url" content="https://linux503.github.io/Flare/" />
   <link rel="icon" href="./favicon.ico" sizes="any" />
@@ -15,7 +15,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@500;600;700;800&family=Noto+Sans+SC:wght@400;500;600;700&display=swap" rel="stylesheet" />
-  <link rel="stylesheet" href="styles.css?v=13" />
+  <link rel="stylesheet" href="styles.css?v=14" />
   <link rel="stylesheet" href="more-apps.css?v=7" />
 </head>
 <body>
@@ -71,7 +71,7 @@
       <div class="hero-inner">
         <p class="brand-xl">Flare Pro</p>
         <h1>一拍即得</h1>
-        <p class="subtitle">原生 macOS 截图与屏幕录制。菜单栏单击就能截，独立菜单就能录，标注和 OCR 都在顺手的位置。</p>
+        <p class="subtitle">macOS 原生截图与录屏；Windows EXE 与 Android APK 可直接下载，支持网页长截图。标注和 OCR 都在顺手的位置。</p>
         <div class="hero-actions">
           <div class="dl-stack">
             <a class="btn primary" data-download href="https://github.com/linux503/Flare/releases/download/v1.2.7/Flare-Pro-1.2.7-Universal.dmg">免费下载</a>
@@ -98,7 +98,7 @@
     <section class="strip">
       <article>
         <h2>截得快</h2>
-        <p>单击菜单栏进入区域截图，确认后直接编辑、复制、保存或钉图。</p>
+        <p>macOS 单击菜单栏即可截图；Windows EXE 与 Android APK 支持网页长截图。</p>
       </article>
       <article>
         <h2>录得清</h2>
@@ -114,11 +114,11 @@
       <div class="chapter-text">
         <p class="tag green">Screenshot</p>
         <h2>截图，为速度而生</h2>
-        <p>区域、窗口、全屏、延时。选区带放大镜与尺寸参考；空格或回车确认后，工具栏可直达下一步。</p>
+        <p>macOS 支持区域、窗口、全屏、延时与长截图。Windows 与 Android 版可打开网页，自动滚动并拼接成长图。</p>
         <ul>
-          <li>默认快捷键 <code>⌘⌥5</code></li>
-          <li>右键菜单栏切换更多截图方式</li>
-          <li>历史记录随时回看最近截图</li>
+          <li>macOS 默认快捷键 <code>⌘⌥5</code></li>
+          <li>Windows：下载 EXE，网页长截图</li>
+          <li>Android：下载 APK，网页长截图</li>
         </ul>
       </div>
       <figure><img src="poster-capture.jpg?v=8" alt="截图展示" loading="lazy" width="1536" height="1024" /></figure>
@@ -157,12 +157,13 @@
       <div class="start-head">
         <p class="tag">上手</p>
         <h2>三步开始用</h2>
+        <p>macOS 走系统授权；Windows 下 EXE、Android 下 APK 即可用网页长截图。</p>
       </div>
       <ol class="steps">
         <li>
           <span>1</span>
           <h3>授权</h3>
-          <p>系统设置 → 隐私与安全性 → 屏幕与系统音频录制，打开 Flare Pro，然后完全退出再打开。</p>
+          <p>macOS：系统设置 → 隐私与安全性 → 屏幕与系统音频录制，打开 Flare Pro，然后完全退出再打开。Windows / Android 无需此步骤，下载 EXE 或 APK 即可。</p>
         </li>
         <li>
           <span>2</span>
@@ -188,10 +189,11 @@
         <div>
           <p class="tag">Download</p>
           <h2>下载 Flare Pro</h2>
-          <p>免费使用。macOS / Windows / Android 均可直接下载安装包。</p>
+          <p>免费使用。macOS 完整截图录屏；Windows 下载 EXE、Android 下载 APK，均支持网页长截图。</p>
           <div class="chips">
-            <span>Universal</span>
-            <span>网页长截图</span>
+            <span>macOS Universal</span>
+            <span>Windows EXE</span>
+            <span>Android APK</span>
           </div>
           <div class="download-panel">
             <div class="platform-grid">
@@ -223,9 +225,9 @@
         <aside>
           <h3>安装建议</h3>
           <ol>
-            <li>放到 <code>/Applications/Flare Pro.app</code></li>
-            <li>授权后务必完全退出再启动</li>
-            <li>灰色旧权限条目请先删除再勾选</li>
+            <li>macOS：放到 <code>/Applications</code>，授权屏幕录制后完全退出再启动</li>
+            <li>Windows：下载 EXE，双击即可运行</li>
+            <li>Android：下载 APK，允许未知来源后安装</li>
           </ol>
         </aside>
       </div>
@@ -237,7 +239,7 @@
       <img src="logo.png" width="22" height="22" alt="" />
       <div>
         <strong>Flare Pro</strong>
-        <em>原生 macOS 截图与屏幕录制</em>
+        <em>macOS · Windows EXE · Android APK</em>
       </div>
     </div>
     <div class="links">
