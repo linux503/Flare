@@ -12,6 +12,8 @@ enum LongScreenshot {
     private struct CapturedSegment {
         let image: CGImage
         let shiftFromPrevious: Int
+        let staticTopInset: Int
+        let staticBottomInset: Int
     }
 
     struct Session {
@@ -58,7 +60,9 @@ enum LongScreenshot {
             targetSize: expectedSize,
             excludeSelf: true
         )
-        var segments: [CapturedSegment] = [CapturedSegment(image: first, shiftFromPrevious: 0)]
+        var segments: [CapturedSegment] = [
+            CapturedSegment(image: first, shiftFromPrevious: 0, staticTopInset: 0, staticBottomInset: 0)
+        ]
 
         // 连续“基本无变化”计数
         var unchangedCount = 0
@@ -176,7 +180,7 @@ enum LongScreenshot {
         let maxShift = max(targetShift + 40, Int(Double(height) * 0.88))
         let wheelPlan: [Int32] = [-7, -9, -11, -13]
 
-        var bestCandidate: (image: CGImage, shift: Int)?
+        var bestCandidate: (image: CGImage, shift: Int, topInset: Int, bottomInset: Int)?
         var sameCount = 0
 
         for (idx, lines) in wheelPlan.enumerated() {
@@ -204,23 +208,35 @@ enum LongScreenshot {
                 continue
             }
 
-            guard let shift = estimateScrollShift(previous: lastSegment, current: candidate, maxShift: maxShift) else {
-                bestCandidate = bestCandidate ?? (candidate, minUsefulShift)
+            let staticInsets = detectStaticInsets(previous: lastSegment, current: candidate)
+            guard let shift = estimateScrollShift(
+                previous: lastSegment,
+                current: candidate,
+                maxShift: maxShift,
+                staticTopInset: staticInsets.top,
+                staticBottomInset: staticInsets.bottom
+            ) else {
+                bestCandidate = bestCandidate ?? (candidate, minUsefulShift, staticInsets.top, staticInsets.bottom)
                 continue
             }
 
             if shift < minUsefulShift {
-                bestCandidate = (candidate, shift)
+                bestCandidate = (candidate, shift, staticInsets.top, staticInsets.bottom)
                 continue
             }
 
-            bestCandidate = (candidate, shift)
+            bestCandidate = (candidate, shift, staticInsets.top, staticInsets.bottom)
             if shift >= targetShift { break }
         }
 
         guard let bestCandidate else { return nil }
         let clampedShift = bestCandidate.shift.clamped(to: 1...(height - 1))
-        return CapturedSegment(image: bestCandidate.image, shiftFromPrevious: clampedShift)
+        return CapturedSegment(
+            image: bestCandidate.image,
+            shiftFromPrevious: clampedShift,
+            staticTopInset: bestCandidate.topInset,
+            staticBottomInset: bestCandidate.bottomInset
+        )
     }
 
     // MARK: - Stitching
@@ -267,9 +283,14 @@ enum LongScreenshot {
             let stitchedCG = stitchedContext.makeImage()
             if let stitchedCG { newContext.draw(stitchedCG, in: CGRect(x: 0, y: 0, width: width, height: stitchedHeight)) }
 
-            // 只接入新的底部内容，减少重复块和吸顶栏带来的错位
-            let crop = CGRect(x: 0, y: 0, width: width, height: shift)
-            if let freshPart = next.image.cropping(to: crop) {
+            // 自动判断新增内容位于图像的哪一侧，避免把浏览器顶部栏反复拼进去
+            if let freshPart = cropFreshPart(
+                from: next.image,
+                shift: shift,
+                previous: stitchedContext.makeImage(),
+                staticTopInset: next.staticTopInset,
+                staticBottomInset: next.staticBottomInset
+            ) {
                 newContext.draw(freshPart, in: CGRect(x: 0, y: stitchedHeight, width: width, height: shift))
             } else {
                 newContext.draw(next.image, in: CGRect(x: 0, y: stitchedHeight - overlap, width: width, height: height))
@@ -282,7 +303,58 @@ enum LongScreenshot {
         return stitchedContext.makeImage()!
     }
 
-    private static func estimateScrollShift(previous: CGImage, current: CGImage, maxShift: Int) -> Int? {
+    private static func cropFreshPart(
+        from next: CGImage,
+        shift: Int,
+        previous: CGImage?,
+        staticTopInset: Int,
+        staticBottomInset: Int
+    ) -> CGImage? {
+        let width = next.width
+        let height = next.height
+        guard shift > 0, shift < height else { return nil }
+
+        let lowerY = staticBottomInset.clamped(to: 0...(height - 1))
+        let upperY = (height - staticTopInset - shift).clamped(to: 0...(height - shift))
+        let lowerCrop = CGRect(x: 0, y: lowerY, width: width, height: shift)
+        let upperCrop = CGRect(x: 0, y: upperY, width: width, height: shift)
+
+        guard let lower = next.cropping(to: lowerCrop) else { return nil }
+        guard let upper = next.cropping(to: upperCrop) else { return lower }
+        guard let previous else { return upper }
+
+        let lowerScore = seamScore(previous: previous, fresh: lower)
+        let upperScore = seamScore(previous: previous, fresh: upper)
+        return upperScore <= lowerScore ? upper : lower
+    }
+
+    private static func seamScore(previous: CGImage, fresh: CGImage) -> Double {
+        let sampleHeight = min(48, previous.height, fresh.height)
+        guard sampleHeight > 4 else { return 0 }
+
+        let prevRect = CGRect(x: 0, y: 0, width: previous.width, height: sampleHeight)
+        let freshRect = CGRect(x: 0, y: fresh.height - sampleHeight, width: fresh.width, height: sampleHeight)
+        guard let prevTail = previous.cropping(to: prevRect),
+              let freshHead = fresh.cropping(to: freshRect) else { return .greatestFiniteMagnitude }
+
+        let a = downsampleGray(prevTail, targetWidth: 96)
+        let b = downsampleGray(freshHead, targetWidth: 96)
+        guard a.width == b.width, a.height == b.height, !a.bytes.isEmpty else { return .greatestFiniteMagnitude }
+
+        var acc = 0.0
+        for i in 0..<min(a.bytes.count, b.bytes.count) {
+            acc += Double(abs(Int(a.bytes[i]) - Int(b.bytes[i])))
+        }
+        return acc / Double(min(a.bytes.count, b.bytes.count))
+    }
+
+    private static func estimateScrollShift(
+        previous: CGImage,
+        current: CGImage,
+        maxShift: Int,
+        staticTopInset: Int,
+        staticBottomInset: Int
+    ) -> Int? {
         let segmentHeight = previous.height
         let minShift = max(8, Int(Double(segmentHeight) * 0.06))
         let cappedMaxShift = min(maxShift, segmentHeight - 1)
@@ -298,8 +370,12 @@ enum LongScreenshot {
         let minShiftDown = max(1, Int(Double(minShift) * scaleY))
         let maxShiftDown = max(minShiftDown + 1, Int(Double(cappedMaxShift) * scaleY))
         let trimY = Int(Double(downA.height) * trimFraction)
-        let usableHeight = downA.height - trimY * 2
-        guard usableHeight > maxShiftDown + 4 else { return nil }
+        let topInsetDown = Int(Double(staticTopInset) * scaleY)
+        let bottomInsetDown = Int(Double(staticBottomInset) * scaleY)
+        let safeTop = min(downA.height - 2, topInsetDown + trimY)
+        let safeBottom = max(safeTop + 8, downA.height - bottomInsetDown - trimY)
+        let usableHeight = safeBottom - safeTop
+        guard usableHeight > maxShiftDown + 8 else { return nil }
 
         var bestShiftDown = minShiftDown
         var bestScore = Double.greatestFiniteMagnitude
@@ -308,11 +384,13 @@ enum LongScreenshot {
         for shiftDown in stride(from: minShiftDown, through: maxShiftDown, by: 2) {
             var acc = 0.0
             var count = 0
-            for y in trimY..<(trimY + usableHeight - shiftDown) {
+            for y in safeTop..<(safeBottom - shiftDown) {
                 let aRow = (y + shiftDown) * downA.width
                 let bRow = y * downB.width
-                var x = 0
-                while x < downA.width {
+                let xStart = Int(Double(downA.width) * 0.10)
+                let xEnd = max(xStart + 4, downA.width - xStart)
+                var x = xStart
+                while x < xEnd {
                     let av = downA.bytes[aRow + x]
                     let bv = downB.bytes[bRow + x]
                     acc += Double(abs(Int(av) - Int(bv)))
@@ -331,6 +409,71 @@ enum LongScreenshot {
 
         guard bestScore < 18 else { return nil }
         return Int(Double(bestShiftDown) / scaleY).clamped(to: 1...(segmentHeight - 1))
+    }
+
+    private static func detectStaticInsets(previous: CGImage, current: CGImage) -> (top: Int, bottom: Int) {
+        let targetWidth = 180
+        let a = downsampleGray(previous, targetWidth: targetWidth)
+        let b = downsampleGray(current, targetWidth: targetWidth)
+        guard a.width == b.width, a.height == b.height, a.height > 40 else { return (0, 0) }
+
+        let xStart = Int(Double(a.width) * 0.10)
+        let xEnd = max(xStart + 8, a.width - xStart)
+        let madThreshold = 4.2
+        let gapTolerance = 3
+
+        func rowMAD(_ rowA: Int, _ rowB: Int) -> Double {
+            var acc = 0.0
+            var count = 0
+            let baseA = rowA * a.width
+            let baseB = rowB * b.width
+            var x = xStart
+            while x < xEnd {
+                acc += Double(abs(Int(a.bytes[baseA + x]) - Int(b.bytes[baseB + x])))
+                count += 1
+                x += 2
+            }
+            return count > 0 ? acc / Double(count) : .greatestFiniteMagnitude
+        }
+
+        func scanTop() -> Int {
+            var staticRows = 0
+            var gap = 0
+            for y in 0..<min(a.height / 3, 120) {
+                if rowMAD(y, y) <= madThreshold {
+                    staticRows += 1
+                    gap = 0
+                } else if staticRows > 0 {
+                    gap += 1
+                    if gap > gapTolerance { break }
+                }
+            }
+            return staticRows
+        }
+
+        func scanBottom() -> Int {
+            var staticRows = 0
+            var gap = 0
+            let limit = min(a.height / 3, 120)
+            for offset in 0..<limit {
+                let y = a.height - 1 - offset
+                if rowMAD(y, y) <= madThreshold {
+                    staticRows += 1
+                    gap = 0
+                } else if staticRows > 0 {
+                    gap += 1
+                    if gap > gapTolerance { break }
+                }
+            }
+            return staticRows
+        }
+
+        let topDown = scanTop()
+        let bottomDown = scanBottom()
+        let scaleBack = Double(previous.height) / Double(a.height)
+        let top = topDown >= 12 ? Int(Double(topDown) * scaleBack) : 0
+        let bottom = bottomDown >= 12 ? Int(Double(bottomDown) * scaleBack) : 0
+        return (top, bottom)
     }
 
     private static func nearlySame(a: CGImage, b: CGImage) -> Bool {
