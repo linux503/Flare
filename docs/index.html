@@ -27,25 +27,29 @@
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@500;600;700;800&family=Noto+Sans+SC:wght@400;500;600;700&display=swap" rel="stylesheet" />
-  <link rel="stylesheet" href="styles.css?v=20" />
+  <link rel="stylesheet" href="styles.css?v=22" />
   <link rel="stylesheet" href="more-apps.css?v=12" />
 </head>
 <body>
   <header class="site-header">
     <a class="brand" href="#">
-      <img src="logo.png" width="28" height="28" alt="" />
-      <span>Flare Pro</span>
+      <span class="brand-mark"><img src="logo.png" width="32" height="32" alt="" /></span>
+      <span class="brand-text">
+        <strong>Flare Pro</strong>
+        <em>一拍即得</em>
+      </span>
     </a>
     <nav>
-      <a href="#shot">截图</a>
-      <a href="#rec">录屏</a>
-      <a href="#start">上手</a>
-      <details class="more-apps" data-more-apps="flare">
-        <summary>
-          <span class="more-apps-ico" aria-hidden="true"><i></i><i></i><i></i><i></i></span>
-          <span class="more-apps-label">更多软件</span>
-          <span class="more-apps-chevron" aria-hidden="true"></span>
-        </summary>
+      <div class="nav-cluster">
+        <a href="#shot">截图</a>
+        <a href="#rec">录屏</a>
+        <a href="#start">上手</a>
+        <details class="more-apps" data-more-apps="flare">
+          <summary>
+            <span class="more-apps-ico" aria-hidden="true"><i></i><i></i><i></i><i></i></span>
+            <span class="more-apps-label">更多软件</span>
+            <span class="more-apps-chevron" aria-hidden="true"></span>
+          </summary>
           <div class="more-apps-panel" role="menu">
             <div class="more-apps-head">其他工具</div>
             <a href="https://linux503.github.io/ZipX/" target="_blank" rel="noopener noreferrer" role="menuitem" style="--app-accent:#e84d32">
@@ -82,7 +86,11 @@
             </a>
           </div>
         </details>
-      <a class="pill" data-download href="https://github.com/linux503/Flare/releases/download/v1.3.0/Flare-Pro-1.3.0-Universal.dmg">下载</a>
+      </div>
+      <a class="pill" data-download href="https://github.com/linux503/Flare/releases/download/v1.3.0/Flare-Pro-1.3.0-Universal.dmg">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M12 3a1 1 0 0 1 1 1v8.6l2.3-2.3a1 1 0 1 1 1.4 1.4l-4 4a1 1 0 0 1-1.4 0l-4-4a1 1 0 1 1 1.4-1.4L11 12.6V4a1 1 0 0 1 1-1ZM5 18a1 1 0 0 1 1-1h12a1 1 0 1 1 0 2H6a1 1 0 0 1-1-1Z"/></svg>
+        下载
+      </a>
     </nav>
   </header>
 
@@ -120,7 +128,7 @@
             </span>
             <span class="dl-copy">
               <strong>Android</strong>
-              <em>APK · 安装包</em>
+              <em>APK</em>
             </span>
             <span class="dl-ver" data-app-version>v1.3.0</span>
           </a>
