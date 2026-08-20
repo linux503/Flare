@@ -2,13 +2,12 @@ import AppKit
 import ApplicationServices
 import CoreGraphics
 
-/// 长截图：选区自动滚动并拼接成长图。
+/// 长截图：选区自动滚动，多帧按重叠区精确拼接。
 ///
-/// 策略（向下滚动）：
-/// 1. 点击选区中心聚焦目标窗口（需辅助功能权限）
-/// 2. 在选区中心发送滚轮事件
-/// 3. 用内容区模板匹配估计滚动位移
-/// 4. 只裁切底部「新增」条带拼到上一张下方，避开顶部固定栏
+/// 拼接核心（ShareX / GoFullPage 同类思路）：
+/// 1. 相邻两帧在「可滚动内容区」搜索最佳重叠行数 overlap
+/// 2. 上一帧底部 overlap 行 ≈ 当前帧顶部 overlap 行
+/// 3. 只追加当前帧底部 (H - overlap) 行新内容，固定顶栏不参与匹配
 enum LongScreenshot {
     struct Session {
         let displayID: CGDirectDisplayID
@@ -31,19 +30,36 @@ enum LongScreenshot {
         }
     }
 
-    private struct Segment {
-        let image: CGImage
-        /// 相对上一段向下滚动的像素数（新内容高度）
-        let freshHeight: Int
-        let staticTop: Int
+    /// 视觉坐标：row 0 = 图像顶部（浏览器地址栏一侧）
+    private struct TopDownGray {
+        let bytes: [UInt8]
+        let width: Int
+        let height: Int
+
+        func rowMAD(with other: TopDownGray, selfRows: Range<Int>, otherRows: Range<Int>, xMargin: Int = 0) -> Double {
+            guard selfRows.count == otherRows.count, !selfRows.isEmpty else { return .greatestFiniteMagnitude }
+            let x0 = max(0, xMargin)
+            let x1 = min(width, width - xMargin)
+            guard x1 > x0 + 4 else { return .greatestFiniteMagnitude }
+            var acc = 0.0
+            var n = 0
+            for (ra, rb) in zip(selfRows, otherRows) {
+                let ba = ra * width
+                let bb = rb * width
+                var x = x0
+                while x < x1 {
+                    acc += Double(abs(Int(bytes[ba + x]) - Int(other.bytes[bb + x])))
+                    n += 1
+                    x += 2
+                }
+            }
+            return n > 0 ? acc / Double(n) : .greatestFiniteMagnitude
+        }
     }
 
-    static func capture(session: Session, maxSegments: Int = 20) async throws -> CGImage {
+    static func capture(session: Session, maxSegments: Int = 24) async throws -> CGImage {
         try Task.checkCancellation()
-
-        guard ensureAccessibility() else {
-            throw Error.needsAccessibility
-        }
+        guard ensureAccessibility() else { throw Error.needsAccessibility }
 
         let widthPx = max(1, Int((session.selectionRectInPoints.width * session.displayScale).rounded()))
         let heightPx = max(1, Int((session.selectionRectInPoints.height * session.displayScale).rounded()))
@@ -57,32 +73,26 @@ enum LongScreenshot {
             y: session.displayBoundsInPoints.minY + session.selectionRectInPoints.midY
         )
 
-        // 等遮罩消失后再点选区，避免点到 Flare 自己
         try await Task.sleep(nanoseconds: 180_000_000)
         focus(at: focusPoint)
         try await Task.sleep(nanoseconds: 120_000_000)
 
-        let first = try await captureSegment(
+        var frames: [CGImage] = []
+        frames.append(try await captureSegment(
             displayID: session.displayID,
             selectionRectInPoints: session.selectionRectInPoints,
             targetSize: targetSize
-        )
+        ))
 
-        var segments: [Segment] = [
-            Segment(image: first, freshHeight: heightPx, staticTop: 0)
-        ]
-        var last = first
+        let wheelSteps: Int32 = -16
         var unchanged = 0
-
-        // 每段滚动约半屏，重叠越大拼接越稳
-        let wheelSteps: Int32 = -18
-        let minFresh = max(32, heightPx / 10)
+        var last = frames[0]
 
         for _ in 1..<maxSegments {
             if cancelMonitor.isCancelled { throw Error.cancelled }
 
             scrollWheel(at: focusPoint, lines: wheelSteps)
-            try await Task.sleep(nanoseconds: 380_000_000)
+            try await Task.sleep(nanoseconds: 400_000_000)
             if cancelMonitor.isCancelled { throw Error.cancelled }
 
             let next = try await captureSegment(
@@ -94,34 +104,237 @@ enum LongScreenshot {
             if nearlySame(a: last, b: next) {
                 unchanged += 1
                 if unchanged >= 2 { break }
-                // 再滚深一点再试
                 scrollWheel(at: focusPoint, lines: wheelSteps)
-                try await Task.sleep(nanoseconds: 320_000_000)
+                try await Task.sleep(nanoseconds: 300_000_000)
                 continue
             }
             unchanged = 0
 
-            let staticTop = detectStaticTop(previous: last, current: next)
-            let shift = estimateScrollShift(
-                previous: last,
-                current: next,
-                staticTop: staticTop
-            ) ?? max(minFresh, heightPx / 2)
-
-            let fresh = min(max(shift, minFresh), heightPx - max(staticTop, 1))
-            // 滚动过小说明几乎没动，再试一轮
-            if fresh < minFresh {
+            // 预估重叠，若几乎没滚动则跳过
+            let overlap = findBestOverlap(previous: last, current: next)
+            let fresh = heightPx - overlap
+            if fresh < max(20, heightPx / 15) {
                 unchanged += 1
                 if unchanged >= 2 { break }
                 continue
             }
 
-            segments.append(Segment(image: next, freshHeight: fresh, staticTop: staticTop))
+            frames.append(next)
             last = next
         }
 
-        guard !segments.isEmpty else { throw Error.noSegment }
-        return stitchTopDown(segments: segments)
+        guard frames.count >= 1 else { throw Error.noSegment }
+        return stitchByOverlap(frames: frames)
+    }
+
+    // MARK: - Stitch
+
+    /// 按相邻帧重叠区拼接：首帧全保留，后续只追加非重叠底部
+    private static func stitchByOverlap(frames: [CGImage]) -> CGImage {
+        guard let first = frames.first else { fatalError("unreachable") }
+        let w = first.width
+        let h = first.height
+
+        var strips: [CGImage] = [first]
+
+        for i in 1..<frames.count {
+            let prev = frames[i - 1]
+            let curr = frames[i]
+            let overlap = findBestOverlap(previous: prev, current: curr)
+            let freshRows = h - overlap
+            guard freshRows > 0, freshRows < h else { continue }
+
+            if let strip = cropTopDownRows(from: curr, startRow: overlap, rowCount: freshRows) {
+                strips.append(strip)
+            }
+        }
+
+        return composeVertical(strips: strips, width: w)
+    }
+
+    /// 搜索最佳重叠：prev 底部 overlap 行 ≈ curr 顶部 overlap 行
+    private static func findBestOverlap(previous: CGImage, current: CGImage) -> Int {
+        let h = previous.height
+        let minOverlap = max(24, h / 8)
+        let maxOverlap = min(h - 24, Int(Double(h) * 0.92))
+
+        let staticTop = detectStaticTop(previous: previous, current: current)
+        let staticBottom = detectStaticBottom(previous: previous, current: current)
+
+        // 粗搜：下采样
+        let tw = 200
+        let prevG = toTopDownGray(previous, targetWidth: tw)
+        let currG = toTopDownGray(current, targetWidth: tw)
+        guard prevG.width == currG.width, prevG.height == currG.height else {
+            return h / 2
+        }
+
+        let scale = Double(prevG.height) / Double(h)
+        let minOD = max(4, Int(Double(minOverlap) * scale))
+        let maxOD = min(prevG.height - 4, Int(Double(maxOverlap) * scale))
+        guard maxOD > minOD else { return h / 2 }
+
+        let skipTop = max(2, Int(Double(staticTop) * scale))
+        let skipBottom = max(2, Int(Double(staticBottom) * scale))
+        let xMargin = prevG.width / 12
+
+        var bestOD = minOD
+        var bestScore = Double.greatestFiniteMagnitude
+
+        for od in stride(from: minOD, through: maxOD, by: 1) {
+            // prev 底部 od 行 vs curr 顶部 od 行
+            let prevRows = (prevG.height - skipBottom - od)..<(prevG.height - skipBottom)
+            let currRows = skipTop..<(skipTop + od)
+            guard prevRows.lowerBound >= 0, currRows.upperBound <= currG.height else { continue }
+
+            let score = prevG.rowMAD(with: currG, selfRows: prevRows, otherRows: currRows, xMargin: xMargin)
+            if score < bestScore {
+                bestScore = score
+                bestOD = od
+            }
+        }
+
+        var overlap = Int((Double(bestOD) / scale).rounded()).clamped(to: minOverlap...maxOverlap)
+
+        // 细搜：全分辨率 ±6px
+        if bestScore < 28 {
+            let refine = refineOverlap(
+                previous: previous,
+                current: current,
+                center: overlap,
+                radius: 6,
+                staticTop: staticTop,
+                staticBottom: staticBottom
+            )
+            if let refine { overlap = refine }
+        }
+
+        return overlap
+    }
+
+    private static func refineOverlap(
+        previous: CGImage,
+        current: CGImage,
+        center: Int,
+        radius: Int,
+        staticTop: Int,
+        staticBottom: Int
+    ) -> Int? {
+        let h = previous.height
+        let lo = max(max(24, h / 8), center - radius)
+        let hi = min(min(h - 24, Int(Double(h) * 0.92)), center + radius)
+        guard hi > lo else { return nil }
+
+        let prevG = toTopDownGray(previous, targetWidth: min(320, previous.width))
+        let currG = toTopDownGray(current, targetWidth: min(320, current.width))
+        guard prevG.width == currG.width, prevG.height == currG.height else { return nil }
+
+        let xMargin = prevG.width / 12
+        var best = center
+        var bestScore = Double.greatestFiniteMagnitude
+        let scale = Double(prevG.height) / Double(h)
+
+        for overlap in lo...hi {
+            let od = max(4, Int(Double(overlap) * scale))
+            let skipTop = max(2, Int(Double(staticTop) * scale))
+            let skipBottom = max(2, Int(Double(staticBottom) * scale))
+            let prevRows = (prevG.height - skipBottom - od)..<(prevG.height - skipBottom)
+            let currRows = skipTop..<(skipTop + od)
+            guard prevRows.lowerBound >= 0, currRows.upperBound <= currG.height else { continue }
+            let score = prevG.rowMAD(with: currG, selfRows: prevRows, otherRows: currRows, xMargin: xMargin)
+            if score < bestScore {
+                bestScore = score
+                best = overlap
+            }
+        }
+        return bestScore < 32 ? best : nil
+    }
+
+    /// 视觉 top-down 行裁剪：startRow=0 是顶部，rowCount 向下取
+    private static func cropTopDownRows(from image: CGImage, startRow: Int, rowCount: Int) -> CGImage? {
+        guard startRow >= 0, rowCount > 0, startRow + rowCount <= image.height else { return nil }
+        // CGImage 原点在左下：视觉顶部 = 高 y
+        let cgY = image.height - startRow - rowCount
+        return image.cropping(to: CGRect(x: 0, y: cgY, width: image.width, height: rowCount))
+    }
+
+    /// 自上而下拼接多条 strip（strip[0] 在最上）
+    private static func composeVertical(strips: [CGImage], width: Int) -> CGImage {
+        var totalH = 0
+        for s in strips { totalH += s.height }
+
+        let ctx = CGContext(
+            data: nil,
+            width: width,
+            height: totalH,
+            bitsPerComponent: 8,
+            bytesPerRow: 0,
+            space: CGColorSpaceCreateDeviceRGB(),
+            bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue
+        )!
+
+        // CG 画布：y 越大越靠上；第一条 strip 画在最顶部
+        var drawY = totalH
+        for strip in strips {
+            drawY -= strip.height
+            ctx.draw(strip, in: CGRect(x: 0, y: drawY, width: width, height: strip.height))
+        }
+        return ctx.makeImage()!
+    }
+
+    // MARK: - Static chrome
+
+    private static func detectStaticTop(previous: CGImage, current: CGImage) -> Int {
+        detectStaticEdge(previous: previous, current: current, fromTop: true)
+    }
+
+    private static func detectStaticBottom(previous: CGImage, current: CGImage) -> Int {
+        detectStaticEdge(previous: previous, current: current, fromTop: false)
+    }
+
+    private static func detectStaticEdge(previous: CGImage, current: CGImage, fromTop: Bool) -> Int {
+        let tw = 160
+        let a = toTopDownGray(previous, targetWidth: tw)
+        let b = toTopDownGray(current, targetWidth: tw)
+        guard a.width == b.width, a.height == b.height, a.height > 40 else { return 0 }
+
+        let x0 = a.width / 10
+        let x1 = a.width - x0
+        let limit = min(a.height / 3, 110)
+        let madThreshold = 4.0
+        var staticRows = 0
+        var gap = 0
+
+        let indices: [Int] = fromTop
+            ? Array(0..<limit)
+            : Array((a.height - limit)..<a.height).reversed()
+
+        for y in indices {
+            var acc = 0.0
+            var n = 0
+            let ba = y * a.width
+            let bb = y * b.width
+            var x = x0
+            while x < x1 {
+                acc += Double(abs(Int(a.bytes[ba + x]) - Int(b.bytes[bb + x])))
+                n += 1
+                x += 2
+            }
+            let mad = n > 0 ? acc / Double(n) : 999
+            if mad <= madThreshold {
+                staticRows += 1
+                gap = 0
+            } else if staticRows > 0 {
+                gap += 1
+                if gap > 2 { break }
+            } else if fromTop {
+                break
+            }
+        }
+
+        guard staticRows >= 6 else { return 0 }
+        let scale = Double(previous.height) / Double(a.height)
+        return Int(Double(staticRows) * scale)
     }
 
     // MARK: - Accessibility
@@ -144,8 +357,6 @@ enum LongScreenshot {
         targetSize: CGSize
     ) async throws -> CGImage {
         let frame = try await ScreenCapturer.captureDisplay(displayID, excludeSelf: true)
-
-        // selection 为 AppKit 点坐标（左上原点）；CGImage 裁剪为左下原点
         let crop = CGRect(
             x: selectionRectInPoints.origin.x * frame.scale,
             y: (frame.bounds.height - selectionRectInPoints.origin.y - selectionRectInPoints.height) * frame.scale,
@@ -153,16 +364,10 @@ enum LongScreenshot {
             height: selectionRectInPoints.height * frame.scale
         ).integral
 
-        guard let cropped = frame.image.cropping(to: crop) else {
-            throw Error.noSegment
-        }
-        if cropped.width == Int(targetSize.width), cropped.height == Int(targetSize.height) {
-            return cropped
-        }
+        guard let cropped = frame.image.cropping(to: crop) else { throw Error.noSegment }
+        if cropped.width == Int(targetSize.width), cropped.height == Int(targetSize.height) { return cropped }
         return resized(cropped, to: targetSize)
     }
-
-    // MARK: - Input
 
     private static func focus(at point: CGPoint) {
         postMouse(.mouseMoved, at: point)
@@ -177,7 +382,6 @@ enum LongScreenshot {
         event.post(tap: .cghidEventTap)
     }
 
-    /// 在指定屏幕位置发送滚轮（必须带 location，否则滚不到目标窗口）
     private static func scrollWheel(at point: CGPoint, lines: Int32) {
         guard let event = CGEvent(
             scrollWheelEvent2Source: nil,
@@ -191,156 +395,21 @@ enum LongScreenshot {
         event.post(tap: .cghidEventTap)
     }
 
-    // MARK: - Stitch (top → bottom)
-
-    private static func stitchTopDown(segments: [Segment]) -> CGImage {
-        let width = segments[0].image.width
-        let height = segments[0].image.height
-
-        var totalHeight = height
-        for seg in segments.dropFirst() {
-            totalHeight += seg.freshHeight
-        }
-
-        let ctx = CGContext(
-            data: nil,
-            width: width,
-            height: totalHeight,
-            bitsPerComponent: 8,
-            bytesPerRow: 0,
-            space: CGColorSpaceCreateDeviceRGB(),
-            bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue
-        )!
-
-        // CG 原点在左下：把「页面顶部」画在高 Y，后续内容往下（低 Y）拼
-        var topY = totalHeight
-        // 第一段整张
-        topY -= height
-        ctx.draw(segments[0].image, in: CGRect(x: 0, y: topY, width: width, height: height))
-
-        for seg in segments.dropFirst() {
-            let fresh = seg.freshHeight
-            // 新内容在视口底部。CGImage y=0 是图像底边 → 直接裁底部 fresh 行
-            let cropRect = CGRect(x: 0, y: 0, width: width, height: fresh)
-            guard let strip = seg.image.cropping(to: cropRect) else { continue }
-            topY -= fresh
-            ctx.draw(strip, in: CGRect(x: 0, y: topY, width: width, height: fresh))
-        }
-
-        return ctx.makeImage()!
-    }
-
-    // MARK: - Analysis
-
-    /// 估计向下滚动了多少像素（上一张内容在下一张里上移的量）
-    private static func estimateScrollShift(previous: CGImage, current: CGImage, staticTop: Int) -> Int? {
-        let h = previous.height
-        let minShift = max(16, h / 12)
-        let maxShift = max(minShift + 8, Int(Double(h) * 0.85))
-
-        let tw = 160
-        let a = downsampleGray(previous, targetWidth: tw)
-        let b = downsampleGray(current, targetWidth: tw)
-        guard a.width == b.width, a.height == b.height, a.height > 24 else { return nil }
-
-        let scaleY = Double(a.height) / Double(h)
-        let topSkip = max(2, Int(Double(max(staticTop, Int(Double(h) * 0.06))) * scaleY))
-        let bottomSkip = max(2, Int(Double(h) * 0.04 * scaleY))
-        let minD = max(1, Int(Double(minShift) * scaleY))
-        let maxD = min(a.height - topSkip - bottomSkip - 2, Int(Double(maxShift) * scaleY))
-        guard maxD > minD else { return nil }
-
-        var best = minD
-        var bestScore = Double.greatestFiniteMagnitude
-        let x0 = a.width / 10
-        let x1 = a.width - x0
-
-        // previous[y+shift] ≈ current[y]（内容上移）
-        for shift in stride(from: minD, through: maxD, by: 1) {
-            var acc = 0.0
-            var n = 0
-            let yStart = topSkip
-            let yEnd = a.height - bottomSkip - shift
-            guard yEnd > yStart else { continue }
-            var y = yStart
-            while y < yEnd {
-                let ra = (y + shift) * a.width
-                let rb = y * b.width
-                var x = x0
-                while x < x1 {
-                    acc += Double(abs(Int(a.bytes[ra + x]) - Int(b.bytes[rb + x])))
-                    n += 1
-                    x += 2
-                }
-                y += 2
-            }
-            guard n > 0 else { continue }
-            let score = acc / Double(n)
-            if score < bestScore {
-                bestScore = score
-                best = shift
-            }
-        }
-
-        // 匹配太差就退回半屏
-        guard bestScore < 22 else {
-            return h / 2
-        }
-        return Int((Double(best) / scaleY).rounded()).clamped(to: 1...(h - 1))
-    }
-
-    private static func detectStaticTop(previous: CGImage, current: CGImage) -> Int {
-        let a = downsampleGray(previous, targetWidth: 140)
-        let b = downsampleGray(current, targetWidth: 140)
-        guard a.width == b.width, a.height == b.height else { return 0 }
-
-        let x0 = a.width / 10
-        let x1 = a.width - x0
-        var staticRows = 0
-        var gap = 0
-        let limit = min(a.height / 3, 100)
-
-        for y in 0..<limit {
-            var acc = 0.0
-            var n = 0
-            let ba = y * a.width
-            let bb = y * b.width
-            var x = x0
-            while x < x1 {
-                acc += Double(abs(Int(a.bytes[ba + x]) - Int(b.bytes[bb + x])))
-                n += 1
-                x += 2
-            }
-            let mad = n > 0 ? acc / Double(n) : 999
-            // 图像顶 = CG 高 y；downsample 的 y=0 对应图像顶（绘制时 top-down 进 gray context）
-            if mad <= 4.5 {
-                staticRows += 1
-                gap = 0
-            } else if staticRows > 0 {
-                gap += 1
-                if gap > 2 { break }
-            } else {
-                break
-            }
-        }
-
-        guard staticRows >= 8 else { return 0 }
-        let scale = Double(previous.height) / Double(a.height)
-        return Int(Double(staticRows) * scale)
-    }
+    // MARK: - Image utils
 
     private static func nearlySame(a: CGImage, b: CGImage) -> Bool {
-        let da = downsampleGray(a, targetWidth: 100)
-        let db = downsampleGray(b, targetWidth: 100)
+        let da = toTopDownGray(a, targetWidth: 100)
+        let db = toTopDownGray(b, targetWidth: 100)
         guard da.width == db.width, da.height == db.height, !da.bytes.isEmpty else { return false }
         var acc = 0.0
         for i in 0..<da.bytes.count {
             acc += Double(abs(Int(da.bytes[i]) - Int(db.bytes[i])))
         }
-        return (acc / Double(da.bytes.count)) < 6.5
+        return (acc / Double(da.bytes.count)) < 6.0
     }
 
-    private static func downsampleGray(_ image: CGImage, targetWidth: Int) -> (bytes: [UInt8], width: Int, height: Int) {
+    /// 转成 top-down 灰度：bytes[row * width + x]，row 0 = 视觉顶部
+    private static func toTopDownGray(_ image: CGImage, targetWidth: Int) -> TopDownGray {
         let scale = Double(targetWidth) / Double(max(1, image.width))
         let newW = targetWidth
         let newH = max(1, Int(Double(image.height) * scale))
@@ -354,13 +423,12 @@ enum LongScreenshot {
             bitmapInfo: CGImageAlphaInfo.none.rawValue
         )!
         ctx.interpolationQuality = .low
-        // 注意：默认 CG 会把图像底画在 y=0；这里用翻转，让 bytes 行 0 = 视觉顶部，便于扫「顶栏」
         ctx.translateBy(x: 0, y: CGFloat(newH))
         ctx.scaleBy(x: 1, y: -1)
         ctx.draw(image, in: CGRect(x: 0, y: 0, width: newW, height: newH))
-        guard let data = ctx.data else { return ([], newW, newH) }
+        guard let data = ctx.data else { return TopDownGray(bytes: [], width: newW, height: newH) }
         let buf = data.bindMemory(to: UInt8.self, capacity: newW * newH)
-        return (Array(UnsafeBufferPointer(start: buf, count: newW * newH)), newW, newH)
+        return TopDownGray(bytes: Array(UnsafeBufferPointer(start: buf, count: newW * newH)), width: newW, height: newH)
     }
 
     private static func resized(_ image: CGImage, to size: CGSize) -> CGImage {
@@ -390,16 +458,11 @@ private final class EscCancelMonitor {
 
     init() {
         local = NSEvent.addLocalMonitorForEvents(matching: .keyDown) { [weak self] event in
-            if event.keyCode == 53 {
-                self?.isCancelled = true
-                return nil
-            }
+            if event.keyCode == 53 { self?.isCancelled = true; return nil }
             return event
         }
         global = NSEvent.addGlobalMonitorForEvents(matching: .keyDown) { [weak self] event in
-            if event.keyCode == 53 {
-                self?.isCancelled = true
-            }
+            if event.keyCode == 53 { self?.isCancelled = true }
         }
     }
 
