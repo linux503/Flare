@@ -202,15 +202,10 @@ final class CaptureOverlayView: NSView {
         }
 
         if mode == .window, let hover = hoverWindow {
-            let local = convertFromScreenTopLeft(hover.bounds)
-            accent.withAlphaComponent(0.22).setFill()
-            NSBezierPath(roundedRect: local, xRadius: 6, yRadius: 6).fill()
-            accent.setStroke()
-            let p = NSBezierPath(roundedRect: local, xRadius: 6, yRadius: 6)
-            p.lineWidth = 2
-            p.stroke()
-            let label = "\(hover.owner)\(hover.name.isEmpty ? "" : " — \(hover.name)")"
-            drawBadge(label, near: local)
+            drawWindowHighlight(hover)
+        } else if isAreaLike, frozenSelection == nil, dragSession == nil, let hover = hoverWindow {
+            drawWindowHighlight(hover)
+            drawHint("双击识别窗口")
         }
 
         if (mode == .area || mode == .longArea), AppSettings.shared.showMagnifier, frozenSelection == nil, dragSession == nil {
@@ -262,6 +257,36 @@ final class CaptureOverlayView: NSView {
         case .se: return CGPoint(x: rect.maxX, y: rect.minY)
         case .sw: return CGPoint(x: rect.minX, y: rect.minY)
         }
+    }
+
+    private func drawWindowHighlight(_ hover: WindowCapturer.WindowInfo) {
+        let local = convertFromScreenTopLeft(hover.bounds).intersection(bounds)
+        guard local.width > 4, local.height > 4 else { return }
+        accent.withAlphaComponent(0.18).setFill()
+        NSBezierPath(roundedRect: local, xRadius: 6, yRadius: 6).fill()
+        accent.setStroke()
+        let p = NSBezierPath(roundedRect: local, xRadius: 6, yRadius: 6)
+        p.lineWidth = 2
+        p.stroke()
+        let label = "\(hover.owner)\(hover.name.isEmpty ? "" : " — \(hover.name)")"
+        drawBadge(label, near: local)
+    }
+
+    private func drawHint(_ text: String) {
+        let attrs: [NSAttributedString.Key: Any] = [
+            .font: NSFont.systemFont(ofSize: 12, weight: .medium),
+            .foregroundColor: NSColor.white
+        ]
+        let size = (text as NSString).size(withAttributes: attrs)
+        let rect = CGRect(
+            x: bounds.midX - size.width / 2 - 10,
+            y: 18,
+            width: size.width + 20,
+            height: size.height + 10
+        )
+        NSColor.black.withAlphaComponent(0.62).setFill()
+        NSBezierPath(roundedRect: rect, xRadius: 8, yRadius: 8).fill()
+        (text as NSString).draw(at: CGPoint(x: rect.minX + 10, y: rect.minY + 5), withAttributes: attrs)
     }
 
     private func drawBadge(_ text: String, near rect: CGRect) {
@@ -453,7 +478,7 @@ final class CaptureOverlayView: NSView {
 
     override func mouseMoved(with event: NSEvent) {
         mouseLocation = convert(event.locationInWindow, from: nil)
-        if mode == .window { updateHoverWindow(at: mouseLocation) }
+        if mode == .window || isAreaLike { updateHoverWindow(at: mouseLocation) }
         updateCursor(at: mouseLocation)
         requestOverlayRedraw()
     }
@@ -469,15 +494,19 @@ final class CaptureOverlayView: NSView {
             return
         }
 
-        if let frozen = frozenSelection {
-            // 仅用系统 clickCount，避免拖选松手后的单击被误判为双击
-            if event.clickCount >= 2, frozen.insetBy(dx: -6, dy: -6).contains(point) {
+        if isAreaLike, event.clickCount >= 2 {
+            if let frozen = frozenSelection,
+               frozen.width > 24, frozen.height > 24,
+               frozen.insetBy(dx: -6, dy: -6).contains(point) {
                 if mode == .recordArea { commitRecordArea() }
                 else if mode == .longArea { commitLongSelection() }
                 else { commitSelection(.clipboard) }
                 return
             }
+            if snapSelectionToWindow(at: point) { return }
+        }
 
+        if let frozen = frozenSelection {
             if let handle = hitHandle(at: point, in: frozen) {
                 hideActionBar()
                 dragSession = .resize(handle: handle, startRect: frozen, anchor: point)
@@ -815,6 +844,21 @@ final class CaptureOverlayView: NSView {
     private func barCancel() {
         hideActionBar()
         onCancel?()
+    }
+
+    private func snapSelectionToWindow(at point: CGPoint) -> Bool {
+        updateHoverWindow(at: point)
+        guard let hover = hoverWindow else { return false }
+        var local = convertFromScreenTopLeft(hover.bounds).intersection(bounds)
+        local = clampSelection(local)
+        guard local.width > 8, local.height > 8 else { return false }
+        hideActionBar()
+        dragSession = nil
+        frozenSelection = local
+        needsDisplay = true
+        showActionBar(near: local)
+        updateCursor(at: point)
+        return true
     }
 
     private func updateHoverWindow(at point: CGPoint) {

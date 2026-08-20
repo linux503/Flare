@@ -43,7 +43,7 @@ struct HomePane: View {
                 Text("截图")
                     .font(.system(size: 26, weight: .bold, design: .rounded))
                     .foregroundStyle(theme.textPrimary)
-                Text(capture.isCapturing ? "正在截图…" : "选区确认后可双击复制到剪贴板")
+                Text(capture.isCapturing ? "正在截图…" : "双击可自动识别窗口，选区确认后可双击复制")
                     .font(.system(size: 12, weight: .medium))
                     .foregroundStyle(theme.textMuted)
                     .animation(.easeOut(duration: 0.2), value: capture.isCapturing)

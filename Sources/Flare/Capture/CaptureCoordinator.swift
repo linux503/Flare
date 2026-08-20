@@ -111,8 +111,9 @@ final class CaptureCoordinator: ObservableObject {
 
     private func presentAreaOverlays(frames: [CapturedFrame]) {
         dismissOverlays()
+        let windows = WindowCapturer.listWindows()
         overlayControllers = frames.map { frame in
-            let controller = CaptureOverlayController(frame: frame, mode: .area)
+            let controller = CaptureOverlayController(frame: frame, mode: .area, windows: windows)
             controller.onCancel = { [weak self] in self?.cancelCapture() }
             controller.onAreaSelected = { [weak self] image, scale, action in
                 self?.completeArea(cgImage: image, scale: scale, action: action)
@@ -124,8 +125,9 @@ final class CaptureCoordinator: ObservableObject {
 
     private func presentLongOverlays(frames: [CapturedFrame]) {
         dismissOverlays()
+        let windows = WindowCapturer.listWindows()
         overlayControllers = frames.map { frame in
-            let controller = CaptureOverlayController(frame: frame, mode: .longArea)
+            let controller = CaptureOverlayController(frame: frame, mode: .longArea, windows: windows)
             controller.onCancel = { [weak self] in self?.cancelCapture() }
             controller.onLongAreaSelected = { [weak self] displayID, displayBounds, selectionRect, selectionScale in
                 self?.completeLongArea(

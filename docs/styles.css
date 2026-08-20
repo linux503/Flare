@@ -457,6 +457,13 @@ body {
   grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 10px;
 }
+.platform-grid .dl-stack {
+  width: 100%;
+  gap: 8px;
+}
+.platform-grid .platform-card {
+  width: 100%;
+}
 .platform-card {
   display: flex;
   flex-direction: column;

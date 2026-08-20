@@ -37,8 +37,9 @@ enum RecordAreaPicker {
         onCancel: @escaping () -> Void
     ) {
         var controllers: [CaptureOverlayController] = []
+        let windows = WindowCapturer.listWindows()
         for frame in frames {
-            let controller = CaptureOverlayController(frame: frame, mode: .recordArea)
+            let controller = CaptureOverlayController(frame: frame, mode: .recordArea, windows: windows)
             controller.onCancel = {
                 controllers.forEach { $0.close() }
                 controllers.removeAll()

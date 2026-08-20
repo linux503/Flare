@@ -1,10 +1,10 @@
 {
-  "version": "1.2.7",
-  "build": 12,
-  "notes": "支持 macOS、Windows EXE 与 Android APK。macOS 含长截图；Windows / Android 可网页长截图。",
-  "downloadURL": "https://github.com/linux503/Flare/releases/download/v1.2.7/Flare-Pro-1.2.7-Universal.dmg",
-  "windowsURL": "https://github.com/linux503/Flare/releases/latest/download/Flare-Windows-x64.exe",
-  "androidURL": "https://github.com/linux503/Flare/releases/latest/download/Flare-Android.apk",
+  "version": "1.2.9",
+  "build": 13,
+  "notes": "区域截图支持双击自动识别窗口；macOS / Windows EXE / Android APK 均可下载。",
+  "downloadURL": "https://github.com/linux503/Flare/releases/download/v1.2.9/Flare-Pro-1.2.9-Universal.dmg",
+  "windowsURL": "https://github.com/linux503/Flare/releases/download/v1.2.9/Flare-Windows-x64.exe",
+  "androidURL": "https://github.com/linux503/Flare/releases/download/v1.2.9/Flare-Android.apk",
   "minOS": "14.0",
-  "publishedAt": "2026-08-14"
+  "publishedAt": "2026-08-20"
 }
