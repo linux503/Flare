@@ -90,7 +90,7 @@ struct HotKeyShortcut: Equatable, Hashable {
 }
 
 enum HotKeyAction: String, CaseIterable, Identifiable {
-    case area, window, screen, delay, record, history
+    case area, window, screen, delay, longShot, record, history
 
     var id: String { rawValue }
 
@@ -100,6 +100,7 @@ enum HotKeyAction: String, CaseIterable, Identifiable {
         case .window: return "窗口截图"
         case .screen: return "全屏截图"
         case .delay: return "延时截图"
+        case .longShot: return "长截图"
         case .record: return "屏幕录制"
         case .history: return "历史记录"
         }
@@ -116,6 +117,8 @@ enum HotKeyAction: String, CaseIterable, Identifiable {
             return HotKeyShortcut(keyCode: HotKeyDefaults.screenKey, modifiers: HotKeyDefaults.cmdOption)
         case .delay:
             return HotKeyShortcut(keyCode: HotKeyDefaults.delayKey, modifiers: HotKeyDefaults.cmdOption)
+        case .longShot:
+            return HotKeyShortcut(keyCode: HotKeyDefaults.longShotKey, modifiers: HotKeyDefaults.cmdOption)
         case .record:
             return HotKeyShortcut(keyCode: HotKeyDefaults.recordKey, modifiers: HotKeyDefaults.cmdOption)
         case .history:

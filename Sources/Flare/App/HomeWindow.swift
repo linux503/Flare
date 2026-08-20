@@ -126,10 +126,15 @@ struct HomePane: View {
 
     private var secondaryRail: some View {
         let _ = shortcutTick
-        return HStack(spacing: 10) {
-            railItem("窗口", .window, .window) { CaptureCoordinator.shared.startWindowCapture() }
-            railItem("全屏", .screen, .screen) { CaptureCoordinator.shared.startFullScreenCapture() }
-            railItem("延时 3s", .delay, .delay) { CaptureCoordinator.shared.startDelayedCapture(seconds: 3) }
+        return VStack(spacing: 10) {
+            HStack(spacing: 10) {
+                railItem("窗口", .window, .window) { CaptureCoordinator.shared.startWindowCapture() }
+                railItem("全屏", .screen, .screen) { CaptureCoordinator.shared.startFullScreenCapture() }
+            }
+            HStack(spacing: 10) {
+                railItem("延时 3s", .delay, .delay) { CaptureCoordinator.shared.startDelayedCapture(seconds: 3) }
+                railItem("长截图", .longShot, .longShot) { CaptureCoordinator.shared.startLongAreaCapture() }
+            }
         }
     }
 

@@ -12,11 +12,11 @@ enum AppLogoKind: String, CaseIterable, Identifiable {
 
     var title: String {
         switch self {
-        case .spark: return "翠绿闪光"
-        case .iris: return "日落镜头"
-        case .bolt: return "电光蓝"
-        case .dusk: return "暮紫轨道"
-        case .coral: return "珊瑚取景"
+        case .spark: return "墨黑闪光"
+        case .iris: return "琥珀镜头"
+        case .bolt: return "电光快拍"
+        case .dusk: return "录制红点"
+        case .coral: return "长截滚页"
         case .custom: return "自选"
         }
     }

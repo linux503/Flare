@@ -24,6 +24,7 @@ final class HotKeyManager {
         case history = 4
         case delay = 5
         case record = 6
+        case longShot = 7
     }
 
     private init() {
@@ -41,6 +42,7 @@ final class HotKeyManager {
             (.window, .window),
             (.screen, .screen),
             (.delay, .delay),
+            (.longShot, .longShot),
             (.record, .record),
             (.history, .history)
         ]
@@ -178,6 +180,8 @@ final class HotKeyManager {
             HistoryWindowController.shared.show()
         case .delay:
             CaptureCoordinator.shared.startDelayedCapture(seconds: 3)
+        case .longShot:
+            CaptureCoordinator.shared.startLongAreaCapture()
         case .record:
             ScreenRecorder.shared.toggle()
         case .none:
@@ -195,6 +199,7 @@ enum HotKeyDefaults {
     static let windowKey: UInt32 = UInt32(kVK_ANSI_6)
     static let screenKey: UInt32 = UInt32(kVK_ANSI_4)
     static let delayKey: UInt32 = UInt32(kVK_ANSI_3)
+    static let longShotKey: UInt32 = UInt32(kVK_ANSI_L)
     static let recordKey: UInt32 = UInt32(kVK_ANSI_R)
     static let historyKey: UInt32 = UInt32(kVK_ANSI_H)
 }

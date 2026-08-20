@@ -34,7 +34,7 @@ final class MainMenuController: NSObject {
             m.addItem(hotItem("窗口截图", .window, #selector(captureWindow)))
             m.addItem(hotItem("全屏截图", .screen, #selector(captureScreen)))
             m.addItem(hotItem("延时截图", .delay, #selector(captureDelay)))
-            m.addItem(item("长截图", #selector(captureLong), key: "", modifiers: []))
+            m.addItem(hotItem("长截图", .longShot, #selector(captureLong)))
             m.addItem(.separator())
             m.addItem(item("打开主面板", #selector(showHome), key: "o", glyph: .home))
             m.addItem(hotItem("历史记录", .history, #selector(showHistory)))

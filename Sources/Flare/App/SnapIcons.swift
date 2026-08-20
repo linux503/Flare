@@ -8,6 +8,7 @@ enum SnapGlyph: String, CaseIterable {
     case window
     case screen
     case delay
+    case longShot
     case record
     case pause
     case play
@@ -65,6 +66,7 @@ enum SnapGlyph: String, CaseIterable {
         case .window: return "macwindow"
         case .screen: return "display"
         case .delay: return "timer"
+        case .longShot: return "arrow.up.and.down.square"
         case .record: return "record.circle"
         case .pause: return "pause.circle"
         case .play: return "play.circle"
@@ -120,6 +122,7 @@ enum SnapGlyph: String, CaseIterable {
         case .window: return .window
         case .screen: return .screen
         case .delay: return .delay
+        case .longShot: return .longShot
         case .record: return .record
         case .history: return .history
         }
@@ -261,7 +264,7 @@ extension FlareBrand {
         let srcSize = source.size.width > 0 && source.size.height > 0
             ? source.size
             : NSSize(width: side, height: side)
-        let pad: CGFloat = 1
+        let pad: CGFloat = 0.5
         let maxSide = side - pad * 2
         let scale = min(maxSide / srcSize.width, maxSide / srcSize.height)
         let drawSize = NSSize(width: srcSize.width * scale, height: srcSize.height * scale)
@@ -271,7 +274,9 @@ extension FlareBrand {
             width: drawSize.width,
             height: drawSize.height
         )
-        let clip = NSBezierPath(roundedRect: draw, xRadius: draw.width * 0.22, yRadius: draw.height * 0.22)
+        // 与 Logo 生成器一致的 squircle 裁切，菜单栏小尺寸更清晰
+        let corner = draw.width * 0.24
+        let clip = NSBezierPath(roundedRect: draw, xRadius: corner, yRadius: corner)
         clip.addClip()
         source.draw(in: draw, from: NSRect(origin: .zero, size: srcSize), operation: .sourceOver, fraction: 1)
         image.unlockFocus()

@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Flare Pro AppIcon — emerald glass + capture frame + flash spark."""
+"""Flare Pro icons — squircle logos tuned for menu-bar + in-app picker."""
 
 from __future__ import annotations
 
@@ -18,6 +18,40 @@ OUT_STATUS = ROOT / "Resources" / "StatusBarIcon.png"
 OUT_PLAIN = ROOT / "Resources" / "icon.png"
 ICONSET = ROOT / "Resources" / "AppIcon.iconset"
 DOCS = ROOT / "docs"
+
+# (bg base RGB, mark RGB, accent RGB optional)
+STYLES: dict[str, dict[str, tuple[float, float, float] | str]] = {
+    "spark": {
+        "label": "墨黑闪光",
+        "bg": (16, 16, 18),
+        "mark": (245, 246, 248),
+        "accent": (255, 255, 255),
+    },
+    "iris": {
+        "label": "琥珀镜头",
+        "bg": (24, 18, 10),
+        "mark": (255, 196, 92),
+        "accent": (255, 224, 160),
+    },
+    "bolt": {
+        "label": "电光快拍",
+        "bg": (8, 18, 36),
+        "mark": (120, 196, 255),
+        "accent": (210, 236, 255),
+    },
+    "dusk": {
+        "label": "录制红点",
+        "bg": (28, 10, 12),
+        "mark": (255, 92, 88),
+        "accent": (255, 170, 160),
+    },
+    "coral": {
+        "label": "长截滚页",
+        "bg": (8, 24, 20),
+        "mark": (72, 220, 170),
+        "accent": (180, 255, 220),
+    },
+}
 
 
 def _crc(chunk_type: bytes, data: bytes) -> int:
@@ -80,78 +114,62 @@ def sd_round_box(px: float, py: float, hx: float, hy: float, rad: float) -> floa
     return math.hypot(max(ax, 0.0), max(ay, 0.0)) + min(max(ax, ay), 0.0) - rad
 
 
-def frame_mask(nx: float, ny: float) -> float:
-    """Screenshot selection — rounded viewfinder frame."""
-    outer = sd_round_box(nx, ny, 0.46, 0.46, 0.12)
-    ring = abs(outer) - 0.038
-    return smoothstep(0.016, -0.01, ring)
+def frame_mask(nx: float, ny: float, thick: float = 0.044) -> float:
+    outer = sd_round_box(nx, ny, 0.44, 0.44, 0.11)
+    ring = abs(outer) - thick
+    return smoothstep(0.018, -0.012, ring)
 
 
-def spark_mask(nx: float, ny: float, scale: float = 1.0) -> float:
-    """4-point camera flash, plus a thinner 45° spark."""
-    px, py = nx / scale, ny / scale
-
+def spark_mask(nx: float, ny: float) -> float:
     def arms(x: float, y: float, reach: float, thick: float) -> float:
         ax, ay = abs(x), abs(y)
-        th_h = thick * max(0.1, 1.0 - ax * (1.15 / reach))
+        th_h = thick * max(0.12, 1.0 - ax * (1.1 / reach))
         dh = ay - th_h if ax < reach else 1e9
-        th_v = thick * max(0.1, 1.0 - ay * (1.15 / reach))
+        th_v = thick * max(0.12, 1.0 - ay * (1.1 / reach))
         dv = ax - th_v if ay < reach else 1e9
         return min(dh, dv)
 
-    plus = arms(px, py, 0.50, 0.078)
+    plus = arms(nx, ny, 0.46, 0.088)
     s = 0.70710678
-    rx = px * s - py * s
-    ry = px * s + py * s
-    cross = arms(rx, ry, 0.34, 0.036)
-    core = sd_circle(px, py, 0.10)
-    m = smoothstep(0.016, -0.01, plus)
-    m = max(m, smoothstep(0.014, -0.008, cross) * 0.88)
-    m = max(m, smoothstep(0.02, -0.01, core))
-    glow = smoothstep(0.09, -0.02, plus) * 0.28
-    return min(1.0, m + glow)
+    rx = nx * s - ny * s
+    ry = nx * s + ny * s
+    cross = arms(rx, ry, 0.30, 0.042)
+    core = sd_circle(nx, ny, 0.095)
+    m = smoothstep(0.018, -0.012, plus)
+    m = max(m, smoothstep(0.016, -0.01, cross) * 0.9)
+    m = max(m, smoothstep(0.022, -0.012, core))
+    return min(1.0, m + smoothstep(0.10, -0.02, plus) * 0.22)
 
 
-def mark_mask(nx: float, ny: float) -> float:
-    return max(spark_mask(nx, ny), frame_mask(nx, ny) * 0.92)
-
-
-def iris_mark(nx: float, ny: float) -> tuple[float, float]:
-    """Lens iris + diagonal flare. Returns (iris, slash)."""
-    ring = abs(math.hypot(nx, ny) - 0.32) - 0.055
-    inner = abs(math.hypot(nx, ny) - 0.18) - 0.016
-    pupil = sd_circle(nx, ny, 0.038)
-    iris = max(smoothstep(0.02, -0.012, min(ring, inner)), smoothstep(0.016, -0.01, pupil) * 0.9)
-    blades = 0.0
+def iris_mark(nx: float, ny: float) -> float:
+    ring = abs(math.hypot(nx, ny) - 0.34) - 0.060
+    inner = abs(math.hypot(nx, ny) - 0.20) - 0.018
+    pupil = sd_circle(nx, ny, 0.048)
+    m = smoothstep(0.02, -0.012, min(ring, inner))
+    m = max(m, smoothstep(0.018, -0.012, pupil))
     for i in range(6):
         ang = i * math.pi / 3 + math.pi / 12
-        d = sd_segment(nx, ny, math.cos(ang) * 0.20, math.sin(ang) * 0.20, math.cos(ang) * 0.29, math.sin(ang) * 0.29, 0.016)
-        blades = max(blades, smoothstep(0.016, -0.01, d) * 0.7)
-    ax, ay, bx, by = -0.58, 0.50, 0.58, -0.50
-    abx, aby = bx - ax, by - ay
-    ab2 = abx * abx + aby * aby
-    t = max(0.0, min(1.0, ((nx - ax) * abx + (ny - ay) * aby) / ab2))
-    thick = 0.028 + 0.045 * math.sin(t * math.pi)
-    core = sd_segment(nx, ny, ax, ay, bx, by, thick)
-    soft = sd_segment(nx, ny, ax, ay, bx, by, thick + 0.045)
-    slash = smoothstep(0.018, -0.012, core)
-    slash = max(slash, smoothstep(0.035, -0.004, soft) * 0.28)
-    slash = max(slash, smoothstep(0.022, -0.01, sd_circle(nx - 0.50, ny + 0.43, 0.055)))
-    return max(iris, blades), min(1.0, slash)
+        d = sd_segment(
+            nx, ny,
+            math.cos(ang) * 0.18, math.sin(ang) * 0.18,
+            math.cos(ang) * 0.30, math.sin(ang) * 0.30,
+            0.018,
+        )
+        m = max(m, smoothstep(0.016, -0.01, d) * 0.75)
+    return m
 
 
 def bolt_mask(nx: float, ny: float) -> float:
-    """Lightning bolt — clean silhouette at small sizes."""
     d = min(
-        sd_segment(nx, ny, -0.06, 0.46, 0.22, 0.08, 0.075),
-        sd_segment(nx, ny, 0.22, 0.08, -0.04, 0.08, 0.075),
-        sd_segment(nx, ny, -0.04, 0.08, 0.10, -0.48, 0.075),
+        sd_segment(nx, ny, -0.04, 0.44, 0.24, 0.06, 0.082),
+        sd_segment(nx, ny, 0.24, 0.06, -0.02, 0.06, 0.082),
+        sd_segment(nx, ny, -0.02, 0.06, 0.12, -0.46, 0.082),
     )
-    return smoothstep(0.018, -0.012, d)
+    return smoothstep(0.020, -0.014, d)
 
 
-def viewfinder_corners(nx: float, ny: float) -> float:
-    arm, thick, inset = 0.22, 0.038, 0.50
+def record_mark(nx: float, ny: float) -> float:
+    arm, thick, inset = 0.20, 0.042, 0.48
     d = 1e9
     for cx, cy, sx, sy in (
         (-inset, inset, 1, -1),
@@ -161,94 +179,67 @@ def viewfinder_corners(nx: float, ny: float) -> float:
     ):
         d = min(d, sd_box(nx - (cx + sx * arm * 0.5), ny - cy, arm * 0.5, thick))
         d = min(d, sd_box(nx - cx, ny - (cy + sy * arm * 0.5), thick, arm * 0.5))
-    return smoothstep(0.016, -0.01, d)
+    corners = smoothstep(0.018, -0.012, d)
+    dot = smoothstep(0.022, -0.012, sd_circle(nx, ny, 0.13))
+    inner = smoothstep(0.018, -0.012, sd_circle(nx, ny, 0.055))
+    return max(corners, dot - inner * 0.35)
 
 
-def orbit_mask(nx: float, ny: float) -> float:
-    ring = abs(math.hypot(nx, ny) - 0.36) - 0.042
-    planet = sd_circle(nx - 0.30, ny + 0.18, 0.10)
-    core = sd_circle(nx, ny, 0.075)
-    m = smoothstep(0.018, -0.01, ring)
-    m = max(m, smoothstep(0.016, -0.01, planet))
-    m = max(m, smoothstep(0.016, -0.01, core))
+def scroll_mark(nx: float, ny: float) -> float:
+    top = abs(sd_round_box(nx, ny + 0.20, 0.36, 0.11, 0.035)) - 0.034
+    mid = abs(sd_round_box(nx, ny, 0.36, 0.11, 0.035)) - 0.034
+    bot = abs(sd_round_box(nx, ny - 0.20, 0.36, 0.11, 0.035)) - 0.034
+    m = max(
+        smoothstep(0.018, -0.012, top),
+        smoothstep(0.018, -0.012, mid) * 0.92,
+        smoothstep(0.018, -0.012, bot) * 0.84,
+    )
+    chev = min(
+        sd_segment(nx, ny - 0.42, 0.0, 0.0, -0.10, -0.08, 0.038),
+        sd_segment(nx, ny - 0.42, 0.0, 0.0, 0.10, -0.08, 0.038),
+        sd_segment(nx, ny - 0.42, -0.10, -0.08, 0.10, -0.08, 0.030),
+    )
+    m = max(m, smoothstep(0.018, -0.012, chev))
     return m
 
 
-def paint_bg(style: str, gloss: float, bloom: float, corner: float, vignette: float) -> tuple[float, float, float]:
+def style_mask(style: str, nx: float, ny: float) -> float:
+    if style == "spark":
+        return max(frame_mask(nx, ny), spark_mask(nx, ny))
     if style == "iris":
-        return (
-            52 + gloss * 36 + bloom * 40 + corner * 28 - vignette * 10,
-            22 + gloss * 18 + bloom * 22 + corner * 14 - vignette * 8,
-            10 + gloss * 10 + bloom * 8 + corner * 6 - vignette * 6,
-        )
+        return iris_mark(nx, ny)
     if style == "bolt":
-        return (
-            10 + gloss * 22 + bloom * 12 + corner * 8 - vignette * 8,
-            22 + gloss * 28 + bloom * 40 + corner * 36 - vignette * 10,
-            48 + gloss * 36 + bloom * 80 + corner * 70 - vignette * 8,
-        )
+        return bolt_mask(nx, ny)
     if style == "dusk":
-        return (
-            32 + gloss * 18 + bloom * 40 + corner * 22 - vignette * 8,
-            10 + gloss * 12 + bloom * 16 + corner * 10 - vignette * 6,
-            58 + gloss * 28 + bloom * 70 + corner * 50 - vignette * 10,
-        )
+        return record_mark(nx, ny)
     if style == "coral":
-        return (
-            58 + gloss * 28 + bloom * 36 + corner * 22 - vignette * 10,
-            12 + gloss * 10 + bloom * 12 + corner * 8 - vignette * 6,
-            24 + gloss * 14 + bloom * 18 + corner * 12 - vignette * 8,
-        )
+        return scroll_mark(nx, ny)
+    return max(frame_mask(nx, ny), spark_mask(nx, ny))
+
+
+def mix_bg(style: str, gloss: float, vignette: float) -> tuple[float, float, float]:
+    spec = STYLES[style]
+    br, bg, bb = spec["bg"]  # type: ignore[misc]
+    lift = gloss * 14 - vignette * 10
+    edge = vignette * 6
     return (
-        6 + gloss * 14 + bloom * 28 + corner * 10 - vignette * 8,
-        36 + gloss * 38 + bloom * 90 + corner * 70 - vignette * 12,
-        32 + gloss * 28 + bloom * 70 + corner * 48 - vignette * 10,
+        max(0, min(255, br + lift - edge)),
+        max(0, min(255, bg + lift * 0.85 - edge)),
+        max(0, min(255, bb + lift * 0.7 - edge * 0.8)),
     )
 
 
-def paint_mark(style: str, px: float, py: float, r: float, g: float, b: float) -> tuple[float, float, float]:
-    if style == "iris":
-        iris, slash = iris_mark(px, py)
-        r += iris * (255 - r) * 0.88
-        g += iris * (236 - g) * 0.80
-        b += iris * (210 - b) * 0.55
-        r += slash * (255 - r)
-        g += slash * (214 - g) * 0.85
-        b += slash * (140 - b) * 0.5
-        return r, g, b
-    if style == "bolt":
-        bolt = bolt_mask(px, py)
-        glow = bolt * 0.45
-        r += bolt * (255 - r) + glow * 30
-        g += bolt * (248 - g) + glow * 24
-        b += bolt * (210 - b) + glow * 18
-        return r, g, b
-    if style == "dusk":
-        mark = orbit_mask(px, py)
-        glow = mark * 0.4
-        r += mark * (255 - r) + glow * 36
-        g += mark * (200 - g) + glow * 8
-        b += mark * (255 - b) + glow * 28
-        return r, g, b
-    if style == "coral":
-        corners = viewfinder_corners(px, py)
-        core = smoothstep(0.02, -0.01, sd_circle(px, py, 0.14))
-        mark = max(corners, core)
-        glow = core * 0.35
-        r += mark * (255 - r) + glow * 20
-        g += mark * (230 - g) + glow * 8
-        b += mark * (228 - b) + glow * 10
-        return r, g, b
-    frame = frame_mask(px, py)
-    spark = spark_mask(px, py)
-    glow = spark * 0.55
-    r += frame * (236 - r) * 0.92
-    g += frame * (248 - g) * 0.92
-    b += frame * (242 - b) * 0.92
-    r += spark * (255 - r) + glow * 20
-    g += spark * (252 - g) + glow * 28
-    b += spark * (230 - b) * 0.55 + glow * 8
-    return r, g, b
+def paint_mark_rgb(style: str, strength: float) -> tuple[float, float, float]:
+    spec = STYLES[style]
+    mr, mg, mb = spec["mark"]  # type: ignore[misc]
+    ar, ag, ab = spec["accent"]  # type: ignore[misc]
+    t = max(0.0, min(1.0, strength))
+    glow = t * t * 0.35
+    return (
+        mr * t + ar * glow + glow * 18,
+        mg * t + ag * glow + glow * 18,
+        mb * t + ab * glow + glow * 18,
+    )
 
 
 def render(size: int = 1024, style: str = "spark") -> bytes:
@@ -261,12 +252,29 @@ def render(size: int = 1024, style: str = "spark") -> bytes:
             alpha = 1.0 - smoothstep(-0.030, 0.010, sdf)
             if alpha < 0.002:
                 continue
-            gloss = smoothstep(-0.15, 1.0, py)
-            bloom = math.exp(-(px * px + py * py) * 2.8)
-            corner = math.exp(-(math.hypot(px + 0.38, py - 0.42) ** 2) * 2.2)
-            vignette = smoothstep(0.2, 1.18, math.hypot(px, py))
-            r, g, b = paint_bg(style, gloss, bloom, corner, vignette)
-            r, g, b = paint_mark(style, px, py, r, g, b)
+
+            gloss = smoothstep(-0.12, 0.95, py)
+            vignette = smoothstep(0.25, 1.15, math.hypot(px, py))
+            r, g, b = mix_bg(style, gloss, vignette)
+
+            mark = style_mask(style, px, py)
+            if style == "spark":
+                frame = frame_mask(px, py)
+                spark = spark_mask(px, py)
+                mr, mg, mb = paint_mark_rgb(style, frame * 0.95)
+                r = r + (mr - r) * frame * 0.95
+                g = g + (mg - g) * frame * 0.95
+                b = b + (mb - b) * frame * 0.95
+                sr, sg, sb = paint_mark_rgb(style, spark)
+                r = r + (sr - r) * spark + spark * 12
+                g = g + (sg - g) * spark + spark * 12
+                b = b + (sb - b) * spark + spark * 12
+            else:
+                mr, mg, mb = paint_mark_rgb(style, mark)
+                r = r + (mr - r) * mark
+                g = g + (mg - g) * mark
+                b = b + (mb - b) * mark
+
             i = (y * size + x) * 4
             rgba[i] = int(max(0, min(255, r)))
             rgba[i + 1] = int(max(0, min(255, g)))
@@ -276,22 +284,8 @@ def render(size: int = 1024, style: str = "spark") -> bytes:
 
 
 def render_status_template(size: int = 128) -> bytes:
-    """Transparent mark for menu-bar template fallback."""
-    rgba = bytearray(size * size * 4)
-    mark_scale = 0.90
-    for y in range(size):
-        py = 1.0 - (y + 0.5) / size * 2
-        for x in range(size):
-            px = (x + 0.5) / size * 2 - 1
-            mark = mark_mask(px * mark_scale, py * mark_scale)
-            if mark < 0.02:
-                continue
-            i = (y * size + x) * 4
-            rgba[i] = 255
-            rgba[i + 1] = 255
-            rgba[i + 2] = 255
-            rgba[i + 3] = int(min(1.0, mark) * 255)
-    return bytes(rgba)
+    """Black squircle + white mark — menu-bar fallback."""
+    return render(size, "spark")
 
 
 def icon_name(base: int, retina: bool) -> str:
@@ -342,7 +336,7 @@ def export_web(master: Path) -> None:
 
 
 def main() -> None:
-    print("==> Rendering Flare Pro icon (capture frame + flash)…")
+    print("==> Rendering Flare Pro logos (menu-bar tuned squircles)…")
     write_png(OUT_PNG, 1024, 1024, render(1024, "spark"))
     print(f"    PNG: {OUT_PNG}")
     write_png(OUT_PLAIN, 256, 256, render(256, "spark"))
@@ -355,9 +349,9 @@ def main() -> None:
     ):
         path = ROOT / "Resources" / f"{name}.png"
         write_png(path, 512, 512, render(512, style))
-        print(f"    Preset {name}: {path}")
+        print(f"    Preset {name} ({STYLES[style]['label']}): {path}")
     write_png(OUT_STATUS, 128, 128, render_status_template(128))
-    print(f"    StatusBar (template): {OUT_STATUS}")
+    print(f"    StatusBar: {OUT_STATUS}")
     build_iconset(OUT_PNG)
     print(f"    ICNS: {OUT_ICNS}")
     export_web(OUT_PNG)

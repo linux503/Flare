@@ -28,6 +28,7 @@ struct SettingsPane: View {
     @State private var window = AppSettings.shared.shortcut(for: .window)
     @State private var screen = AppSettings.shared.shortcut(for: .screen)
     @State private var delay = AppSettings.shared.shortcut(for: .delay)
+    @State private var longShot = AppSettings.shared.shortcut(for: .longShot)
     @State private var record = AppSettings.shared.shortcut(for: .record)
     @State private var history = AppSettings.shared.shortcut(for: .history)
     @State private var hotkeyError: String?
@@ -123,6 +124,7 @@ struct SettingsPane: View {
                         KeyRecorderButton(title: "窗口截图", shortcut: $window) { save(.window, $0) }
                         KeyRecorderButton(title: "全屏截图", shortcut: $screen) { save(.screen, $0) }
                         KeyRecorderButton(title: "延时截图", shortcut: $delay) { save(.delay, $0) }
+                        KeyRecorderButton(title: "长截图", shortcut: $longShot) { save(.longShot, $0) }
                         KeyRecorderButton(title: "屏幕录制", shortcut: $record) { save(.record, $0) }
                         KeyRecorderButton(title: "历史记录", shortcut: $history) { save(.history, $0) }
 
@@ -373,7 +375,7 @@ struct SettingsPane: View {
 
     private func save(_ action: HotKeyAction, _ shortcut: HotKeyShortcut) {
         let others: [(HotKeyAction, HotKeyShortcut)] = [
-            (.area, area), (.window, window), (.screen, screen), (.delay, delay), (.record, record), (.history, history)
+            (.area, area), (.window, window), (.screen, screen), (.delay, delay), (.longShot, longShot), (.record, record), (.history, history)
         ]
         if let conflict = others.first(where: { $0.0 != action && $0.1 == shortcut }) {
             hotkeyError = "与「\(conflict.0.title)」冲突，请换一组快捷键"
@@ -394,6 +396,7 @@ struct SettingsPane: View {
         window = AppSettings.shared.shortcut(for: .window)
         screen = AppSettings.shared.shortcut(for: .screen)
         delay = AppSettings.shared.shortcut(for: .delay)
+        longShot = AppSettings.shared.shortcut(for: .longShot)
         record = AppSettings.shared.shortcut(for: .record)
         history = AppSettings.shared.shortcut(for: .history)
     }
