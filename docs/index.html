@@ -3,23 +3,23 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Flare Pro — 一拍即得 · macOS / Windows / Android</title>
-  <meta name="description" content="免费截图工具。macOS 原生截图与录屏；Windows 下载 EXE、Android 下载 APK，支持网页长截图。" />
+  <title>Flare Pro - 免费截图录屏工具，支持 macOS / Windows / Android 长截图</title>
+  <meta name="description" content="Flare Pro 是免费截图录屏工具：macOS 原生支持区域截图、窗口截图、全屏截图、长截图、录屏、OCR 与钉图；Windows EXE、Android APK 支持网页长截图。" />
   <meta name="theme-color" content="#059669" />
   <link rel="canonical" href="https://linux503.github.io/Flare/" />
   <meta property="og:type" content="website" />
   <meta property="og:site_name" content="Flare Pro" />
   <meta property="og:locale" content="zh_CN" />
-  <meta property="og:title" content="Flare Pro — 一拍即得" />
-  <meta property="og:description" content="现已支持 Windows 与 Android。macOS 原生截图录屏，Windows EXE / Android APK 可做网页长截图。" />
+  <meta property="og:title" content="Flare Pro - 一拍即得的截图录屏工具" />
+  <meta property="og:description" content="macOS 原生截图、录屏、OCR、钉图；Windows EXE 与 Android APK 支持网页长截图，打开就能用。" />
   <meta property="og:url" content="https://linux503.github.io/Flare/" />
   <meta property="og:image" content="https://linux503.github.io/Flare/og-cover.jpg" />
   <meta property="og:image:width" content="1200" />
   <meta property="og:image:height" content="630" />
-  <meta property="og:image:alt" content="Flare Pro 截图界面预览" />
+  <meta property="og:image:alt" content="Flare Pro 免费截图录屏工具预览" />
   <meta name="twitter:card" content="summary_large_image" />
-  <meta name="twitter:title" content="Flare Pro — 一拍即得 · macOS / Windows / Android" />
-  <meta name="twitter:description" content="免费截图工具。macOS 原生截图录屏，Windows EXE 与 Android APK 支持网页长截图。" />
+  <meta name="twitter:title" content="Flare Pro - 免费截图录屏工具" />
+  <meta name="twitter:description" content="支持 macOS / Windows / Android。macOS 可截图、录屏、OCR、钉图；Windows 与 Android 可网页长截图。" />
   <meta name="twitter:image" content="https://linux503.github.io/Flare/og-cover.jpg" />
   <link rel="icon" type="image/png" href="./favicon-32.png?v=14" sizes="32x32" />
   <link rel="shortcut icon" type="image/png" href="./favicon-32.png?v=14" />
@@ -27,7 +27,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@500;600;700;800&family=Noto+Sans+SC:wght@400;500;600;700&display=swap" rel="stylesheet" />
-  <link rel="stylesheet" href="styles.css?v=23" />
+  <link rel="stylesheet" href="styles.css?v=24" />
   <link rel="stylesheet" href="more-apps.css?v=12" />
 </head>
 <body>
@@ -152,7 +152,16 @@
 
     <section class="strip os-strip">
       <article class="os-mac" data-reveal style="--d:0">
-        <p class="os-kicker">macOS</p>
+        <div class="os-aura" aria-hidden="true"></div>
+        <header class="os-head">
+          <span class="os-icon" aria-hidden="true">
+            <svg viewBox="0 0 24 24"><path fill="currentColor" d="M18.71 19.5c-.83 1.24-1.71 2.45-3.05 2.47-1.34.03-1.77-.79-3.29-.79-1.53 0-2 .77-3.27.82-1.31.05-2.3-1.32-3.14-2.53C4.25 17 2.94 12.45 4.7 9.39c.87-1.52 2.43-2.48 4.12-2.51 1.28-.02 2.5.87 3.29.87.78 0 2.26-1.07 3.8-.91.65.03 2.47.26 3.64 1.98-.09.06-2.17 1.28-2.15 3.81.03 3.02 2.65 4.03 2.68 4.04-.03.07-.42 1.44-1.38 2.83M13 3.5c.73-.83 1.94-1.46 2.94-1.5.13 1.17-.34 2.35-1.04 3.19-.69.85-1.83 1.51-2.95 1.42-.15-1.15.41-2.35 1.05-3.11z"/></svg>
+          </span>
+          <div class="os-head-copy">
+            <p class="os-kicker">macOS</p>
+            <span class="os-badge">完整工具箱</span>
+          </div>
+        </header>
         <h2>截图、录屏、长图一套完成</h2>
         <p class="os-lead">原生菜单栏工具，打开就能截，录完就能存，顺手还能新建文档。</p>
         <ul class="os-points">
@@ -162,7 +171,16 @@
         </ul>
       </article>
       <article class="os-win" data-reveal style="--d:1">
-        <p class="os-kicker">Windows</p>
+        <div class="os-aura" aria-hidden="true"></div>
+        <header class="os-head">
+          <span class="os-icon" aria-hidden="true">
+            <svg viewBox="0 0 24 24"><path fill="currentColor" d="M3 5.5L10.5 4.6v7.5H3V5.5zm10.5-.9L21 3.5v8.6h-7.5V4.6zM3 13.5h7.5v7.5L3 19.6V13.5zm10.5 0H21v6.1l-7.5 1.4V13.5z"/></svg>
+          </span>
+          <div class="os-head-copy">
+            <p class="os-kicker">Windows</p>
+            <span class="os-badge">网页长图</span>
+          </div>
+        </header>
         <h2>打开网页，自动拼成长图</h2>
         <p class="os-lead">下载 EXE 直接用，不用装环境，适合页面留档、商品详情和聊天记录保存。</p>
         <ul class="os-points">
@@ -172,7 +190,16 @@
         </ul>
       </article>
       <article class="os-android" data-reveal style="--d:2">
-        <p class="os-kicker">Android</p>
+        <div class="os-aura" aria-hidden="true"></div>
+        <header class="os-head">
+          <span class="os-icon" aria-hidden="true">
+            <svg viewBox="0 0 24 24"><path fill="currentColor" d="M6 18c0 .55.45 1 1 1h1v3.5c0 .83.67 1.5 1.5 1.5s1.5-.67 1.5-1.5V19h2v3.5c0 .83.67 1.5 1.5 1.5s1.5-.67 1.5-1.5V19h1c.55 0 1-.45 1-1V8H6v10zM3.5 8C2.67 8 2 8.67 2 9.5v7c0 .83.67 1.5 1.5 1.5S5 17.33 5 16.5v-7C5 8.67 4.33 8 3.5 8zm17 0c-.83 0-1.5.67-1.5 1.5v7c0 .83.67 1.5 1.5 1.5s1.5-.67 1.5-1.5v-7c0-.83-.67-1.5-1.5-1.5zm-4.97-5.41l1.41-1.41 1.06 1.06-1.41 1.41-1.06-1.06zm-6.12 0l-1.06-1.06-1.41 1.41 1.06 1.06 1.41-1.41zM12 4.5c-2.67 0-4.83 2.16-4.83 4.83h9.66C16.83 6.66 14.67 4.5 12 4.5z"/></svg>
+          </span>
+          <div class="os-head-copy">
+            <p class="os-kicker">Android</p>
+            <span class="os-badge">移动长截</span>
+          </div>
+        </header>
         <h2>手机里也能一键滚动长截</h2>
         <p class="os-lead">安装 APK 后打开链接，边滚边截，最后直接保存到相册，分享更方便。</p>
         <ul class="os-points">
