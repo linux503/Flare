@@ -3,7 +3,7 @@
   "build": 27,
   "notes": "框选后可双击/标注就地编辑；Esc 直接退出截图；全屏截图定位修复。",
   "downloadURL": "https://github.com/linux503/Flare/releases/download/v1.3.13/Flare-Pro-1.3.13-Universal.dmg",
-  "windowsURL": "https://github.com/linux503/Flare/releases/download/v1.3.13/Flare-Windows-x64.exe",
+  "windowsURL": "https://github.com/linux503/Flare/releases/download/v1.3.12/Flare-Windows-x64.exe",
   "androidURL": "https://github.com/linux503/Flare/releases/download/v1.3.13/Flare-Android.apk",
   "minOS": "14.0",
   "publishedAt": "2026-08-20"
