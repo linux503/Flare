@@ -15,7 +15,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@500;600;700;800&family=Noto+Sans+SC:wght@400;500;600;700&display=swap" rel="stylesheet" />
-  <link rel="stylesheet" href="styles.css?v=16" />
+  <link rel="stylesheet" href="styles.css?v=17" />
   <link rel="stylesheet" href="more-apps.css?v=8" />
 </head>
 <body>
@@ -103,11 +103,11 @@
             <span class="dl-ver" data-app-version>v1.2.9</span>
           </div>
           <div class="dl-stack">
-            <a class="btn soft" data-download-windows href="https://github.com/linux503/Flare/releases/download/v1.2.9/Flare-Windows-x64.exe">Windows</a>
+            <a class="btn win" data-download-windows href="https://github.com/linux503/Flare/releases/download/v1.2.9/Flare-Windows-x64.exe">Windows</a>
             <span class="dl-ver" data-app-version>v1.2.9</span>
           </div>
           <div class="dl-stack">
-            <a class="btn soft" data-download-android href="https://github.com/linux503/Flare/releases/download/v1.2.9/Flare-Android.apk">Android</a>
+            <a class="btn android" data-download-android href="https://github.com/linux503/Flare/releases/download/v1.2.9/Flare-Android.apk">Android</a>
             <span class="dl-ver" data-app-version>v1.2.9</span>
           </div>
         </div>
@@ -128,17 +128,17 @@
     </section>
 
     <section class="strip os-strip">
-      <article>
+      <article class="os-mac">
         <p class="os-kicker">macOS</p>
         <h2>截图 · 录屏 · 标注</h2>
         <p>原生菜单栏工具。区域 / 窗口 / 全屏 / 长截图，支持 OCR 与钉图。</p>
       </article>
-      <article>
+      <article class="os-win">
         <p class="os-kicker">Windows</p>
         <h2>EXE 网页长截图</h2>
         <p>下载即可用。打开网页，自动滚动并拼接成一张长图。</p>
       </article>
-      <article>
+      <article class="os-android">
         <p class="os-kicker">Android</p>
         <h2>APK 网页长截图</h2>
         <p>安装 APK 后打开链接，滚动截取并保存到相册。</p>
@@ -243,7 +243,7 @@
                 <span class="dl-ver" data-app-version>v1.2.9</span>
               </div>
               <div class="dl-stack">
-                <a class="platform-card" data-download-windows href="https://github.com/linux503/Flare/releases/download/v1.2.9/Flare-Windows-x64.exe">
+                <a class="platform-card is-win" data-download-windows href="https://github.com/linux503/Flare/releases/download/v1.2.9/Flare-Windows-x64.exe">
                   <span class="platform-icon-wrap" aria-hidden="true">
                     <svg class="platform-icon" viewBox="0 0 24 24"><path fill="currentColor" d="M3 5.5L10.5 4.6v7.5H3V5.5zm10.5-.9L21 3.5v8.6h-7.5V4.6zM3 13.5h7.5v7.5L3 19.6V13.5zm10.5 0H21v6.1l-7.5 1.4V13.5z"/></svg>
                   </span>
@@ -253,7 +253,7 @@
                 <span class="dl-ver" data-app-version>v1.2.9</span>
               </div>
               <div class="dl-stack">
-                <a class="platform-card" data-download-android href="https://github.com/linux503/Flare/releases/download/v1.2.9/Flare-Android.apk">
+                <a class="platform-card is-android" data-download-android href="https://github.com/linux503/Flare/releases/download/v1.2.9/Flare-Android.apk">
                   <span class="platform-icon-wrap" aria-hidden="true">
                     <svg class="platform-icon" viewBox="0 0 24 24"><path fill="currentColor" d="M6 18c0 .55.45 1 1 1h1v3.5c0 .83.67 1.5 1.5 1.5s1.5-.67 1.5-1.5V19h2v3.5c0 .83.67 1.5 1.5 1.5s1.5-.67 1.5-1.5V19h1c.55 0 1-.45 1-1V8H6v10zM3.5 8C2.67 8 2 8.67 2 9.5v7c0 .83.67 1.5 1.5 1.5S5 17.33 5 16.5v-7C5 8.67 4.33 8 3.5 8zm17 0c-.83 0-1.5.67-1.5 1.5v7c0 .83.67 1.5 1.5 1.5s1.5-.67 1.5-1.5v-7c0-.83-.67-1.5-1.5-1.5zm-4.97-5.41l1.41-1.41 1.06 1.06-1.41 1.41-1.06-1.06zm-6.12 0l-1.06-1.06-1.41 1.41 1.06 1.06 1.41-1.41zM12 4.5c-2.67 0-4.83 2.16-4.83 4.83h9.66C16.83 6.66 14.67 4.5 12 4.5z"/></svg>
                   </span>
