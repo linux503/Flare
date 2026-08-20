@@ -27,7 +27,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@500;600;700;800&family=Noto+Sans+SC:wght@400;500;600;700&display=swap" rel="stylesheet" />
-  <link rel="stylesheet" href="styles.css?v=18" />
+  <link rel="stylesheet" href="styles.css?v=19" />
   <link rel="stylesheet" href="more-apps.css?v=10" />
 </head>
 <body>
@@ -88,7 +88,7 @@
 
   <main>
     <section class="hero">
-      <div class="hero-inner">
+      <div class="hero-inner" data-hero>
         <p class="now-badge">现已支持 Windows 与 Android</p>
         <p class="brand-xl">Flare Pro</p>
         <h1>一拍即得</h1>
@@ -109,7 +109,7 @@
         </div>
       </div>
 
-      <div class="showcase" data-carousel>
+      <div class="showcase" data-carousel data-hero>
         <div class="stage">
           <img class="on" src="poster-capture.jpg?v=8" alt="截图" data-i="0" width="1536" height="1024" />
           <img src="poster-record.jpg?v=8" alt="录屏" data-i="1" width="1536" height="1024" />
@@ -124,24 +124,24 @@
     </section>
 
     <section class="strip os-strip">
-      <article class="os-mac">
+      <article class="os-mac" data-reveal style="--d:0">
         <p class="os-kicker">macOS</p>
         <h2>截图 · 录屏 · 标注</h2>
         <p>原生菜单栏工具。区域 / 窗口 / 全屏 / 长截图，支持 OCR 与钉图。</p>
       </article>
-      <article class="os-win">
+      <article class="os-win" data-reveal style="--d:1">
         <p class="os-kicker">Windows</p>
         <h2>EXE 网页长截图</h2>
         <p>下载即可用。打开网页，自动滚动并拼接成一张长图。</p>
       </article>
-      <article class="os-android">
+      <article class="os-android" data-reveal style="--d:2">
         <p class="os-kicker">Android</p>
         <h2>APK 网页长截图</h2>
         <p>安装 APK 后打开链接，滚动截取并保存到相册。</p>
       </article>
     </section>
 
-    <section id="shot" class="chapter">
+    <section id="shot" class="chapter" data-reveal>
       <div class="chapter-text">
         <p class="tag green">Screenshot</p>
         <h2>截图，为速度而生</h2>
@@ -155,7 +155,7 @@
       <figure><img src="poster-capture.jpg?v=8" alt="截图展示" loading="lazy" width="1536" height="1024" /></figure>
     </section>
 
-    <section id="rec" class="chapter flip">
+    <section id="rec" class="chapter flip" data-reveal>
       <div class="chapter-text">
         <p class="tag rose">Recording</p>
         <h2>录屏，单独一整套</h2>
@@ -170,7 +170,7 @@
       <figure><img src="poster-record.jpg?v=8" alt="录屏展示" loading="lazy" width="1536" height="1024" /></figure>
     </section>
 
-    <section class="chapter">
+    <section class="chapter" data-reveal>
       <div class="chapter-text">
         <p class="tag gold">Annotate</p>
         <h2>标注与识字</h2>
@@ -185,38 +185,38 @@
     </section>
 
     <section id="start" class="start">
-      <div class="start-head">
+      <div class="start-head" data-reveal>
         <p class="tag">上手</p>
         <h2>三步开始用</h2>
         <p>macOS 走系统授权；Windows 下 EXE、Android 下 APK 即可用网页长截图。</p>
       </div>
       <ol class="steps">
-        <li>
+        <li data-reveal style="--d:0">
           <span>1</span>
           <h3>授权</h3>
           <p>macOS：系统设置 → 隐私与安全性 → 屏幕与系统音频录制，打开 Flare Pro，然后完全退出再打开。Windows / Android 无需此步骤，下载 EXE 或 APK 即可。</p>
         </li>
-        <li>
+        <li data-reveal style="--d:1">
           <span>2</span>
           <h3>截图</h3>
           <p>单击菜单栏图标进入区域截图；右键可打开完整功能菜单。</p>
         </li>
-        <li>
+        <li data-reveal style="--d:2">
           <span>3</span>
           <h3>录屏</h3>
           <p>用「录制」菜单或 <code>⌘⌥R</code>。需要时再进主面板调整录制选项。</p>
         </li>
       </ol>
       <div class="shortcuts">
-        <div><kbd>菜单栏单击</kbd><span>区域截图</span></div>
-        <div><kbd>⌘⌥5</kbd><span>区域截图</span></div>
-        <div><kbd>⌘⌥R</kbd><span>录屏开关</span></div>
-        <div><kbd>⌘O</kbd><span>主面板</span></div>
+        <div data-reveal style="--d:0"><kbd>菜单栏单击</kbd><span>区域截图</span></div>
+        <div data-reveal style="--d:1"><kbd>⌘⌥5</kbd><span>区域截图</span></div>
+        <div data-reveal style="--d:2"><kbd>⌘⌥R</kbd><span>录屏开关</span></div>
+        <div data-reveal style="--d:3"><kbd>⌘O</kbd><span>主面板</span></div>
       </div>
     </section>
 
     <section id="get" class="get">
-      <div class="get-card">
+      <div class="get-card" data-reveal>
         <div>
           <p class="tag">Download</p>
           <h2>下载 Flare Pro</h2>
@@ -288,7 +288,7 @@
     </div>
   </footer>
 
-  <script src="site.js?v=14"></script>
+  <script src="site.js?v=15"></script>
   <script src="more-apps.js?v=9" defer></script>
 </body>
 </html>

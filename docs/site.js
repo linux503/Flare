@@ -24,6 +24,25 @@
     })
     .catch(() => {});
 
+  const reduce = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+  const reveal = () => {
+    const items = Array.from(document.querySelectorAll("[data-reveal]"));
+    if (!items.length) return;
+    if (reduce) {
+      items.forEach((el) => el.classList.add("in"));
+      return;
+    }
+    const io = new IntersectionObserver((entries) => {
+      entries.forEach((entry) => {
+        if (!entry.isIntersecting) return;
+        entry.target.classList.add("in");
+        io.unobserve(entry.target);
+      });
+    }, { threshold: 0.14, rootMargin: "0px 0px -6% 0px" });
+    items.forEach((el) => io.observe(el));
+  };
+  reveal();
+
   const root = document.querySelector("[data-carousel]");
   if (!root) return;
 
@@ -31,7 +50,6 @@
   const tabs = Array.from(root.querySelectorAll(".switcher button"));
   let index = 0;
   let timer = 0;
-  const reduce = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
 
   const show = (i) => {
     index = (i + frames.length) % frames.length;
