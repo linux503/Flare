@@ -6,6 +6,7 @@ final class AnnotationCanvasView: NSView {
     }
 
     var onRequestOCRToTXT: (() -> Void)?
+    var onEscape: (() -> Void)?
 
     private var dragStart: CGPoint?
     private var dragCurrent: CGPoint?
@@ -131,6 +132,10 @@ final class AnnotationCanvasView: NSView {
     }
 
     override func keyDown(with event: NSEvent) {
+        if event.keyCode == 53 { // Esc
+            onEscape?()
+            return
+        }
         if event.modifierFlags.contains(.command) {
             switch event.charactersIgnoringModifiers {
             case "z":

@@ -16,6 +16,15 @@ enum CaptureFinishAction: Equatable {
     case save
     case pin
     case ocr
+
+    static func from(after action: AfterCaptureAction) -> CaptureFinishAction {
+        switch action {
+        case .editor: return .clipboard
+        case .clipboard: return .clipboard
+        case .save: return .save
+        case .pin: return .pin
+        }
+    }
 }
 
 final class CaptureOverlayController {
@@ -136,6 +145,12 @@ final class CaptureOverlayView: NSView {
     private var lastOverlayDraw = Date.distantPast
     private var actionBar: NSView?
     private var hoverHandle: Handle?
+
+    /// 就地标注：在选区内直接画，不跳独立编辑器
+    private var isAnnotating = false
+    private var annotateDocument: AnnotationDocument?
+    private var annotateCanvas: AnnotationCanvasView?
+    private var annotateBar: NSView?
 
     private let dim: CGFloat = 0.48
     /// 选区描边固定高对比色（不跟主题 accent，避免墨黑主题白底白字）
@@ -500,11 +515,13 @@ final class CaptureOverlayView: NSView {
                frozen.insetBy(dx: -6, dy: -6).contains(point) {
                 if mode == .recordArea { commitRecordArea() }
                 else if mode == .longArea { commitLongSelection() }
-                else { commitSelection(.clipboard) }
+                else { enterInlineAnnotate() }
                 return
             }
             if snapSelectionToWindow(at: point) { return }
         }
+
+        if isAnnotating { return }
 
         if let frozen = frozenSelection {
             if let handle = hitHandle(at: point, in: frozen) {
@@ -527,7 +544,7 @@ final class CaptureOverlayView: NSView {
     }
 
     override func mouseDragged(with event: NSEvent) {
-        guard isAreaLike else { return }
+        guard isAreaLike, !isAnnotating else { return }
         let point = convert(event.locationInWindow, from: nil)
         mouseLocation = point
         switch dragSession {
@@ -548,7 +565,7 @@ final class CaptureOverlayView: NSView {
     }
 
     override func mouseUp(with event: NSEvent) {
-        guard isAreaLike, !didComplete else { return }
+        guard isAreaLike, !didComplete, !isAnnotating else { return }
         let point = convert(event.locationInWindow, from: nil)
         mouseLocation = point
 
@@ -588,16 +605,18 @@ final class CaptureOverlayView: NSView {
 
     override func keyDown(with event: NSEvent) {
         if event.keyCode == 53 { // Esc
-            if frozenSelection != nil {
-                hideActionBar()
-                frozenSelection = nil
-                dragSession = nil
-                needsDisplay = true
+            if isAnnotating {
+                exitInlineAnnotate(keepSelection: true)
                 return
             }
+            // 有选区时 Esc 直接退出截图（重选请用工具栏「重选」）
+            hideActionBar()
+            hideAnnotateBar()
             onCancel?()
             return
         }
+
+        if isAnnotating { return }
 
         // 方向键微调选区
         if frozenSelection != nil, [123, 124, 125, 126].contains(event.keyCode) {
@@ -611,7 +630,7 @@ final class CaptureOverlayView: NSView {
                 switch chars {
                 case "c": commitSelection(.clipboard); return
                 case "s": commitSelection(.save); return
-                case "e": commitSelection(.editor); return
+                case "e": enterInlineAnnotate(); return
                 case "p": commitSelection(.pin); return
                 case "t": commitSelection(.ocr); return
                 default: break
@@ -625,6 +644,8 @@ final class CaptureOverlayView: NSView {
                 commitRecordArea()
             } else if mode == .longArea {
                 commitLongSelection()
+            } else if mode == .area, AppSettings.shared.afterCaptureAction == .editor {
+                enterInlineAnnotate()
             } else {
                 commitSelection(.useSettings)
             }
@@ -747,13 +768,19 @@ final class CaptureOverlayView: NSView {
             let again = makeBarButton(title: "重选", glyph: nil, primary: false) { [weak self] in
                 self?.barReselect()
             }
-            again.toolTip = "清除选区重新框选 (Esc)"
+            again.toolTip = "清除选区重新框选"
             bar.addArrangedSubview(again)
 
         } else {
         let preferred = AppSettings.shared.afterCaptureAction
+        let editPrimary = preferred == .editor
+        let annotate = makeBarButton(title: "标注", glyph: .edit, primary: editPrimary) { [weak self] in
+            self?.enterInlineAnnotate()
+        }
+        annotate.toolTip = "在选区内直接标注（双击选区 / ⌘E）"
+        bar.addArrangedSubview(annotate)
+
         let items: [(String, SnapGlyph, CaptureFinishAction, String)] = [
-            ("编辑", .edit, .editor, "打开标注编辑器 (⌘E / 回车默认视设置)"),
             ("复制", .copy, .clipboard, "复制到剪贴板 (⌘C)"),
             ("保存", .save, .save, "保存到文件 (⌘S)"),
             ("钉住", .pin, .pin, "钉在屏幕上 (⌘P)"),
@@ -761,8 +788,7 @@ final class CaptureOverlayView: NSView {
         ]
 
         for (title, glyph, action, tip) in items {
-            let primary = (action == .editor && preferred == .editor)
-                || (action == .clipboard && preferred == .clipboard)
+            let primary = (action == .clipboard && preferred == .clipboard)
                 || (action == .save && preferred == .save)
                 || (action == .pin && preferred == .pin)
             let button = makeBarButton(title: title, glyph: glyph, primary: primary) { [weak self] in
@@ -775,13 +801,13 @@ final class CaptureOverlayView: NSView {
         let again = makeBarButton(title: "重选", glyph: nil, primary: false) { [weak self] in
             self?.barReselect()
         }
-        again.toolTip = "清除选区重新框选 (Esc)"
+        again.toolTip = "清除选区重新框选"
         bar.addArrangedSubview(again)
 
         let cancel = makeBarButton(title: "取消", glyph: .close, primary: false) { [weak self] in
             self?.barCancel()
         }
-        cancel.toolTip = "退出截图"
+        cancel.toolTip = "退出截图 (Esc)"
         bar.addArrangedSubview(cancel)
         }
 
@@ -834,6 +860,7 @@ final class CaptureOverlayView: NSView {
     }
 
     private func barReselect() {
+        exitInlineAnnotate(keepSelection: false)
         hideActionBar()
         frozenSelection = nil
         dragSession = nil
@@ -842,8 +869,183 @@ final class CaptureOverlayView: NSView {
     }
 
     private func barCancel() {
+        exitInlineAnnotate(keepSelection: false)
         hideActionBar()
         onCancel?()
+    }
+
+    // MARK: - Inline annotate
+
+    private func enterInlineAnnotate() {
+        guard !didComplete, !isAnnotating, mode == .area,
+              let rect = frozenSelection, rect.width > 8, rect.height > 8,
+              let cropped = cropSelection(rect)
+        else { return }
+
+        hideActionBar()
+        isAnnotating = true
+        dragSession = nil
+
+        let base = ImageExporter.nsImage(from: cropped, scale: captured.scale)
+        let doc = AnnotationDocument(image: base)
+        doc.tool = .arrow
+        annotateDocument = doc
+
+        let canvas = AnnotationCanvasView(frame: rect)
+        canvas.autoresizingMask = []
+        canvas.document = doc
+        canvas.wantsLayer = true
+        canvas.layer?.cornerRadius = 2
+        canvas.layer?.masksToBounds = true
+        canvas.onEscape = { [weak self] in
+            self?.exitInlineAnnotate(keepSelection: true)
+        }
+        addSubview(canvas)
+        annotateCanvas = canvas
+        window?.makeFirstResponder(canvas)
+
+        showAnnotateBar(near: rect)
+        needsDisplay = true
+        ToastController.shared.show("选区内标注 · Esc 返回选区")
+    }
+
+    private func exitInlineAnnotate(keepSelection: Bool) {
+        annotateCanvas?.removeFromSuperview()
+        annotateCanvas = nil
+        annotateDocument = nil
+        hideAnnotateBar()
+        isAnnotating = false
+        if keepSelection, let rect = frozenSelection {
+            showActionBar(near: rect)
+            window?.makeFirstResponder(self)
+        } else if !keepSelection {
+            frozenSelection = nil
+        }
+        needsDisplay = true
+        NSCursor.crosshair.set()
+    }
+
+    private func showAnnotateBar(near rect: CGRect) {
+        hideAnnotateBar()
+
+        let bar = NSStackView()
+        bar.orientation = .horizontal
+        bar.spacing = 5
+        bar.edgeInsets = NSEdgeInsets(top: 8, left: 10, bottom: 8, right: 10)
+        bar.wantsLayer = true
+        bar.layer?.backgroundColor = NSColor.black.withAlphaComponent(0.86).cgColor
+        bar.layer?.cornerRadius = 12
+        bar.layer?.borderWidth = 1
+        bar.layer?.borderColor = NSColor.white.withAlphaComponent(0.16).cgColor
+        if #available(macOS 10.15, *) {
+            bar.layer?.cornerCurve = .continuous
+        }
+
+        let tools: [(AnnotationTool, String)] = [
+            (.arrow, "箭头"),
+            (.pen, "画笔"),
+            (.highlight, "高亮"),
+            (.rect, "矩形"),
+            (.ellipse, "椭圆"),
+            (.blur, "马赛克"),
+            (.number, "序号"),
+            (.text, "文字")
+        ]
+        for (tool, tip) in tools {
+            let primary = tool == (annotateDocument?.tool ?? .arrow)
+            let button = makeBarButton(title: tool.title, glyph: tool.glyph, primary: primary) { [weak self] in
+                self?.annotateDocument?.tool = tool
+                if let r = self?.frozenSelection {
+                    self?.showAnnotateBar(near: r)
+                }
+                self?.annotateCanvas?.needsDisplay = true
+                self?.window?.makeFirstResponder(self?.annotateCanvas)
+            }
+            button.toolTip = tip
+            bar.addArrangedSubview(button)
+        }
+
+        let divider = NSView(frame: NSRect(x: 0, y: 0, width: 1, height: 22))
+        divider.wantsLayer = true
+        divider.layer?.backgroundColor = NSColor.white.withAlphaComponent(0.18).cgColor
+        divider.translatesAutoresizingMaskIntoConstraints = false
+        divider.widthAnchor.constraint(equalToConstant: 1).isActive = true
+        divider.heightAnchor.constraint(equalToConstant: 22).isActive = true
+        bar.addArrangedSubview(divider)
+
+        let undo = makeBarButton(title: "撤销", glyph: nil, primary: false) { [weak self] in
+            self?.annotateDocument?.undo()
+            self?.annotateCanvas?.needsDisplay = true
+        }
+        undo.toolTip = "撤销 (⌘Z)"
+        bar.addArrangedSubview(undo)
+
+        let copy = makeBarButton(title: "复制", glyph: .copy, primary: true) { [weak self] in
+            self?.finishInlineAnnotate(.clipboard)
+        }
+        copy.toolTip = "复制标注结果 (⌘C)"
+        bar.addArrangedSubview(copy)
+
+        let save = makeBarButton(title: "保存", glyph: .save, primary: false) { [weak self] in
+            self?.finishInlineAnnotate(.save)
+        }
+        bar.addArrangedSubview(save)
+
+        let pin = makeBarButton(title: "钉住", glyph: .pin, primary: false) { [weak self] in
+            self?.finishInlineAnnotate(.pin)
+        }
+        bar.addArrangedSubview(pin)
+
+        let done = makeBarButton(title: "完成", glyph: .success, primary: false) { [weak self] in
+            self?.finishInlineAnnotate(.from(after: AppSettings.shared.afterCaptureAction))
+        }
+        done.toolTip = "按默认设置完成"
+        bar.addArrangedSubview(done)
+
+        bar.translatesAutoresizingMaskIntoConstraints = false
+        addSubview(bar)
+        bar.layoutSubtreeIfNeeded()
+        let size = bar.fittingSize
+        let barSize = NSSize(width: ceil(size.width), height: max(44, ceil(size.height)))
+        bar.setFrameSize(barSize)
+
+        var origin = NSPoint(x: rect.midX - barSize.width / 2, y: rect.maxY + 12)
+        if origin.y + barSize.height > bounds.maxY - 12 {
+            origin.y = rect.minY - barSize.height - 12
+        }
+        origin.x = min(max(12, origin.x), bounds.maxX - barSize.width - 12)
+        origin.y = min(max(12, origin.y), bounds.maxY - barSize.height - 12)
+        bar.setFrameOrigin(origin)
+        annotateBar = bar
+    }
+
+    private func hideAnnotateBar() {
+        annotateBar?.removeFromSuperview()
+        annotateBar = nil
+    }
+
+    private func finishInlineAnnotate(_ action: CaptureFinishAction) {
+        guard !didComplete, let doc = annotateDocument else { return }
+        let rendered = doc.renderedImage()
+        guard let cg = rendered.cgImage(
+            forProposedRect: nil,
+            context: nil,
+            hints: nil
+        ) else { return }
+
+        let scale: CGFloat = {
+            let w = rendered.size.width
+            guard w > 0 else { return captured.scale }
+            return CGFloat(cg.width) / w
+        }()
+
+        hideAnnotateBar()
+        annotateCanvas?.removeFromSuperview()
+        annotateCanvas = nil
+        annotateDocument = nil
+        isAnnotating = false
+        didComplete = true
+        onAreaSelected?(cg, scale, action)
     }
 
     private func snapSelectionToWindow(at point: CGPoint) -> Bool {
