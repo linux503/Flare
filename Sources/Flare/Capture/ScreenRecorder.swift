@@ -537,6 +537,11 @@ final class ScreenRecorder: NSObject, ObservableObject {
             try? FileManager.default.removeItem(at: url)
         }
         outputURL = nil
+        if failed, AppSettings.shared.recordHideFlareWindows {
+            DispatchQueue.main.async {
+                HomeWindowController.shared.show(tab: .record)
+            }
+        }
     }
 
     private func startTimer() {

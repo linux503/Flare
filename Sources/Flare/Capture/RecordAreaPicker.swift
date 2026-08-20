@@ -36,18 +36,30 @@ enum RecordAreaPicker {
         onPicked: @escaping (Selection) -> Void,
         onCancel: @escaping () -> Void
     ) {
-        var controllers: [CaptureOverlayController] = []
+        final class Holder {
+            var controllers: [CaptureOverlayController] = []
+        }
+        let holder = Holder()
         let windows = WindowCapturer.listWindows()
+
+        let cleanup = {
+            let list = holder.controllers
+            holder.controllers.removeAll()
+            for c in list {
+                c.onCancel = nil
+                c.onRecordAreaConfirmed = nil
+                c.close()
+            }
+        }
+
         for frame in frames {
             let controller = CaptureOverlayController(frame: frame, mode: .recordArea, windows: windows)
             controller.onCancel = {
-                controllers.forEach { $0.close() }
-                controllers.removeAll()
+                cleanup()
                 onCancel()
             }
             controller.onRecordAreaConfirmed = { viewRect in
-                controllers.forEach { $0.close() }
-                controllers.removeAll()
+                cleanup()
                 guard let selection = makeSelection(viewRect: viewRect, frame: frame) else {
                     ToastController.shared.show("选区无效，请重试")
                     onCancel()
@@ -55,7 +67,7 @@ enum RecordAreaPicker {
                 }
                 onPicked(selection)
             }
-            controllers.append(controller)
+            holder.controllers.append(controller)
             controller.show()
         }
     }

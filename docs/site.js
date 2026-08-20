@@ -1,5 +1,5 @@
 (() => {
-  fetch("./version.json", { cache: "no-store" })
+  fetch("./version.json", { cache: "no-cache" })
     .then((r) => (r.ok ? r.json() : null))
     .then((data) => {
       if (!data || !data.version) return;
@@ -54,7 +54,11 @@
   const show = (i) => {
     index = (i + frames.length) % frames.length;
     frames.forEach((el, n) => el.classList.toggle("on", n === index));
-    tabs.forEach((el, n) => el.classList.toggle("on", n === index));
+    tabs.forEach((el, n) => {
+      const on = n === index;
+      el.classList.toggle("on", on);
+      el.setAttribute("aria-selected", on ? "true" : "false");
+    });
   };
 
   const stop = () => {

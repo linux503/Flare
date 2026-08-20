@@ -3,9 +3,10 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Flare Pro - 免费截图录屏工具，支持 macOS / Windows / Android 长截图</title>
+  <title>Flare Pro - 免费截图录屏工具 | macOS · Windows · Android</title>
   <meta name="description" content="Flare Pro 是免费截图录屏工具：macOS 原生支持区域截图、窗口截图、全屏截图、长截图、录屏、OCR 与钉图；Windows EXE、Android APK 支持网页长截图。" />
   <meta name="theme-color" content="#059669" />
+  <meta name="author" content="linux503" />
   <link rel="canonical" href="https://linux503.github.io/Flare/" />
   <meta property="og:type" content="website" />
   <meta property="og:site_name" content="Flare Pro" />
@@ -27,12 +28,13 @@
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@500;600;700;800&family=Noto+Sans+SC:wght@400;500;600;700&display=swap" rel="stylesheet" />
-  <link rel="stylesheet" href="styles.css?v=24" />
-  <link rel="stylesheet" href="more-apps.css?v=12" />
+  <link rel="stylesheet" href="styles.css?v=25" />
+  <link rel="stylesheet" href="more-apps.css?v=13" />
 </head>
 <body>
+  <a class="skip-link" href="#main">跳至正文</a>
   <header class="site-header">
-    <a class="brand" href="#">
+    <a class="brand" href="./" aria-label="Flare Pro 首页">
       <span class="brand-mark"><img src="logo.png?v=13" width="32" height="32" alt="" /></span>
       <span class="brand-text">
         <strong>Flare Pro</strong>
@@ -43,7 +45,7 @@
       <div class="nav-cluster">
         <a href="#shot">截图</a>
         <a href="#rec">录屏</a>
-        <a href="#docs">新建</a>
+        <a href="#docs">文档</a>
         <a href="#start">上手</a>
         <details class="more-apps" data-more-apps="flare">
           <summary>
@@ -54,48 +56,48 @@
           <div class="more-apps-panel" role="menu">
             <div class="more-apps-head">其他工具</div>
             <a href="https://linux503.github.io/ZipX/" target="_blank" rel="noopener noreferrer" role="menuitem" style="--app-accent:#e84d32">
-              <img class="more-apps-icon" src="https://linux503.github.io/ZipX/assets/logo.png" alt="" width="40" height="40" />
+              <img class="more-apps-icon" src="https://linux503.github.io/ZipX/assets/logo.png" alt="" width="40" height="40" loading="lazy" decoding="async" />
               <span class="app-meta"><span class="app-name">ZipX</span><span class="app-desc">解压压缩</span></span>
             </a>
             <a href="https://linux503.github.io/MacText/" target="_blank" rel="noopener noreferrer" role="menuitem" style="--app-accent:#3b5bdb">
-              <img class="more-apps-icon" src="https://linux503.github.io/MacText/assets/icon-256.png" alt="" width="40" height="40" />
+              <img class="more-apps-icon" src="https://linux503.github.io/MacText/assets/icon-256.png" alt="" width="40" height="40" loading="lazy" decoding="async" />
               <span class="app-meta"><span class="app-name">MacText</span><span class="app-desc">文本编辑</span></span>
             </a>
             <a href="https://linux503.github.io/suptools/" target="_blank" rel="noopener noreferrer" role="menuitem" style="--app-accent:#0d7a6c">
-              <img class="more-apps-icon" src="https://linux503.github.io/suptools/assets/icon-256.png" alt="" width="40" height="40" />
+              <img class="more-apps-icon" src="https://linux503.github.io/suptools/assets/icon-256.png" alt="" width="40" height="40" loading="lazy" decoding="async" />
               <span class="app-meta"><span class="app-name">SupTools</span><span class="app-desc">超级工具箱</span></span>
             </a>
             <a href="https://linux503.github.io/MacFan/" target="_blank" rel="noopener noreferrer" role="menuitem" style="--app-accent:#0891b2">
-              <img class="more-apps-icon" src="https://linux503.github.io/MacFan/assets/logo-512.png" alt="" width="40" height="40" />
+              <img class="more-apps-icon" src="https://linux503.github.io/MacFan/assets/logo-512.png" alt="" width="40" height="40" loading="lazy" decoding="async" />
               <span class="app-meta"><span class="app-name">MacFan</span><span class="app-desc">风扇转速</span></span>
             </a>
             <a href="https://linux503.github.io/FilesDesk/" target="_blank" rel="noopener noreferrer" role="menuitem" style="--app-accent:#7c3aed">
-              <img class="more-apps-icon" src="https://linux503.github.io/FilesDesk/assets/apple-touch-180.png" alt="" width="40" height="40" />
+              <img class="more-apps-icon" src="https://linux503.github.io/FilesDesk/assets/apple-touch-180.png" alt="" width="40" height="40" loading="lazy" decoding="async" />
               <span class="app-meta"><span class="app-name">FilesDesk</span><span class="app-desc">批量重命名</span></span>
             </a>
             <a href="https://linux503.github.io/LocaDesk/" target="_blank" rel="noopener noreferrer" role="menuitem" style="--app-accent:#2563eb">
-              <img class="more-apps-icon" src="https://linux503.github.io/LocaDesk/assets/icon.png" alt="" width="40" height="40" />
+              <img class="more-apps-icon" src="https://linux503.github.io/LocaDesk/assets/icon.png" alt="" width="40" height="40" loading="lazy" decoding="async" />
               <span class="app-meta"><span class="app-name">LocaDesk</span><span class="app-desc">定位模拟</span></span>
             </a>
             <a href="https://linux503.github.io/BattyBar/" target="_blank" rel="noopener noreferrer" role="menuitem" style="--app-accent:#ca8a04">
-              <img class="more-apps-icon" src="https://linux503.github.io/BattyBar/assets/apple-touch-icon.png" alt="" width="40" height="40" />
+              <img class="more-apps-icon" src="https://linux503.github.io/BattyBar/assets/apple-touch-icon.png" alt="" width="40" height="40" loading="lazy" decoding="async" />
               <span class="app-meta"><span class="app-name">BattyBar</span><span class="app-desc">电池管理</span></span>
             </a>
             <a href="https://linux503.github.io/RemoteX/" target="_blank" rel="noopener noreferrer" role="menuitem" style="--app-accent:#4f46e5">
-              <img class="more-apps-icon" src="https://linux503.github.io/RemoteX/icon.png" alt="" width="40" height="40" />
+              <img class="more-apps-icon" src="https://linux503.github.io/RemoteX/icon.png" alt="" width="40" height="40" loading="lazy" decoding="async" />
               <span class="app-meta"><span class="app-name">RemoteX</span><span class="app-desc">远程桌面</span></span>
             </a>
           </div>
         </details>
       </div>
-      <a class="pill" data-download href="https://github.com/linux503/Flare/releases/download/v1.3.10/Flare-Pro-1.3.10-Universal.dmg">
+      <a class="pill" data-download href="https://github.com/linux503/Flare/releases/download/v1.3.11/Flare-Pro-1.3.11-Universal.dmg" aria-label="下载 Flare Pro for macOS">
         <svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M12 3a1 1 0 0 1 1 1v8.6l2.3-2.3a1 1 0 1 1 1.4 1.4l-4 4a1 1 0 0 1-1.4 0l-4-4a1 1 0 1 1 1.4-1.4L11 12.6V4a1 1 0 0 1 1-1ZM5 18a1 1 0 0 1 1-1h12a1 1 0 1 1 0 2H6a1 1 0 0 1-1-1Z"/></svg>
         下载
       </a>
     </nav>
   </header>
 
-  <main>
+  <main id="main">
     <section class="hero">
       <div class="hero-inner" data-hero>
         <p class="now-badge"><span class="now-dot" aria-hidden="true"></span>现已支持 Windows 与 Android</p>
@@ -103,7 +105,7 @@
         <h1>一拍即得</h1>
         <p class="subtitle">macOS 完整截图、录屏，还能一键新建 TXT / Word / PPT / Excel。Windows 下载 EXE、Android 下载 APK，打开网页即可自动滚动拼接长图。</p>
         <div class="hero-dls">
-          <a class="dl-btn mac" data-download href="https://github.com/linux503/Flare/releases/download/v1.3.10/Flare-Pro-1.3.10-Universal.dmg">
+          <a class="dl-btn mac" data-download href="https://github.com/linux503/Flare/releases/download/v1.3.11/Flare-Pro-1.3.11-Universal.dmg">
             <span class="dl-ico" aria-hidden="true">
               <svg viewBox="0 0 24 24"><path fill="currentColor" d="M18.71 19.5c-.83 1.24-1.71 2.45-3.05 2.47-1.34.03-1.77-.79-3.29-.79-1.53 0-2 .77-3.27.82-1.31.05-2.3-1.32-3.14-2.53C4.25 17 2.94 12.45 4.7 9.39c.87-1.52 2.43-2.48 4.12-2.51 1.28-.02 2.5.87 3.29.87.78 0 2.26-1.07 3.8-.91.65.03 2.47.26 3.64 1.98-.09.06-2.17 1.28-2.15 3.81.03 3.02 2.65 4.03 2.68 4.04-.03.07-.42 1.44-1.38 2.83M13 3.5c.73-.83 1.94-1.46 2.94-1.5.13 1.17-.34 2.35-1.04 3.19-.69.85-1.83 1.51-2.95 1.42-.15-1.15.41-2.35 1.05-3.11z"/></svg>
             </span>
@@ -111,9 +113,9 @@
               <strong>macOS</strong>
               <em>DMG · Universal</em>
             </span>
-            <span class="dl-ver" data-app-version>v1.3.10</span>
+            <span class="dl-ver" data-app-version>v1.3.11</span>
           </a>
-          <a class="dl-btn win" data-download-windows href="https://github.com/linux503/Flare/releases/download/v1.3.10/Flare-Windows-x64.exe">
+          <a class="dl-btn win" data-download-windows href="https://github.com/linux503/Flare/releases/download/v1.3.11/Flare-Windows-x64.exe">
             <span class="dl-ico" aria-hidden="true">
               <svg viewBox="0 0 24 24"><path fill="currentColor" d="M3 5.5L10.5 4.6v7.5H3V5.5zm10.5-.9L21 3.5v8.6h-7.5V4.6zM3 13.5h7.5v7.5L3 19.6V13.5zm10.5 0H21v6.1l-7.5 1.4V13.5z"/></svg>
             </span>
@@ -121,9 +123,9 @@
               <strong>Windows</strong>
               <em>EXE · x64</em>
             </span>
-            <span class="dl-ver" data-app-version>v1.3.10</span>
+            <span class="dl-ver" data-app-version>v1.3.11</span>
           </a>
-          <a class="dl-btn android" data-download-android href="https://github.com/linux503/Flare/releases/download/v1.3.10/Flare-Android.apk">
+          <a class="dl-btn android" data-download-android href="https://github.com/linux503/Flare/releases/download/v1.3.11/Flare-Android.apk">
             <span class="dl-ico" aria-hidden="true">
               <svg viewBox="0 0 24 24"><path fill="currentColor" d="M6 18c0 .55.45 1 1 1h1v3.5c0 .83.67 1.5 1.5 1.5s1.5-.67 1.5-1.5V19h2v3.5c0 .83.67 1.5 1.5 1.5s1.5-.67 1.5-1.5V19h1c.55 0 1-.45 1-1V8H6v10zM3.5 8C2.67 8 2 8.67 2 9.5v7c0 .83.67 1.5 1.5 1.5S5 17.33 5 16.5v-7C5 8.67 4.33 8 3.5 8zm17 0c-.83 0-1.5.67-1.5 1.5v7c0 .83.67 1.5 1.5 1.5s1.5-.67 1.5-1.5v-7c0-.83-.67-1.5-1.5-1.5zm-4.97-5.41l1.41-1.41 1.06 1.06-1.41 1.41-1.06-1.06zm-6.12 0l-1.06-1.06-1.41 1.41 1.06 1.06 1.41-1.41zM12 4.5c-2.67 0-4.83 2.16-4.83 4.83h9.66C16.83 6.66 14.67 4.5 12 4.5z"/></svg>
             </span>
@@ -131,21 +133,21 @@
               <strong>Android</strong>
               <em>APK</em>
             </span>
-            <span class="dl-ver" data-app-version>v1.3.10</span>
+            <span class="dl-ver" data-app-version>v1.3.11</span>
           </a>
         </div>
       </div>
 
-      <div class="showcase" data-carousel data-hero>
+      <div class="showcase" data-carousel data-hero role="region" aria-label="功能演示">
         <div class="stage">
-          <img class="on" src="poster-capture.jpg?v=8" alt="截图" data-i="0" width="1536" height="1024" />
-          <img src="poster-record.jpg?v=8" alt="录屏" data-i="1" width="1536" height="1024" />
-          <img src="poster-annotate.jpg?v=8" alt="标注" data-i="2" width="1536" height="1024" />
+          <img class="on" src="poster-capture.jpg?v=8" alt="截图" data-i="0" width="1536" height="1024" fetchpriority="high" decoding="async" />
+          <img src="poster-record.jpg?v=8" alt="录屏" data-i="1" width="1536" height="1024" PLACEHOLDER
+          <img src="poster-annotate.jpg?v=8" alt="标注" data-i="2" width="1536" height="1024" PLACEHOLDER
         </div>
-        <div class="switcher">
-          <button type="button" class="on" data-goto="0"><b>截图</b><span>框选 · 窗口 · 全屏</span></button>
-          <button type="button" data-goto="1"><b>录屏</b><span>区域 · 系统声 · MOV</span></button>
-          <button type="button" data-goto="2"><b>标注</b><span>箭头 · 高亮 · OCR</span></button>
+        <div class="switcher" role="tablist" aria-label="演示切换">
+          <button type="button" class="on" data-goto="0" role="tab" aria-selected="true"><b>截图</b><span>框选 · 窗口 · 全屏</span></button>
+          <button type="button" data-goto="1" role="tab" aria-selected="false"><b>录屏</b><span>区域 · 系统声 · MOV</span></button>
+          <button type="button" data-goto="2" role="tab" aria-selected="false"><b>标注</b><span>箭头 · 高亮 · OCR</span></button>
         </div>
       </div>
     </section>
@@ -242,7 +244,7 @@
     <section class="chapter" data-reveal>
       <div class="chapter-text">
         <p class="tag gold">Annotate</p>
-        <h2>标注与识字</h2>
+        <h2>标注与 OCR</h2>
         <p>箭头、高亮、马赛克、序号用于快速说明；OCR 可导出文本。需要对照时，把图钉在桌面即可。</p>
         <ul>
           <li>编辑器内完成常用标注</li>
@@ -318,34 +320,34 @@
           <div class="download-panel">
             <div class="platform-grid">
               <div class="dl-stack">
-                <a class="platform-card is-primary" id="download-btn" data-download href="https://github.com/linux503/Flare/releases/download/v1.3.10/Flare-Pro-1.3.10-Universal.dmg">
+                <a class="platform-card is-primary" id="download-btn" data-download href="https://github.com/linux503/Flare/releases/download/v1.3.11/Flare-Pro-1.3.11-Universal.dmg">
                   <span class="platform-icon-wrap" aria-hidden="true">
                     <svg class="platform-icon" viewBox="0 0 24 24"><path fill="currentColor" d="M18.71 19.5c-.83 1.24-1.71 2.45-3.05 2.47-1.34.03-1.77-.79-3.29-.79-1.53 0-2 .77-3.27.82-1.31.05-2.3-1.32-3.14-2.53C4.25 17 2.94 12.45 4.7 9.39c.87-1.52 2.43-2.48 4.12-2.51 1.28-.02 2.5.87 3.29.87.78 0 2.26-1.07 3.8-.91.65.03 2.47.26 3.64 1.98-.09.06-2.17 1.28-2.15 3.81.03 3.02 2.65 4.03 2.68 4.04-.03.07-.42 1.44-1.38 2.83M13 3.5c.73-.83 1.94-1.46 2.94-1.5.13 1.17-.34 2.35-1.04 3.19-.69.85-1.83 1.51-2.95 1.42-.15-1.15.41-2.35 1.05-3.11z"/></svg>
                   </span>
                   <span class="platform-name">macOS</span>
                   <span class="platform-tag">DMG</span>
                 </a>
-                <span class="dl-ver" data-app-version>v1.3.10</span>
+                <span class="dl-ver" data-app-version>v1.3.11</span>
               </div>
               <div class="dl-stack">
-                <a class="platform-card is-win" data-download-windows href="https://github.com/linux503/Flare/releases/download/v1.3.10/Flare-Windows-x64.exe">
+                <a class="platform-card is-win" data-download-windows href="https://github.com/linux503/Flare/releases/download/v1.3.11/Flare-Windows-x64.exe">
                   <span class="platform-icon-wrap" aria-hidden="true">
                     <svg class="platform-icon" viewBox="0 0 24 24"><path fill="currentColor" d="M3 5.5L10.5 4.6v7.5H3V5.5zm10.5-.9L21 3.5v8.6h-7.5V4.6zM3 13.5h7.5v7.5L3 19.6V13.5zm10.5 0H21v6.1l-7.5 1.4V13.5z"/></svg>
                   </span>
                   <span class="platform-name">Windows</span>
                   <span class="platform-tag">EXE</span>
                 </a>
-                <span class="dl-ver" data-app-version>v1.3.10</span>
+                <span class="dl-ver" data-app-version>v1.3.11</span>
               </div>
               <div class="dl-stack">
-                <a class="platform-card is-android" data-download-android href="https://github.com/linux503/Flare/releases/download/v1.3.10/Flare-Android.apk">
+                <a class="platform-card is-android" data-download-android href="https://github.com/linux503/Flare/releases/download/v1.3.11/Flare-Android.apk">
                   <span class="platform-icon-wrap" aria-hidden="true">
                     <svg class="platform-icon" viewBox="0 0 24 24"><path fill="currentColor" d="M6 18c0 .55.45 1 1 1h1v3.5c0 .83.67 1.5 1.5 1.5s1.5-.67 1.5-1.5V19h2v3.5c0 .83.67 1.5 1.5 1.5s1.5-.67 1.5-1.5V19h1c.55 0 1-.45 1-1V8H6v10zM3.5 8C2.67 8 2 8.67 2 9.5v7c0 .83.67 1.5 1.5 1.5S5 17.33 5 16.5v-7C5 8.67 4.33 8 3.5 8zm17 0c-.83 0-1.5.67-1.5 1.5v7c0 .83.67 1.5 1.5 1.5s1.5-.67 1.5-1.5v-7c0-.83-.67-1.5-1.5-1.5zm-4.97-5.41l1.41-1.41 1.06 1.06-1.41 1.41-1.06-1.06zm-6.12 0l-1.06-1.06-1.41 1.41 1.06 1.06 1.41-1.41zM12 4.5c-2.67 0-4.83 2.16-4.83 4.83h9.66C16.83 6.66 14.67 4.5 12 4.5z"/></svg>
                   </span>
                   <span class="platform-name">Android</span>
                   <span class="platform-tag">APK</span>
                 </a>
-                <span class="dl-ver" data-app-version>v1.3.10</span>
+                <span class="dl-ver" data-app-version>v1.3.11</span>
               </div>
             </div>
             <a class="all-releases" href="https://github.com/linux503/Flare/releases" target="_blank" rel="noopener">查看全部版本 →</a>
@@ -377,7 +379,7 @@
     </div>
   </footer>
 
-  <script src="site.js?v=15"></script>
-  <script src="more-apps.js?v=12" defer></script>
+  <script src="site.js?v=16" defer></script>
+  <script src="more-apps.js?v=13" defer></script>
 </body>
 </html>

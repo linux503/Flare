@@ -364,6 +364,7 @@
     transform-origin: top center;
     min-width: min(440px, calc(100vw - 1.5rem));
     width: min(440px, calc(100vw - 1.5rem));
+    animation-name: moreAppsInMobile;
   }
 
   @media (max-width: 480px) {
@@ -372,7 +373,7 @@
     }
   }
 
-  @keyframes moreAppsIn {
+  @keyframes moreAppsInMobile {
     from {
       opacity: 0;
       transform: translateX(-50%) translateY(-6px) scale(0.98);

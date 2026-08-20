@@ -306,11 +306,12 @@ final class CaptureCoordinator: ObservableObject {
                 }
                 ToastController.shared.show("已保存：\(url.lastPathComponent)")
                 HistoryStore.shared.add(image: image, fileURL: url)
-                StatusBarController.shared?.reloadMenu()
-                return
             } catch {
-                ToastController.shared.show("保存失败")
+                ToastController.shared.show("保存失败，已保留到历史")
+                HistoryStore.shared.add(image: image)
             }
+            StatusBarController.shared?.reloadMenu()
+            return
         case .pin:
             PinWindowController.shared.pin(image: image)
         }

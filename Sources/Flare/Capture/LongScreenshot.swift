@@ -263,24 +263,22 @@ enum LongScreenshot {
         let firstTD = TopDownImage(cgImage: frames[0].image)
         let h = firstTD.height
 
-        // 固定顶栏高度：只用「首帧 vs 第二帧」测一次，避免滚动重叠干扰
-        let sticky: Int = {
-            guard frames.count > 1 else { return 0 }
-            return detectStickyTop(previous: frames[0].image, current: frames[1].image)
-        }()
+        // 与采集循环一致：取各帧 stickyTop 的最大值，避免裁切偏少导致顶栏重复
+        let sticky = frames.map(\.stickyTop).max() ?? 0
 
         var parts: [TopDownImage] = [firstTD]
 
         for frame in frames.dropFirst() {
-            guard sticky < h - 16 else { continue }
+            let frameSticky = max(sticky, frame.stickyTop)
+            guard frameSticky < h - 16 else { continue }
 
-            let fresh = min(frame.shift, h - sticky - 2).clamped(to: 1...(h - sticky - 1))
-            let startRow = max(sticky, h - fresh)
+            let fresh = min(frame.shift, h - frameSticky - 2).clamped(to: 1...(h - frameSticky - 1))
+            let startRow = max(frameSticky, h - fresh)
             let rowCount = h - startRow
-            guard rowCount > 8, startRow >= sticky else { continue }
+            guard rowCount > 8, startRow >= frameSticky else { continue }
 
             if ProcessInfo.processInfo.environment["FLARE_STITCH_DEBUG"] == "1" {
-                print("    strip sticky=\(sticky) fresh=\(fresh) startRow=\(startRow) rows=\(rowCount)")
+                print("    strip sticky=\(frameSticky) fresh=\(fresh) startRow=\(startRow) rows=\(rowCount)")
             }
 
             let td = TopDownImage(cgImage: frame.image)

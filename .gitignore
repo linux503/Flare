@@ -1,5 +1,6 @@
 .build/
 .build-universal/
+.build-stitch-test/
 dist/
 .DS_Store
 *.swp

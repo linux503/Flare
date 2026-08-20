@@ -29,6 +29,24 @@
 
 * { box-sizing: border-box; }
 html { scroll-behavior: smooth; }
+.skip-link {
+  position: absolute;
+  left: 12px;
+  top: -48px;
+  z-index: 1000;
+  padding: 8px 14px;
+  border-radius: 999px;
+  background: var(--ink);
+  color: #fff;
+  font-weight: 700;
+  text-decoration: none;
+  transition: top 0.2s var(--ease);
+}
+.skip-link:focus {
+  top: 12px;
+  outline: 2px solid var(--green);
+  outline-offset: 2px;
+}
 body {
   margin: 0;
   color: var(--ink);
@@ -160,14 +178,12 @@ body {
   padding: 4px;
   border-radius: 8px;
   box-shadow: none;
+  grid-template-columns: repeat(2, 4px);
+  gap: 2px;
 }
 .site-header .more-apps-ico i {
   width: 4px;
   height: 4px;
-}
-.site-header .more-apps-ico {
-  grid-template-columns: repeat(2, 4px);
-  gap: 2px;
 }
 .site-header .more-apps-chevron {
   width: 1rem;
