@@ -519,7 +519,7 @@ final class CaptureOverlayView: NSView {
             return
         }
 
-        // 双击选区 → 完成截图；无选区双击 → 吸附窗口
+        // 选区：双击复制完成；三击打开编辑器；无选区双击吸附窗口
         if isAreaLike, event.clickCount >= 2 {
             pendingSelectionTap = nil
             selectionTapMoved = false
@@ -528,7 +528,11 @@ final class CaptureOverlayView: NSView {
                frozen.insetBy(dx: -6, dy: -6).contains(point) {
                 if mode == .recordArea { commitRecordArea() }
                 else if mode == .longArea { commitLongSelection() }
-                else { commitSelection(.useSettings) }
+                else if event.clickCount >= 3 {
+                    commitSelection(.editor)
+                } else {
+                    commitSelection(.clipboard)
+                }
                 return
             }
             if snapSelectionToWindow(at: point) { return }
@@ -544,7 +548,7 @@ final class CaptureOverlayView: NSView {
                 return
             }
             if frozen.contains(point) {
-                // 单击预备：未拖动则进编辑；拖动则移动选区
+                // 按下预备：拖动则移动选区；单击不触发完成
                 pendingSelectionTap = (anchor: point, startRect: frozen)
                 selectionTapMoved = false
                 hideActionBar()
@@ -599,15 +603,10 @@ final class CaptureOverlayView: NSView {
         let point = convert(event.locationInWindow, from: nil)
         mouseLocation = point
 
-        // 选区上单击（未拖动）→ 进入编辑
+        // 选区上单击：仅恢复工具栏（双击复制 / 三击编辑）
         if pendingSelectionTap != nil {
-            let wasTap = !selectionTapMoved
             pendingSelectionTap = nil
             selectionTapMoved = false
-            if wasTap, mode == .area, event.clickCount == 1 {
-                enterInlineAnnotate()
-                return
-            }
             if let rect = frozenSelection, rect.width > 4, rect.height > 4 {
                 showActionBar(near: rect)
             }
@@ -828,11 +827,11 @@ final class CaptureOverlayView: NSView {
         let annotate = makeBarButton(title: "标注", glyph: .edit, primary: editPrimary) { [weak self] in
             self?.enterInlineAnnotate()
         }
-        annotate.toolTip = "在选区内直接标注（单击选区 / ⌘E）"
+        annotate.toolTip = "在选区内直接标注（⌘E）"
         bar.addArrangedSubview(annotate)
 
         let items: [(String, SnapGlyph, CaptureFinishAction, String)] = [
-            ("复制", .copy, .clipboard, "复制到剪贴板 (⌘C)"),
+            ("复制", .copy, .clipboard, "复制到剪贴板（双击选区 / ⌘C）"),
             ("保存", .save, .save, "保存到文件 (⌘S)"),
             ("钉住", .pin, .pin, "钉在屏幕上 (⌘P)"),
             ("OCR", .ocr, .ocr, "识别文字并保存 TXT (⌘T)")
