@@ -1,10 +1,10 @@
 {
-  "version": "1.3.6",
-  "build": 20,
-  "notes": "长截图加入固定头尾检测与安全区域拼接；官网平台卡片展示与文案优化。",
-  "downloadURL": "https://github.com/linux503/Flare/releases/download/v1.3.6/Flare-Pro-1.3.6-Universal.dmg",
-  "windowsURL": "https://github.com/linux503/Flare/releases/download/v1.3.6/Flare-Windows-x64.exe",
-  "androidURL": "https://github.com/linux503/Flare/releases/download/v1.3.6/Flare-Android.apk",
+  "version": "1.3.7",
+  "build": 21,
+  "notes": "官网平台卡片视觉升级：玻璃拟态、平台图标与悬停动效。",
+  "downloadURL": "https://github.com/linux503/Flare/releases/download/v1.3.7/Flare-Pro-1.3.7-Universal.dmg",
+  "windowsURL": "https://github.com/linux503/Flare/releases/download/v1.3.7/Flare-Windows-x64.exe",
+  "androidURL": "https://github.com/linux503/Flare/releases/download/v1.3.7/Flare-Android.apk",
   "minOS": "14.0",
   "publishedAt": "2026-08-20"
 }
