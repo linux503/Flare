@@ -40,9 +40,32 @@ final class CaptureCoordinator: ObservableObject {
     }
 
     func startFullScreenCapture() {
-        beginCapture {
-            let frame = try await self.captureActiveDisplay()
-            await MainActor.run { self.finish(with: frame.image, scale: frame.scale) }
+        guard Permissions.prepareForCapture() else { return }
+        guard !isCapturing else { return }
+        if ScreenRecorder.shared.isRecording {
+            ToastController.shared.show("请先停止录屏")
+            return
+        }
+
+        let targetDisplayID = resolveTargetDisplayID()
+        isCapturing = true
+        suppressHomeUntil = Date().addingTimeInterval(4)
+        resignForCapture()
+
+        Task {
+            try await Task.sleep(nanoseconds: 280_000_000)
+            do {
+                let frame = try await ScreenCapturer.captureDisplay(targetDisplayID, excludeSelf: true)
+                await MainActor.run {
+                    Permissions.markCaptureSucceeded()
+                    self.finish(with: frame.image, scale: frame.scale)
+                }
+            } catch {
+                await MainActor.run {
+                    self.endCaptureSession(restoreHome: false)
+                    Permissions.handleCaptureFailure(error: error)
+                }
+            }
         }
     }
 
@@ -53,18 +76,24 @@ final class CaptureCoordinator: ObservableObject {
             ToastController.shared.show("请先停止录屏")
             return
         }
+        let targetDisplayID = resolveTargetDisplayID()
         isCapturing = true
+        suppressHomeUntil = Date().addingTimeInterval(Double(seconds) + 4)
         hideFlareWindows()
         DelayOverlayController.shared.start(seconds: seconds) { [weak self] in
             guard let self else { return }
+            self.resignForCapture()
             Task {
+                try await Task.sleep(nanoseconds: 180_000_000)
                 do {
-                    let frame = try await self.captureActiveDisplay()
-                    Permissions.markCaptureSucceeded()
-                    await MainActor.run { self.finish(with: frame.image, scale: frame.scale) }
+                    let frame = try await ScreenCapturer.captureDisplay(targetDisplayID, excludeSelf: true)
+                    await MainActor.run {
+                        Permissions.markCaptureSucceeded()
+                        self.finish(with: frame.image, scale: frame.scale)
+                    }
                 } catch {
                     await MainActor.run {
-                        self.endCaptureSession(restoreHome: true)
+                        self.endCaptureSession(restoreHome: false)
                         Permissions.handleCaptureFailure(error: error)
                     }
                 }
@@ -105,10 +134,76 @@ final class CaptureCoordinator: ObservableObject {
     }
 
     private func captureActiveDisplay() async throws -> CapturedFrame {
+        try await ScreenCapturer.captureDisplay(resolveTargetDisplayID(), excludeSelf: true)
+    }
+
+    /// 全屏/延时截图：优先截前台应用所在显示器，避免在 Flare 界面里误截另一块屏或桌面
+    private func resolveTargetDisplayID() -> CGDirectDisplayID {
+        if let screen = screenForFrontmostExternalApp() ?? screenUnderMouse() {
+            return displayID(for: screen) ?? CGMainDisplayID()
+        }
+        return CGMainDisplayID()
+    }
+
+    private func screenUnderMouse() -> NSScreen? {
         let mouse = NSEvent.mouseLocation
-        let screen = NSScreen.screens.first { NSMouseInRect(mouse, $0.frame, false) } ?? NSScreen.main
-        let displayID = (screen?.deviceDescription[NSDeviceDescriptionKey("NSScreenNumber")] as? NSNumber)?.uint32Value ?? CGMainDisplayID()
-        return try await ScreenCapturer.captureDisplay(displayID)
+        return NSScreen.screens.first { NSMouseInRect(mouse, $0.frame, false) } ?? NSScreen.main
+    }
+
+    private func displayID(for screen: NSScreen) -> CGDirectDisplayID? {
+        (screen.deviceDescription[NSDeviceDescriptionKey("NSScreenNumber")] as? NSNumber)?.uint32Value
+    }
+
+    private func screenForFrontmostExternalApp() -> NSScreen? {
+        guard let front = NSWorkspace.shared.frontmostApplication,
+              front.bundleIdentifier != Bundle.main.bundleIdentifier else { return nil }
+
+        guard let list = CGWindowListCopyWindowInfo([.optionOnScreenOnly], kCGNullWindowID) as? [[String: Any]] else {
+            return nil
+        }
+
+        let pid = front.processIdentifier
+        var best: CGRect?
+        var bestArea: CGFloat = 0
+        for info in list {
+            guard
+                let ownerPID = info[kCGWindowOwnerPID as String] as? pid_t,
+                ownerPID == pid,
+                let layer = info[kCGWindowLayer as String] as? Int,
+                layer == 0,
+                let boundsDict = info[kCGWindowBounds as String] as? [String: CGFloat]
+            else { continue }
+
+            let bounds = CGRect(
+                x: boundsDict["X"] ?? 0,
+                y: boundsDict["Y"] ?? 0,
+                width: boundsDict["Width"] ?? 0,
+                height: boundsDict["Height"] ?? 0
+            )
+            guard bounds.width > 80, bounds.height > 80 else { continue }
+            let area = bounds.width * bounds.height
+            if area > bestArea {
+                bestArea = area
+                best = bounds
+            }
+        }
+
+        guard let rect = best else { return nil }
+        let globalMaxY = NSScreen.screens.map(\.frame.maxY).max() ?? 0
+        let appKitPoint = CGPoint(x: rect.midX, y: globalMaxY - rect.midY)
+        return NSScreen.screens.first { NSMouseInRect(appKitPoint, $0.frame, false) }
+    }
+
+    /// 截图前隐藏 Flare 并尽量把焦点还给用户正在用的应用，避免截到 Flare 自己的界面
+    private func resignForCapture() {
+        hideFlareWindows()
+        let front = NSWorkspace.shared.frontmostApplication
+        NSApp.hide(nil)
+        if let front,
+           front.bundleIdentifier != Bundle.main.bundleIdentifier,
+           front.activationPolicy == .regular {
+            front.activate(options: [])
+        }
     }
 
     private func presentAreaOverlays(frames: [CapturedFrame]) {

@@ -1,10 +1,10 @@
 {
-  "version": "1.3.11",
-  "build": 25,
-  "notes": "全面打磨：修复长截图拼接一致性、录屏失败后恢复窗口、截图保存失败保留历史；官网性能与无障碍优化。",
-  "downloadURL": "https://github.com/linux503/Flare/releases/download/v1.3.11/Flare-Pro-1.3.11-Universal.dmg",
-  "windowsURL": "https://github.com/linux503/Flare/releases/download/v1.3.11/Flare-Windows-x64.exe",
-  "androidURL": "https://github.com/linux503/Flare/releases/download/v1.3.11/Flare-Android.apk",
+  "version": "1.3.12",
+  "build": 26,
+  "notes": "修复全屏截图：截图前隐藏 Flare 并切回前台应用，按目标显示器截取，避免截到 Flare 界面或其它桌面。",
+  "downloadURL": "https://github.com/linux503/Flare/releases/download/v1.3.12/Flare-Pro-1.3.12-Universal.dmg",
+  "windowsURL": "https://github.com/linux503/Flare/releases/download/v1.3.12/Flare-Windows-x64.exe",
+  "androidURL": "https://github.com/linux503/Flare/releases/download/v1.3.12/Flare-Android.apk",
   "minOS": "14.0",
   "publishedAt": "2026-08-20"
 }
