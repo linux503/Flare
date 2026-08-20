@@ -445,31 +445,19 @@ body {
   padding: 6px 10px;
   background: var(--bg);
 }
-.platform-grid {
-  margin-top: 14px;
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 10px;
+.download-row {
+  align-items: flex-end;
+  gap: 12px;
 }
-.platform-card {
-  text-decoration: none;
-  border: 1px solid var(--line);
-  border-radius: 12px;
-  background: var(--bg);
-  padding: 11px 12px;
-  display: grid;
-  gap: 3px;
+.platform-dl {
+  gap: 8px;
+  min-width: 132px;
+  justify-content: center;
 }
-.platform-card strong {
-  color: var(--ink);
-  font-size: 13px;
-}
-.platform-card span {
-  color: var(--muted);
-  font-size: 12px;
-}
-.platform-card:hover {
-  border-color: rgba(16,24,40,0.22);
+.platform-icon {
+  width: 18px;
+  height: 18px;
+  flex: 0 0 18px;
 }
 .get-card aside {
   background: var(--bg);
@@ -537,7 +525,17 @@ body {
   .shortcuts {
     grid-template-columns: 1fr 1fr;
   }
-  .platform-grid { grid-template-columns: 1fr; }
+  .download-row {
+    flex-direction: column;
+    align-items: stretch;
+  }
+  .download-row .dl-stack,
+  .download-row .btn.soft:last-child {
+    width: 100%;
+  }
+  .platform-dl {
+    width: 100%;
+  }
 }
 
 @media (max-width: 640px) {

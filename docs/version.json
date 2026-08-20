@@ -4,9 +4,7 @@
   "notes": "新增长截图模式；新增 Windows WPF 与 Android Compose 原生工程（网页长截图）。",
   "downloadURL": "https://github.com/linux503/Flare/releases/download/v1.2.7/Flare-Pro-1.2.7-Universal.dmg",
   "windowsURL": "https://github.com/linux503/Flare/releases/latest/download/Flare-Windows-x64.exe",
-  "windowsMsixURL": "https://github.com/linux503/Flare/releases/latest/download/Flare-Windows-x64.msix",
   "androidURL": "https://github.com/linux503/Flare/releases/latest/download/Flare-Android.apk",
-  "androidAabURL": "https://github.com/linux503/Flare/releases/latest/download/Flare-Android.aab",
   "minOS": "14.0",
   "publishedAt": "2026-08-14"
 }
