@@ -660,6 +660,7 @@ body {
 .tag.green { color: var(--green); }
 .tag.rose { color: var(--rose); }
 .tag.gold { color: var(--gold); }
+.tag.win { color: var(--win); }
 .chapter-text h2,
 .start-head h2,
 .get-card h2 {
@@ -697,7 +698,8 @@ body {
   background: var(--green);
 }
 .chapter.flip li::before { background: var(--rose); }
-.chapter:last-of-type li::before { background: var(--gold); }
+.chapter.docs li::before { background: var(--win); }
+.chapter:last-of-type:not(.docs) li::before { background: var(--gold); }
 .chapter-text code,
 .steps code,
 .get code {
@@ -711,6 +713,10 @@ body {
 .chapter.flip code {
   background: var(--rose-soft);
   color: #9f1239;
+}
+.chapter.docs code {
+  background: var(--win-soft);
+  color: #1e3a8a;
 }
 .chapter figure {
   margin: 0;
@@ -731,6 +737,42 @@ body {
 .chapter figure:hover img {
   transform: scale(1.035);
 }
+.chapter figure.doc-board {
+  aspect-ratio: auto;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+  padding: 18px;
+  background:
+    radial-gradient(ellipse 80% 70% at 20% 0%, rgba(37, 99, 235, 0.12), transparent 55%),
+    var(--surface);
+}
+.chapter figure.doc-board:hover { transform: none; }
+.doc-card {
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+  gap: 4px;
+  min-height: 118px;
+  padding: 16px;
+  border-radius: 16px;
+  color: #fff;
+  box-shadow: 0 12px 24px rgba(12, 26, 20, 0.08);
+}
+.doc-card b {
+  font-family: var(--display);
+  font-size: 20px;
+  letter-spacing: -0.04em;
+}
+.doc-card span {
+  font-size: 12px;
+  font-weight: 600;
+  opacity: 0.86;
+}
+.doc-card.is-txt { background: linear-gradient(160deg, #64748b, #334155); }
+.doc-card.is-word { background: linear-gradient(160deg, #60a5fa, #1d4ed8); }
+.doc-card.is-ppt { background: linear-gradient(160deg, #fb923c, #c2410c); }
+.doc-card.is-xls { background: linear-gradient(160deg, #34d399, #047857); }
 
 .start { border-top: 1px solid var(--line); }
 .start-head { max-width: 36rem; margin-bottom: 28px; }

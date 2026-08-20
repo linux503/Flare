@@ -27,7 +27,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@500;600;700;800&family=Noto+Sans+SC:wght@400;500;600;700&display=swap" rel="stylesheet" />
-  <link rel="stylesheet" href="styles.css?v=22" />
+  <link rel="stylesheet" href="styles.css?v=23" />
   <link rel="stylesheet" href="more-apps.css?v=12" />
 </head>
 <body>
@@ -43,6 +43,7 @@
       <div class="nav-cluster">
         <a href="#shot">截图</a>
         <a href="#rec">录屏</a>
+        <a href="#docs">新建</a>
         <a href="#start">上手</a>
         <details class="more-apps" data-more-apps="flare">
           <summary>
@@ -100,7 +101,7 @@
         <p class="now-badge"><span class="now-dot" aria-hidden="true"></span>现已支持 Windows 与 Android</p>
         <p class="brand-xl">Flare Pro</p>
         <h1>一拍即得</h1>
-        <p class="subtitle">macOS 完整截图与录屏。Windows 下载 EXE、Android 下载 APK，打开网页即可自动滚动拼接长图。</p>
+        <p class="subtitle">macOS 完整截图、录屏，还能一键新建 TXT / Word / PPT / Excel。Windows 下载 EXE、Android 下载 APK，打开网页即可自动滚动拼接长图。</p>
         <div class="hero-dls">
           <a class="dl-btn mac" data-download href="https://github.com/linux503/Flare/releases/download/v1.3.0/Flare-Pro-1.3.0-Universal.dmg">
             <span class="dl-ico" aria-hidden="true">
@@ -152,8 +153,8 @@
     <section class="strip os-strip">
       <article class="os-mac" data-reveal style="--d:0">
         <p class="os-kicker">macOS</p>
-        <h2>截图 · 录屏 · 标注</h2>
-        <p>原生菜单栏工具。区域 / 窗口 / 全屏 / 长截图，支持 OCR 与钉图。</p>
+        <h2>截图 · 录屏 · 新建</h2>
+        <p>原生菜单栏工具。区域 / 窗口 / 全屏 / 长截图，支持 OCR、钉图，以及一键创建 TXT / Word / PPT / Excel。</p>
       </article>
       <article class="os-win" data-reveal style="--d:1">
         <p class="os-kicker">Windows</p>
@@ -210,6 +211,25 @@
       <figure><img src="poster-annotate.jpg?v=8" alt="标注展示" loading="lazy" width="1536" height="1024" /></figure>
     </section>
 
+    <section id="docs" class="chapter flip docs" data-reveal>
+      <div class="chapter-text">
+        <p class="tag win">New file</p>
+        <h2>新建文档，一键空白</h2>
+        <p>macOS 专属。主面板「新建」或菜单栏右键，立刻创建 TXT、Word、PPT、Excel，选好位置后自动打开。</p>
+        <ul>
+          <li>文本 TXT · Word · PPT · Excel</li>
+          <li>快捷键 <code>⌘⇧D</code> 打开新建面板</li>
+          <li>可指定默认保存文件夹</li>
+        </ul>
+      </div>
+      <figure class="doc-board" aria-hidden="true">
+        <div class="doc-card is-txt"><b>TXT</b><span>纯文本</span></div>
+        <div class="doc-card is-word"><b>Word</b><span>.docx</span></div>
+        <div class="doc-card is-ppt"><b>PPT</b><span>.pptx</span></div>
+        <div class="doc-card is-xls"><b>Excel</b><span>.xlsx</span></div>
+      </figure>
+    </section>
+
     <section id="start" class="start">
       <div class="start-head" data-reveal>
         <p class="tag">上手</p>
@@ -237,7 +257,8 @@
         <div data-reveal style="--d:0"><kbd>菜单栏单击</kbd><span>区域截图</span></div>
         <div data-reveal style="--d:1"><kbd>⌘⌥5</kbd><span>区域截图</span></div>
         <div data-reveal style="--d:2"><kbd>⌘⌥R</kbd><span>录屏开关</span></div>
-        <div data-reveal style="--d:3"><kbd>⌘O</kbd><span>主面板</span></div>
+        <div data-reveal style="--d:3"><kbd>⌘⇧D</kbd><span>新建文档</span></div>
+        <div data-reveal style="--d:4"><kbd>⌘O</kbd><span>主面板</span></div>
       </div>
     </section>
 
@@ -246,7 +267,7 @@
         <div>
           <p class="tag">Download</p>
           <h2>下载 Flare Pro</h2>
-          <p>免费使用。macOS 完整截图录屏；Windows 下载 EXE、Android 下载 APK，均支持网页长截图。</p>
+          <p>免费使用。macOS 完整截图、录屏与新建文档；Windows 下载 EXE、Android 下载 APK，均支持网页长截图。</p>
           <div class="chips">
             <span>macOS Universal</span>
             <span>Windows EXE</span>
