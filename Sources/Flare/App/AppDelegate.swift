@@ -8,6 +8,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     func applicationDidFinishLaunching(_ notification: Notification) {
         AppSettings.shared.load()
         HistoryStore.shared.load()
+        migrateToMenuBarOnlyIfNeeded()
         NSApp.setActivationPolicy(AppSettings.shared.showInDock ? .regular : .accessory)
 
         DistributedNotificationCenter.default().addObserver(
@@ -97,6 +98,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     }
 
     func applicationShouldHandleReopen(_ sender: NSApplication, hasVisibleWindows flag: Bool) -> Bool {
+        if CaptureCoordinator.shared.shouldSuppressHomeReveal {
+            return false
+        }
         bringToFront()
         return true
     }
@@ -140,6 +144,13 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
     func applicationWillTerminate(_ notification: Notification) {
         HotKeyManager.shared.unregisterAll()
+    }
+
+    private func migrateToMenuBarOnlyIfNeeded() {
+        let defaults = UserDefaults.standard
+        guard defaults.object(forKey: "flareMenuBarOnly") == nil else { return }
+        defaults.set(true, forKey: "flareMenuBarOnly")
+        defaults.set(false, forKey: "showInDock")
     }
 
     private func bringToFront() {

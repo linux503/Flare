@@ -48,6 +48,10 @@ final class HomeWindowController {
         }
     }
 
+    static func isHomeWindow(_ window: NSWindow) -> Bool {
+        window.identifier?.rawValue == "FlareHome" || window.frameAutosaveName == "FlareHome"
+    }
+
     func show(tab: MainTab = .home) {
         withAnimation(.easeInOut(duration: 0.2)) {
             model.tab = tab
@@ -60,6 +64,7 @@ final class HomeWindowController {
                 backing: .buffered,
                 defer: false
             )
+            window.identifier = NSUserInterfaceItemIdentifier("FlareHome")
             window.title = FlareBrand.name
             window.titlebarAppearsTransparent = true
             window.titleVisibility = .hidden

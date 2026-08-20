@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Flare Pro AppIcon — distinctive lens iris + flare slash + viewfinder, no white rim."""
+"""Flare Pro AppIcon — emerald glass + lens iris + gold flare slash."""
 
 from __future__ import annotations
 
@@ -15,7 +15,9 @@ ROOT = Path(__file__).resolve().parents[1]
 OUT_ICNS = ROOT / "Resources" / "AppIcon.icns"
 OUT_PNG = ROOT / "Resources" / "FlareIcon.png"
 OUT_STATUS = ROOT / "Resources" / "StatusBarIcon.png"
+OUT_PLAIN = ROOT / "Resources" / "icon.png"
 ICONSET = ROOT / "Resources" / "AppIcon.iconset"
+DOCS = ROOT / "docs"
 
 
 def _crc(chunk_type: bytes, data: bytes) -> int:
@@ -73,10 +75,9 @@ def sd_ring(px: float, py: float, r: float, w: float) -> float:
 
 
 def viewfinder_mask(nx: float, ny: float) -> float:
-    """Four corner L-brackets — screenshot DNA, more prominent."""
-    arm = 0.24
-    thick = 0.045
-    inset = 0.52
+    arm = 0.20
+    thick = 0.032
+    inset = 0.54
     corners = [
         (-inset, inset, 1, -1),
         (inset, inset, -1, -1),
@@ -87,59 +88,47 @@ def viewfinder_mask(nx: float, ny: float) -> float:
     for cx, cy, sx, sy in corners:
         d = min(d, sd_box(nx - (cx + sx * arm * 0.5), ny - cy, arm * 0.5, thick))
         d = min(d, sd_box(nx - cx, ny - (cy + sy * arm * 0.5), thick, arm * 0.5))
-    return smoothstep(0.018, -0.012, d)
+    return smoothstep(0.016, -0.01, d)
 
 
 def iris_mask(nx: float, ny: float) -> float:
-    """Bold camera iris ring — core identity mark."""
-    ring = sd_ring(nx, ny, 0.32, 0.055)
-    inner = sd_ring(nx, ny, 0.18, 0.018)
-    pupil = sd_circle(nx, ny, 0.038)
+    ring = sd_ring(nx, ny, 0.34, 0.058)
+    inner = sd_ring(nx, ny, 0.19, 0.016)
+    pupil = sd_circle(nx, ny, 0.042)
     d = min(ring, inner)
     m = smoothstep(0.02, -0.012, d)
-    m = max(m, smoothstep(0.018, -0.01, pupil) * 0.9)
+    m = max(m, smoothstep(0.016, -0.01, pupil) * 0.95)
     return m
 
 
 def aperture_blades(nx: float, ny: float) -> float:
-    """Hex aperture ticks — reads as lens, not a ban symbol."""
     d = 1e9
     for i in range(6):
         ang = i * math.pi / 3 + math.pi / 12
-        ax = math.cos(ang) * 0.20
-        ay = math.sin(ang) * 0.20
-        bx = math.cos(ang) * 0.29
-        by = math.sin(ang) * 0.29
-        d = min(d, sd_segment(nx, ny, ax, ay, bx, by, 0.018))
-    return smoothstep(0.016, -0.01, d) * 0.7
+        ax = math.cos(ang) * 0.215
+        ay = math.sin(ang) * 0.215
+        bx = math.cos(ang) * 0.305
+        by = math.sin(ang) * 0.305
+        d = min(d, sd_segment(nx, ny, ax, ay, bx, by, 0.016))
+    return smoothstep(0.014, -0.01, d) * 0.85
 
 
 def flare_slash_mask(nx: float, ny: float) -> float:
-    """
-    Signature diagonal lens-flare slash — unique silhouette.
-    Tapers: thicker center, sharp tip spark (no “hilt” blob).
-    """
-    ax, ay = -0.58, 0.50
-    bx, by = 0.58, -0.50
-    # Distance along slash for taper
+    ax, ay = -0.60, 0.52
+    bx, by = 0.60, -0.52
     abx, aby = bx - ax, by - ay
     ab2 = abx * abx + aby * aby
     t = ((nx - ax) * abx + (ny - ay) * aby) / ab2
     t = max(0.0, min(1.0, t))
-    # Thickness peaks mid-beam, thin at ends
-    thick = 0.028 + 0.045 * math.sin(t * math.pi)
+    thick = 0.026 + 0.050 * math.sin(t * math.pi)
     core = sd_segment(nx, ny, ax, ay, bx, by, thick)
-    soft = sd_segment(nx, ny, ax, ay, bx, by, thick + 0.045)
-
-    # Bright tip spark (lower-right) — round flare node
-    tip = sd_circle(nx - 0.50, ny + 0.43, 0.055)
-    # Upper-left soft origin glow
-    origin = sd_circle(nx + 0.48, ny - 0.40, 0.035)
-
-    m = smoothstep(0.018, -0.012, core)
-    m = max(m, smoothstep(0.035, -0.004, soft) * 0.28)
+    soft = sd_segment(nx, ny, ax, ay, bx, by, thick + 0.055)
+    tip = sd_circle(nx - 0.52, ny + 0.45, 0.058)
+    origin = sd_circle(nx + 0.50, ny - 0.42, 0.038)
+    m = smoothstep(0.016, -0.012, core)
+    m = max(m, smoothstep(0.04, -0.004, soft) * 0.32)
     m = max(m, smoothstep(0.022, -0.01, tip))
-    m = max(m, smoothstep(0.02, -0.008, origin) * 0.75)
+    m = max(m, smoothstep(0.02, -0.008, origin) * 0.8)
     return min(1.0, m)
 
 
@@ -154,27 +143,33 @@ def render(size: int = 1024) -> bytes:
             if alpha < 0.002:
                 continue
 
-            # Deep cinematic glass — cool charcoal, subtle top light
-            gloss = smoothstep(0.10, 0.95, py) * 0.18
-            sheen = math.exp(-((px * 0.7 + py * 0.45 - 0.08) ** 2) * 9) * 0.14
-            depth = smoothstep(0.05, -1.0, py) * 0.12
-            # slight cool tint in body via channel split later
-            base = 12 + gloss * 190 + sheen * 150 - depth * 28
-            base = max(5, min(40, base))
+            # Emerald glass body (site green #059669)
+            gloss = smoothstep(0.05, 0.98, py)
+            sheen = math.exp(-((px * 0.65 + py * 0.42 - 0.12) ** 2) * 8)
+            corner = math.exp(-(math.hypot(px + 0.42, py - 0.48) ** 2) * 2.4)
+            vignette = smoothstep(0.15, 1.15, math.hypot(px * 0.92, py * 0.92))
+
+            r = 8 + gloss * 18 + sheen * 22 + corner * 14 - vignette * 6
+            g = 28 + gloss * 42 + sheen * 48 + corner * 95 - vignette * 10
+            b = 24 + gloss * 32 + sheen * 36 + corner * 62 - vignette * 8
 
             iris = iris_mask(px, py)
             blades = aperture_blades(px, py)
             slash = flare_slash_mask(px, py)
-            corners = viewfinder_mask(px, py)
+            corners = viewfinder_mask(px, py) * 0.72
 
-            # Slash cuts across iris — dominate identity
-            mark = max(slash, iris * 0.95, blades * 0.75, blades)
-            glow = slash * 0.40 + iris * 0.12
+            silver = max(iris * 0.92, blades * 0.8, corners)
+            glow = slash * 0.55 + iris * 0.16
 
-            # Near-white mark with cool edge; body stays dark
-            r = base + mark * (235 - base) + glow * 40
-            g = base + mark * (238 - base) + glow * 42
-            b = base + 2 + mark * (245 - base) + glow * 48
+            # Cool silver iris / viewfinder
+            r += silver * (228 - r)
+            g += silver * (240 - g)
+            b += silver * (236 - b)
+
+            # Warm-gold flare core, emerald halo
+            r += slash * (255 - r) * 0.98 + glow * 18
+            g += slash * (236 - g) * 0.92 + glow * 36
+            b += slash * (168 - b) * 0.55 + glow * 12
 
             i = (y * size + x) * 4
             rgba[i] = int(max(0, min(255, r)))
@@ -185,10 +180,9 @@ def render(size: int = 1024) -> bytes:
 
 
 def render_status_template(size: int = 128) -> bytes:
-    """Transparent mark for menu-bar template tinting (light/dark menu bars)."""
+    """Transparent mark for menu-bar template fallback."""
     rgba = bytearray(size * size * 4)
-    # 0.86：图形更大、留白更少，菜单栏里更易辨认
-    mark_scale = 0.86
+    mark_scale = 0.88
     for y in range(size):
         py = 1.0 - (y + 0.5) / size * 2
         for x in range(size):
@@ -247,14 +241,26 @@ def build_iconset(master: Path) -> None:
     shutil.rmtree(work, ignore_errors=True)
 
 
+def export_web(master: Path) -> None:
+    if not DOCS.exists():
+        return
+    subprocess.run(["sips", "-z", "256", "256", str(master), "--out", str(DOCS / "logo.png")], check=True, capture_output=True)
+    subprocess.run(["sips", "-z", "32", "32", str(master), "--out", str(DOCS / "favicon-32.png")], check=True, capture_output=True)
+    subprocess.run(["sips", "-z", "180", "180", str(master), "--out", str(DOCS / "apple-touch-icon.png")], check=True, capture_output=True)
+    ico = DOCS / "favicon.ico"
+    subprocess.run(["sips", "-s", "format", "ico", "-z", "32", "32", str(master), "--out", str(ico)], check=False, capture_output=True)
+
+
 def main() -> None:
-    print("==> Rendering Flare Pro icon (iris + flare slash)…")
+    print("==> Rendering Flare Pro icon (emerald glass + gold flare)…")
     write_png(OUT_PNG, 1024, 1024, render(1024))
     print(f"    PNG: {OUT_PNG}")
+    write_png(OUT_PLAIN, 256, 256, render(256))
     write_png(OUT_STATUS, 128, 128, render_status_template(128))
     print(f"    StatusBar (template): {OUT_STATUS}")
     build_iconset(OUT_PNG)
     print(f"    ICNS: {OUT_ICNS}")
+    export_web(OUT_PNG)
     print("Done.")
 
 

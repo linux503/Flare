@@ -5,7 +5,7 @@ enum FlareBrand {
     /// 对外品牌名
     static let name = "Flare Pro"
     static let tagline = "一拍即得"
-    static let version = "1.2.9"
+    static let version = "1.3.0"
 
     /// 官网 / 下载 / 更新源（GitHub Pages）
     static let websiteURL = "https://linux503.github.io/Flare/"

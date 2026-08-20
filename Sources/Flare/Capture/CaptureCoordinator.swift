@@ -8,6 +8,12 @@ final class CaptureCoordinator: ObservableObject {
 
     private var overlayControllers: [CaptureOverlayController] = []
     private var hiddenWindows: [NSWindow] = []
+    private var suppressHomeUntil = Date.distantPast
+
+    /// 截图层关掉后系统可能触发 reopen，短时间内不要弹出主界面
+    var shouldSuppressHomeReveal: Bool {
+        isCapturing || Date() < suppressHomeUntil
+    }
 
     private init() {}
 
@@ -58,22 +64,19 @@ final class CaptureCoordinator: ObservableObject {
                     await MainActor.run { self.finish(with: frame.image, scale: frame.scale) }
                 } catch {
                     await MainActor.run {
-                        self.restoreFlareWindows()
-                        self.isCapturing = false
+                        self.endCaptureSession(restoreHome: true)
                         Permissions.handleCaptureFailure(error: error)
                     }
                 }
             }
         } onCancel: { [weak self] in
-            self?.restoreFlareWindows()
-            self?.isCapturing = false
+            self?.endCaptureSession(restoreHome: true)
         }
     }
 
     func cancelCapture() {
         dismissOverlays()
-        restoreFlareWindows()
-        isCapturing = false
+        endCaptureSession(restoreHome: true)
     }
 
     private func beginCapture(_ work: @escaping () async throws -> Void) {
@@ -93,8 +96,7 @@ final class CaptureCoordinator: ObservableObject {
                     Permissions.markCaptureSucceeded()
                 } catch {
                     await MainActor.run {
-                        self.restoreFlareWindows()
-                        self.isCapturing = false
+                        self.endCaptureSession(restoreHome: true)
                         Permissions.handleCaptureFailure(error: error)
                     }
                 }
@@ -183,8 +185,7 @@ final class CaptureCoordinator: ObservableObject {
                 }
             } catch {
                 await MainActor.run {
-                    self.restoreFlareWindows()
-                    self.isCapturing = false
+                    self.endCaptureSession(restoreHome: true)
                     if let err = error as? LongScreenshot.Error, err == .cancelled {
                         ToastController.shared.show("已取消长截图")
                     } else {
@@ -203,8 +204,7 @@ final class CaptureCoordinator: ObservableObject {
                 await MainActor.run { self.finish(with: image, scale: scale) }
             } catch {
                 await MainActor.run {
-                    self.restoreFlareWindows()
-                    self.isCapturing = false
+                    self.endCaptureSession(restoreHome: true)
                     Permissions.handleCaptureFailure(error: error)
                 }
             }
@@ -221,16 +221,24 @@ final class CaptureCoordinator: ObservableObject {
         hiddenWindows.forEach { $0.orderOut(nil) }
     }
 
-    private func restoreFlareWindows() {
+    private func restoreFlareWindows(includingHome: Bool) {
         for window in hiddenWindows {
+            if !includingHome, HomeWindowController.isHomeWindow(window) {
+                continue
+            }
             window.orderFront(nil)
         }
         hiddenWindows.removeAll()
     }
 
-    private func finish(with cgImage: CGImage, scale: CGFloat, action: CaptureFinishAction = .useSettings) {
+    private func endCaptureSession(restoreHome: Bool) {
         isCapturing = false
-        restoreFlareWindows()
+        suppressHomeUntil = Date().addingTimeInterval(1.5)
+        restoreFlareWindows(includingHome: restoreHome)
+    }
+
+    private func finish(with cgImage: CGImage, scale: CGFloat, action: CaptureFinishAction = .useSettings) {
+        endCaptureSession(restoreHome: false)
         SoundPlayer.playShutter()
         let image = ImageExporter.nsImage(from: cgImage, scale: scale)
 

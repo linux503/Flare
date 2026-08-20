@@ -62,7 +62,7 @@ final class AppSettings {
     }
 
     var showInDock: Bool {
-        get { defaults.object(forKey: "showInDock") as? Bool ?? true }
+        get { defaults.object(forKey: "showInDock") as? Bool ?? false }
         set { defaults.set(newValue, forKey: "showInDock"); notify() }
     }
 

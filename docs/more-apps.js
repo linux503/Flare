@@ -28,7 +28,7 @@
     items.forEach(function (app) {
       html +=
         '<a href="' + app.url + '" target="_blank" rel="noopener noreferrer" role="menuitem" style="--app-accent:' + app.accent + '">' +
-        '<img class="more-apps-icon" src="' + app.icon + '" alt="" width="18" height="18" />' +
+        '<img class="more-apps-icon" src="' + app.icon + '" alt="" width="40" height="40" />' +
         '<span class="app-meta"><span class="app-name">' + app.name + '</span><span class="app-desc">' + (app.desc[lang] || app.desc.zh) + "</span></span></a>";
     });
     return html;

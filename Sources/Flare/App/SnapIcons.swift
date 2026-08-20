@@ -223,17 +223,10 @@ extension FlareBrand {
         max(20, NSStatusBar.system.thickness - 1)
     }
 
-    /// 菜单栏图标：透明底品牌剪影（template，深浅菜单栏都清晰）
+    /// 菜单栏图标：与 App 图标同款彩色 Logo
     static func statusBarSymbol() -> NSImage? {
-        let names = ["StatusBarIcon", "FlareIcon"]
-        for name in names {
-            if let url = Bundle.main.url(forResource: name, withExtension: "png"),
-               let source = NSImage(contentsOf: url) {
-                return prepareStatusBarImage(source)
-            }
-            if let source = NSImage(named: name) {
-                return prepareStatusBarImage(source)
-            }
+        if let mark = appMarkImage() {
+            return prepareStatusBarImage(mark, asTemplate: false)
         }
         return menuSymbol(.brand, pointSize: statusBarIconSide - 4)
     }
@@ -254,7 +247,7 @@ extension FlareBrand {
         return image
     }
 
-    private static func prepareStatusBarImage(_ source: NSImage) -> NSImage {
+    private static func prepareStatusBarImage(_ source: NSImage, asTemplate: Bool) -> NSImage {
         let side = statusBarIconSide
         let dest = NSRect(x: 0, y: 0, width: side, height: side)
         let image = NSImage(size: dest.size)
@@ -262,9 +255,27 @@ extension FlareBrand {
         if let ctx = NSGraphicsContext.current {
             ctx.imageInterpolation = .high
         }
-        source.draw(in: dest, from: NSRect(origin: .zero, size: source.size), operation: .sourceOver, fraction: 1)
+        NSColor.clear.setFill()
+        NSBezierPath(rect: dest).fill()
+
+        let srcSize = source.size.width > 0 && source.size.height > 0
+            ? source.size
+            : NSSize(width: side, height: side)
+        let pad: CGFloat = 1
+        let maxSide = side - pad * 2
+        let scale = min(maxSide / srcSize.width, maxSide / srcSize.height)
+        let drawSize = NSSize(width: srcSize.width * scale, height: srcSize.height * scale)
+        let draw = NSRect(
+            x: (side - drawSize.width) / 2,
+            y: (side - drawSize.height) / 2,
+            width: drawSize.width,
+            height: drawSize.height
+        )
+        let clip = NSBezierPath(roundedRect: draw, xRadius: draw.width * 0.22, yRadius: draw.height * 0.22)
+        clip.addClip()
+        source.draw(in: draw, from: NSRect(origin: .zero, size: srcSize), operation: .sourceOver, fraction: 1)
         image.unlockFocus()
-        image.isTemplate = true
+        image.isTemplate = asTemplate
         return image
     }
 }
