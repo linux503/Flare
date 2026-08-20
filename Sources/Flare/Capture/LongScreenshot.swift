@@ -165,14 +165,16 @@ enum LongScreenshot {
         }
     }
 
-    static func capture(session: Session, maxSegments: Int = 30) async throws -> CGImage {
+    static func capture(session: Session, maxSegments: Int = 40) async throws -> CGImage {
         try Task.checkCancellation()
         guard ensureAccessibility() else { throw Error.needsAccessibility }
 
         let widthPx = max(1, Int((session.selectionRectInPoints.width * session.displayScale).rounded()))
         let heightPx = max(1, Int((session.selectionRectInPoints.height * session.displayScale).rounded()))
         let targetSize = CGSize(width: widthPx, height: heightPx)
-        let minShift = max(24, heightPx / 16)
+        // 小步滚动，保证帧间 25%+ 重叠，便于精确对缝
+        let minShift = max(16, heightPx / 20)
+        let idealShift = max(minShift, heightPx / 3)
 
         let cancelMonitor = EscCancelMonitor()
         defer { cancelMonitor.stop() }
@@ -182,11 +184,11 @@ enum LongScreenshot {
             y: session.displayBoundsInPoints.minY + session.selectionRectInPoints.midY
         )
 
-        try await Task.sleep(nanoseconds: 200_000_000)
+        try await Task.sleep(nanoseconds: 180_000_000)
         focus(at: focusPoint)
-        try await Task.sleep(nanoseconds: 150_000_000)
+        try await Task.sleep(nanoseconds: 160_000_000)
 
-        let first = try await captureSegment(
+        let first = try await captureStableSegment(
             displayID: session.displayID,
             selectionRectInPoints: session.selectionRectInPoints,
             targetSize: targetSize
@@ -196,16 +198,17 @@ enum LongScreenshot {
         var last = first
         var globalSticky = 0
         var unchanged = 0
-        let wheel: Int32 = -11
+        // 像素滚动比「行」更稳定，减少网页不定高行导致的位移抖动
+        let pixelStep = Int32(-max(80, min(220, idealShift * 2 / 3)))
 
         for _ in 1..<maxSegments {
             if cancelMonitor.isCancelled { throw Error.cancelled }
 
-            scrollWheel(at: focusPoint, lines: wheel)
-            try await Task.sleep(nanoseconds: 520_000_000)
+            scrollWheelPixels(at: focusPoint, delta: pixelStep)
+            try await Task.sleep(nanoseconds: 280_000_000)
             if cancelMonitor.isCancelled { throw Error.cancelled }
 
-            let next = try await captureSegment(
+            let next = try await captureStableSegment(
                 displayID: session.displayID,
                 selectionRectInPoints: session.selectionRectInPoints,
                 targetSize: targetSize
@@ -214,12 +217,11 @@ enum LongScreenshot {
             if nearlySame(a: last, b: next) {
                 unchanged += 1
                 if unchanged >= 2 { break }
-                scrollWheel(at: focusPoint, lines: wheel)
-                try await Task.sleep(nanoseconds: 350_000_000)
+                scrollWheelPixels(at: focusPoint, delta: pixelStep)
+                try await Task.sleep(nanoseconds: 320_000_000)
                 continue
             }
 
-            // 固定顶栏只能相对「首帧」检测；相邻滚动帧大面积重叠会被误判成顶栏
             let stickyTop = max(
                 globalSticky,
                 detectStickyTop(previous: first, current: next)
@@ -227,15 +229,35 @@ enum LongScreenshot {
             globalSticky = max(globalSticky, stickyTop)
             let stickyBottom = detectStickyBottom(previous: last, current: next)
 
-            let shift = estimateShift(
+            let guessed = estimateShift(
                 previous: last,
                 current: next,
                 stickyTop: stickyTop,
                 stickyBottom: stickyBottom
-            ) ?? max(minShift, (heightPx - stickyTop - stickyBottom) * 2 / 5)
+            ) ?? idealShift
 
-            let maxFresh = max(minShift, heightPx - stickyTop - max(stickyBottom, 2))
-            let fresh = min(max(shift, minShift), maxFresh)
+            // 用上一帧底部条带在下一帧里精修位移，消除接缝
+            let refined = refineOverlap(
+                previous: last,
+                current: next,
+                stickyTop: stickyTop,
+                stickyBottom: stickyBottom,
+                guess: guessed
+            )
+            let maxFresh = max(8, heightPx - stickyTop - max(stickyBottom, 2) - 4)
+            let fresh = min(max(refined, 8), maxFresh)
+
+            if ProcessInfo.processInfo.environment["FLARE_STITCH_DEBUG"] == "1" {
+                print("shift guess=\(guessed) refined=\(refined) fresh=\(fresh) sticky=\(stickyTop)")
+            }
+
+            // 位移过小说明几乎没滚，再试一次
+            if fresh < minShift {
+                unchanged += 1
+                if unchanged >= 3 { break }
+                last = next
+                continue
+            }
 
             frames.append(Captured(image: next, shift: fresh, stickyTop: stickyTop))
             last = next
@@ -250,7 +272,7 @@ enum LongScreenshot {
         precondition(!images.isEmpty)
         let first = images[0]
         let h = first.height
-        let minShift = max(24, h / 16)
+        let idealShift = max(24, h / 3)
         var globalSticky = 0
         for i in 1..<images.count {
             globalSticky = max(globalSticky, detectStickyTop(previous: first, current: images[i]))
@@ -261,14 +283,21 @@ enum LongScreenshot {
             let curr = images[i]
             let stickyTop = max(globalSticky, detectStickyTop(previous: first, current: curr))
             let stickyBottom = detectStickyBottom(previous: prev, current: curr)
-            let shift = estimateShift(
+            let guessed = estimateShift(
                 previous: prev,
                 current: curr,
                 stickyTop: stickyTop,
                 stickyBottom: stickyBottom
-            ) ?? max(minShift, (h - stickyTop - stickyBottom) * 2 / 5)
-            let maxFresh = max(minShift, h - stickyTop - max(stickyBottom, 2))
-            let fresh = min(max(shift, minShift), maxFresh)
+            ) ?? idealShift
+            let refined = refineOverlap(
+                previous: prev,
+                current: curr,
+                stickyTop: stickyTop,
+                stickyBottom: stickyBottom,
+                guess: guessed
+            )
+            let maxFresh = max(8, h - stickyTop - max(stickyBottom, 2) - 4)
+            let fresh = min(max(refined, 8), maxFresh)
             captured.append(Captured(image: curr, shift: fresh, stickyTop: stickyTop))
         }
         return stitch(frames: captured)
@@ -280,8 +309,6 @@ enum LongScreenshot {
         let firstTD = TopDownImage(cgImage: frames[0].image)
         let w = firstTD.width
         let h = firstTD.height
-
-        // 与采集循环一致：取各帧 stickyTop 的最大值，避免裁切偏少导致顶栏重复
         let sticky = frames.map(\.stickyTop).max() ?? 0
 
         var parts: [TopDownImage] = [firstTD]
@@ -290,24 +317,171 @@ enum LongScreenshot {
             let frameSticky = max(sticky, frame.stickyTop)
             guard frameSticky < h - 16 else { continue }
 
-            let fresh = min(frame.shift, h - frameSticky - 2).clamped(to: 1...(h - frameSticky - 1))
-            let startRow = max(frameSticky, h - fresh)
-            let rowCount = h - startRow
-            guard rowCount > 8, startRow >= frameSticky else { continue }
-
-            if ProcessInfo.processInfo.environment["FLARE_STITCH_DEBUG"] == "1" {
-                print("    strip sticky=\(frameSticky) fresh=\(fresh) startRow=\(startRow) rows=\(rowCount)")
-            }
-
             let td = TopDownImage(cgImage: frame.image).aligned(toWidth: w)
             let hh = td.height
-            let safeStart = min(startRow, max(0, hh - 9))
-            let safeCount = min(rowCount, hh - safeStart)
-            guard safeCount > 8 else { continue }
-            parts.append(td.crop(startRow: safeStart, rowCount: safeCount))
+
+            // 再对「已拼结果底部」与「新帧」做一次对缝，避免累计漂移
+            let prevPart = parts.last!
+            let localGuess = frame.shift
+            let cut = refineAppendCut(
+                accumulated: prevPart,
+                next: td,
+                stickyTop: frameSticky,
+                guessFresh: localGuess
+            )
+            let startRow = max(frameSticky, hh - cut)
+            let rowCount = hh - startRow
+            guard rowCount > 4, startRow >= frameSticky, startRow + rowCount <= hh else { continue }
+
+            if ProcessInfo.processInfo.environment["FLARE_STITCH_DEBUG"] == "1" {
+                print("    append sticky=\(frameSticky) cut=\(cut) startRow=\(startRow) rows=\(rowCount)")
+            }
+
+            parts.append(td.crop(startRow: startRow, rowCount: rowCount))
         }
 
         return TopDownImage.composeVertical(parts)
+    }
+
+    /// 在下一帧中定位上一帧底部条带，得到应追加的新像素高度
+    private static func refineOverlap(
+        previous: CGImage,
+        current: CGImage,
+        stickyTop: Int,
+        stickyBottom: Int,
+        guess: Int
+    ) -> Int {
+        let prev = TopDownImage(cgImage: previous)
+        let curr = TopDownImage(cgImage: current)
+        guard prev.height == curr.height, prev.width == curr.width else { return guess }
+
+        let h = prev.height
+        let contentBottom = h - max(stickyBottom, 0)
+        let templateH = min(64, max(24, (contentBottom - stickyTop) / 5))
+        guard contentBottom - stickyTop > templateH + 8 else { return guess }
+
+        let a = prev.grayDownsample(targetWidth: 280)
+        let b = curr.grayDownsample(targetWidth: 280)
+        guard a.width == b.width, a.height == b.height else { return guess }
+
+        let scale = Double(a.height) / Double(h)
+        let stickyD = max(0, Int(Double(stickyTop) * scale))
+        let bottomD = max(0, Int(Double(max(stickyBottom, 0)) * scale))
+        let templateHD = max(8, Int(Double(templateH) * scale))
+        let templateStartD = max(stickyD, a.height - bottomD - templateHD)
+        let contentEndD = a.height - bottomD
+
+        let expectedY = max(stickyD, min(contentEndD - templateHD, Int((Double(h - guess - templateH) * scale).rounded())))
+        let searchPad = max(12, Int(Double(h) * 0.12 * scale))
+        let yMin = max(stickyD, expectedY - searchPad)
+        let yMax = min(contentEndD - templateHD, expectedY + searchPad)
+        guard yMax >= yMin else { return guess }
+
+        let x0 = a.width / 12
+        let x1 = a.width - x0
+        var bestY = expectedY
+        var bestScore = Double.greatestFiniteMagnitude
+
+        for y in yMin...yMax {
+            var acc = 0.0
+            var n = 0
+            var row = 0
+            while row < templateHD {
+                let ra = (templateStartD + row) * a.width
+                let rb = (y + row) * b.width
+                var x = x0
+                while x < x1 {
+                    acc += Double(abs(Int(a.bytes[ra + x]) - Int(b.bytes[rb + x])))
+                    n += 1
+                    x += 2
+                }
+                row += 1
+            }
+            guard n > 0 else { continue }
+            // 略偏好接近 guess 的解，避免跳到重复纹理
+            let score = acc / Double(n) + Double(abs(y - expectedY)) * 0.015
+            if score < bestScore {
+                bestScore = score
+                bestY = y
+            }
+        }
+
+        guard bestScore < 22 else { return guess }
+        let matchedTop = Int((Double(bestY) / scale).rounded())
+        // prev 底部 template 对齐到 curr 的 matchedTop → 新内容高度 = h - (matchedTop + templateH)
+        let fresh = h - (matchedTop + templateH)
+        let minFresh = 8
+        let maxFresh = max(minFresh, h - stickyTop - max(stickyBottom, 2) - 2)
+        return fresh.clamped(to: minFresh...maxFresh)
+    }
+
+    /// 拼到累计图时，用累计图底部与新帧再对一次缝
+    private static func refineAppendCut(
+        accumulated: TopDownImage,
+        next: TopDownImage,
+        stickyTop: Int,
+        guessFresh: Int
+    ) -> Int {
+        let h = next.height
+        let templateH = min(56, max(20, (h - stickyTop) / 6))
+        guard accumulated.height >= templateH, h - stickyTop > templateH + 8 else {
+            return min(max(guessFresh, 8), h - stickyTop - 2)
+        }
+
+        let aFull = accumulated
+        let a = aFull.grayDownsample(targetWidth: 260)
+        let b = next.grayDownsample(targetWidth: 260)
+        guard a.width == b.width else {
+            return min(max(guessFresh, 8), h - stickyTop - 2)
+        }
+
+        let scaleA = Double(a.height) / Double(aFull.height)
+        let scaleB = Double(b.height) / Double(h)
+        let templateHD = max(8, Int(Double(templateH) * scaleA))
+        let templateStartD = max(0, a.height - templateHD)
+        let stickyD = max(0, Int(Double(stickyTop) * scaleB))
+        let expectedY = max(stickyD, min(b.height - templateHD, Int((Double(h - guessFresh - templateH) * scaleB).rounded())))
+        let searchPad = max(10, Int(0.1 * Double(b.height)))
+        let yMin = max(stickyD, expectedY - searchPad)
+        let yMax = min(b.height - templateHD, expectedY + searchPad)
+        guard yMax >= yMin else {
+            return min(max(guessFresh, 8), h - stickyTop - 2)
+        }
+
+        let x0 = a.width / 12
+        let x1 = min(a.width, b.width) - x0
+        var bestY = expectedY
+        var bestScore = Double.greatestFiniteMagnitude
+
+        for y in yMin...yMax {
+            var acc = 0.0
+            var n = 0
+            var row = 0
+            while row < templateHD {
+                let ra = (templateStartD + row) * a.width
+                let rb = (y + row) * b.width
+                var x = x0
+                while x < x1 {
+                    acc += Double(abs(Int(a.bytes[ra + x]) - Int(b.bytes[rb + x])))
+                    n += 1
+                    x += 2
+                }
+                row += 1
+            }
+            guard n > 0 else { continue }
+            let score = acc / Double(n) + Double(abs(y - expectedY)) * 0.02
+            if score < bestScore {
+                bestScore = score
+                bestY = y
+            }
+        }
+
+        if bestScore < 24 {
+            let matchedTop = Int((Double(bestY) / scaleB).rounded())
+            let fresh = h - (matchedTop + templateH)
+            return fresh.clamped(to: 8...(h - stickyTop - 2))
+        }
+        return min(max(guessFresh, 8), h - stickyTop - 2)
     }
 
     // MARK: - Analysis
@@ -393,11 +567,11 @@ enum LongScreenshot {
         let contentH = h - top - bottom
         guard contentH > 48 else { return nil }
 
-        let minShift = max(20, contentH / 12)
-        let maxShift = max(minShift + 4, Int(Double(contentH) * 0.78))
+        let minShift = max(12, contentH / 16)
+        let maxShift = max(minShift + 4, Int(Double(contentH) * 0.72))
 
-        let a = TopDownImage(cgImage: previous).grayDownsample(targetWidth: 240)
-        let b = TopDownImage(cgImage: current).grayDownsample(targetWidth: 240)
+        let a = TopDownImage(cgImage: previous).grayDownsample(targetWidth: 260)
+        let b = TopDownImage(cgImage: current).grayDownsample(targetWidth: 260)
         guard a.width == b.width, a.height == b.height else { return nil }
 
         let scale = Double(a.height) / Double(h)
@@ -412,7 +586,7 @@ enum LongScreenshot {
         var best = minD
         var bestScore = Double.greatestFiniteMagnitude
 
-        for shiftD in minD...maxD {
+        for shiftD in stride(from: minD, through: maxD, by: 1) {
             let yEnd = a.height - bottomD - shiftD
             guard yEnd > topD else { continue }
             var acc = 0.0
@@ -437,7 +611,7 @@ enum LongScreenshot {
             }
         }
 
-        guard bestScore < 16 else { return nil }
+        guard bestScore < 18 else { return nil }
         return Int((Double(best) / scale).rounded()).clamped(to: minShift...maxShift)
     }
 
@@ -453,6 +627,30 @@ enum LongScreenshot {
         return AXIsProcessTrusted()
     }
 
+    /// 滚动后等到画面静止再截，避免半动画帧造成接缝
+    private static func captureStableSegment(
+        displayID: CGDirectDisplayID,
+        selectionRectInPoints: CGRect,
+        targetSize: CGSize
+    ) async throws -> CGImage {
+        var last = try await captureSegment(
+            displayID: displayID,
+            selectionRectInPoints: selectionRectInPoints,
+            targetSize: targetSize
+        )
+        for _ in 0..<3 {
+            try await Task.sleep(nanoseconds: 90_000_000)
+            let next = try await captureSegment(
+                displayID: displayID,
+                selectionRectInPoints: selectionRectInPoints,
+                targetSize: targetSize
+            )
+            if nearlySame(a: last, b: next) { return next }
+            last = next
+        }
+        return last
+    }
+
     private static func captureSegment(
         displayID: CGDirectDisplayID,
         selectionRectInPoints: CGRect,
@@ -466,17 +664,16 @@ enum LongScreenshot {
             height: selectionRectInPoints.height * frame.scale
         ).integral
         guard let cropped = frame.image.cropping(to: crop) else { throw Error.noSegment }
-        // 优先保留原生像素，避免 1px 误差触发整图缩放导致发糊
+        // 统一到目标尺寸，保证各帧宽高一致，便于对缝
         let tw = Int(targetSize.width)
         let th = Int(targetSize.height)
-        if abs(cropped.width - tw) <= 2, abs(cropped.height - th) <= 2 {
+        if cropped.width == tw, cropped.height == th {
             return cropped
         }
-        // 宁可略大也不要缩小糊图
-        if cropped.width >= tw, cropped.height >= th {
+        if abs(cropped.width - tw) <= 1, abs(cropped.height - th) <= 1 {
             return cropped
         }
-        return resized(cropped, to: CGSize(width: max(cropped.width, tw), height: max(cropped.height, th)))
+        return resized(cropped, to: targetSize)
     }
 
     private static func focus(at point: CGPoint) {
@@ -492,12 +689,12 @@ enum LongScreenshot {
         event.post(tap: .cghidEventTap)
     }
 
-    private static func scrollWheel(at point: CGPoint, lines: Int32) {
+    private static func scrollWheelPixels(at point: CGPoint, delta: Int32) {
         guard let event = CGEvent(
             scrollWheelEvent2Source: nil,
-            units: .line,
+            units: .pixel,
             wheelCount: 1,
-            wheel1: lines,
+            wheel1: delta,
             wheel2: 0,
             wheel3: 0
         ) else { return }
@@ -516,7 +713,7 @@ enum LongScreenshot {
         return (acc / Double(da.bytes.count)) < 5.0
     }
 
-        private static func resized(_ image: CGImage, to size: CGSize) -> CGImage {
+    private static func resized(_ image: CGImage, to size: CGSize) -> CGImage {
         let w = Int(size.width)
         let h = Int(size.height)
         let ctx = CGContext(
