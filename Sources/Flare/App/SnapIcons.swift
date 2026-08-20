@@ -226,10 +226,13 @@ extension FlareBrand {
         max(20, NSStatusBar.system.thickness - 1)
     }
 
-    /// 菜单栏图标：与 App 图标同款彩色 Logo
+    /// 菜单栏图标：跟随当前 Logo 预设（默认墨黑闪光）
     static func statusBarSymbol() -> NSImage? {
         if let mark = appMarkImage() {
             return prepareStatusBarImage(mark, asTemplate: false)
+        }
+        if let spark = LogoCatalog.presetImage(.spark) {
+            return prepareStatusBarImage(spark, asTemplate: false)
         }
         return menuSymbol(.brand, pointSize: statusBarIconSide - 4)
     }

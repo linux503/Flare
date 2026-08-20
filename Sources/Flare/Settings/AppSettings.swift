@@ -300,6 +300,7 @@ final class AppSettings {
     }
 
     func load() {
+        migrateDefaultLogoIfNeeded()
         migrateLegacyHotkeysIfNeeded()
         sanitizeHotkeysIfNeeded()
         migrateSystemConflictHotkeysIfNeeded()
@@ -315,6 +316,15 @@ final class AppSettings {
         try? FileManager.default.createDirectory(at: saveDirectory, withIntermediateDirectories: true)
         try? FileManager.default.createDirectory(at: documentDirectory, withIntermediateDirectories: true)
         try? FileManager.default.createDirectory(at: recordDirectory, withIntermediateDirectories: true)
+    }
+
+    private func migrateDefaultLogoIfNeeded() {
+        let flag = "logoDefaultSparkV1"
+        guard defaults.bool(forKey: flag) == false else { return }
+        defaults.set(true, forKey: flag)
+        if defaults.string(forKey: "logoKind") == nil {
+            defaults.set(AppLogoKind.spark.rawValue, forKey: "logoKind")
+        }
     }
 
     private func notify() {

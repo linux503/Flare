@@ -52,10 +52,10 @@ final class StatusBarController: NSObject {
     }
 
     func reloadMenu() {
-        refreshRecordingAppearance()
+        refreshStatusBarIcon()
     }
 
-    func refreshRecordingAppearance() {
+    func refreshStatusBarIcon() {
         guard let button = item.button else { return }
         let recording = ScreenRecorder.shared.isRecording || ScreenRecorder.shared.isCountingDown
         if recording {
@@ -69,6 +69,10 @@ final class StatusBarController: NSObject {
             button.image = FlareBrand.statusBarSymbol()
             button.toolTip = "\(FlareBrand.name) — 单击截图 · 右键菜单"
         }
+    }
+
+    func refreshRecordingAppearance() {
+        refreshStatusBarIcon()
     }
 
     @objc private func statusButtonClicked(_ sender: Any?) {

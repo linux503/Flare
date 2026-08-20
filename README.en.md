@@ -20,7 +20,7 @@
 </p>
 
 <p align="center">
-  <a href="https://github.com/linux503/Flare/releases/download/v1.3.3/Flare-Pro-1.3.3-Universal.dmg"><strong>Download DMG</strong></a>
+  <a href="https://github.com/linux503/Flare/releases/download/v1.3.4/Flare-Pro-1.3.4-Universal.dmg"><strong>Download DMG</strong></a>
   ·
   <a href="https://linux503.github.io/Flare/">Website</a>
   ·
@@ -99,7 +99,7 @@ Defaults use **⌘⌥** so they do not collide with system capture ⌘⇧3 / 4 /
 
 ## Install
 
-1. Download [Flare-Pro-1.3.3-Universal.dmg](https://github.com/linux503/Flare/releases/download/v1.3.3/Flare-Pro-1.3.3-Universal.dmg)
+1. Download [Flare-Pro-1.3.4-Universal.dmg](https://github.com/linux503/Flare/releases/download/v1.3.4/Flare-Pro-1.3.4-Universal.dmg)
 2. Drag **Flare Pro** into Applications
 3. Always run `/Applications/Flare Pro.app` (not a copy from `dist/`)
 
