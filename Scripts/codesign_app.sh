@@ -1,6 +1,7 @@
 #!/bin/zsh
 # 用稳定的代码签名身份给 .app 签名。
 # ad-hoc（codesign -s -）每次构建 CDHash 都变，macOS TCC 会当成新应用，屏幕录制权限必须重开。
+# 对外分发必须用 Developer ID Application + 公证，否则会弹出「无法验证是否恶意软件」。
 set -euo pipefail
 
 APP="${1:?usage: codesign_app.sh /path/to/App.app}"
@@ -50,15 +51,30 @@ sign_adhoc() {
 IDENTITY=""
 if IDENTITY="$(pick_identity)"; then
   echo "==> Codesign: $IDENTITY"
-  if ! codesign --force --sign "$IDENTITY" \
-    --identifier "$BUNDLE_ID" \
-    --entitlements "$ENTITLEMENTS" \
-    --timestamp=none \
-    "$APP"
-  then
-    echo "!! 使用「$IDENTITY」签名失败。" >&2
-    echo "!! 若弹出钥匙串提示，请点「始终允许」后重试（不要回退 ad-hoc，否则截图权限每次都会丢）。" >&2
-    exit 1
+  # Developer ID 对外分发：必须 Hardened Runtime + 安全时间戳，才能公证
+  if [[ "$IDENTITY" == Developer\ ID\ Application:* ]]; then
+    if ! codesign --force --sign "$IDENTITY" \
+      --identifier "$BUNDLE_ID" \
+      --entitlements "$ENTITLEMENTS" \
+      --options runtime \
+      --timestamp \
+      "$APP"
+    then
+      echo "!! 使用「$IDENTITY」签名失败。" >&2
+      exit 1
+    fi
+  else
+    echo "!! 当前是开发证书，Gatekeeper 仍会拦截下载安装。请创建 Developer ID Application 后再打包。" >&2
+    if ! codesign --force --sign "$IDENTITY" \
+      --identifier "$BUNDLE_ID" \
+      --entitlements "$ENTITLEMENTS" \
+      --timestamp=none \
+      "$APP"
+    then
+      echo "!! 使用「$IDENTITY」签名失败。" >&2
+      echo "!! 若弹出钥匙串提示，请点「始终允许」后重试（不要回退 ad-hoc，否则截图权限每次都会丢）。" >&2
+      exit 1
+    fi
   fi
 else
   sign_adhoc

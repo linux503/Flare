@@ -130,8 +130,19 @@ fi
 
 rm -rf "$STAGE"
 
-if command -v codesign >/dev/null; then
+# 有 Developer ID 时给 DMG 正式签名；否则 ad-hoc（仅本地）
+if security find-identity -v -p codesigning | grep -q 'Developer ID Application:'; then
+  DEV_ID="$(security find-identity -v -p codesigning | sed -n 's/^[[:space:]]*[0-9]*)[[:space:]]*[A-F0-9]*[[:space:]]*"\(Developer ID Application: .*\)"$/\1/p' | head -1)"
+  echo "==> 签名 DMG: $DEV_ID"
+  codesign --force --sign "$DEV_ID" --timestamp "$OUT_DMG" 2>/dev/null || true
+elif command -v codesign >/dev/null; then
   codesign --force --sign - "$OUT_DMG" 2>/dev/null || true
+fi
+
+# NOTARIZE=1 时自动公证（需先 ./Scripts/setup_notarization.sh）
+if [[ "${NOTARIZE:-0}" == "1" ]]; then
+  echo "==> 开始公证…"
+  "$ROOT/Scripts/notarize.sh" "$OUT_DMG"
 fi
 
 echo ""
@@ -146,5 +157,11 @@ echo "  · 安装说明.txt"
 echo ""
 lipo -info "$APP_SRC/Contents/MacOS/FlarePro" || true
 shasum -a 256 "$OUT_DMG" | awk '{print "SHA256: "$1}'
+if ! security find-identity -v -p codesigning | grep -q 'Developer ID Application:'; then
+  echo ""
+  echo "⚠️  当前无 Developer ID，下载安装仍会提示「无法验证」。"
+  echo "   一次性配置： ./Scripts/setup_notarization.sh"
+  echo "   然后： NOTARIZE=1 ./Scripts/make_dmg.sh"
+fi
 echo ""
 echo "打开： open \"$OUT_DMG\""

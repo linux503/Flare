@@ -170,6 +170,13 @@ final class CaptureCoordinator: ObservableObject {
         selectionScale: CGFloat
     ) {
         dismissOverlays()
+        if !LongScreenshot.ensureAccessibility(prompt: true) {
+            endCaptureSession(restoreHome: true)
+            ToastController.shared.show("请在系统设置中打开「辅助功能」权限后再试长截图")
+            NSWorkspace.shared.open(URL(string: "x-apple.systempreferences:com.apple.preference.security?Privacy_Accessibility")!)
+            return
+        }
+        ToastController.shared.show("正在长截图…按 Esc 取消")
         Task {
             do {
                 let cgImage = try await LongScreenshot.capture(
@@ -186,8 +193,15 @@ final class CaptureCoordinator: ObservableObject {
             } catch {
                 await MainActor.run {
                     self.endCaptureSession(restoreHome: true)
-                    if let err = error as? LongScreenshot.Error, err == .cancelled {
-                        ToastController.shared.show("已取消长截图")
+                    if let err = error as? LongScreenshot.Error {
+                        switch err {
+                        case .cancelled:
+                            ToastController.shared.show("已取消长截图")
+                        case .needsAccessibility:
+                            ToastController.shared.show("长截图需要「辅助功能」权限")
+                        case .noSegment:
+                            ToastController.shared.show("未能截取到可滚动内容，请对准网页或列表后再试")
+                        }
                     } else {
                         Permissions.handleCaptureFailure(error: error)
                     }

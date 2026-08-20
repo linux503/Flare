@@ -7,6 +7,7 @@ xcuserdata/
 DerivedData/
 Resources/tmpicons/
 .codesign-identity
+.notarize/
 windows/**/bin/
 windows/**/obj/
 android/FlareAndroid/.gradle/

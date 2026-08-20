@@ -1,161 +1,184 @@
 import AppKit
-import Carbon
+import ApplicationServices
 import CoreGraphics
 
-/// 长截图：对选区进行自动滚动截取，并把多段截图拼成长图
+/// 长截图：选区自动滚动并拼接成长图。
 ///
-/// MVP 说明：
-/// - 自动滚动使用 PageDown（需要目标窗口已获得焦点）
-/// - 拼接使用“重叠区域最小差异”估计重叠高度（基于下采样灰度）
-/// - 结束条件：达到最大段数或连续两次变化幅度很小
+/// 策略（向下滚动）：
+/// 1. 点击选区中心聚焦目标窗口（需辅助功能权限）
+/// 2. 在选区中心发送滚轮事件
+/// 3. 用内容区模板匹配估计滚动位移
+/// 4. 只裁切底部「新增」条带拼到上一张下方，避开顶部固定栏
 enum LongScreenshot {
-    private struct CapturedSegment {
-        let image: CGImage
-        let shiftFromPrevious: Int
-        let staticTopInset: Int
-        let staticBottomInset: Int
-    }
-
     struct Session {
         let displayID: CGDirectDisplayID
         let displayBoundsInPoints: CGRect
-        let selectionRectInPoints: CGRect // 以 screen overlay 坐标为准：左上/右上不影响，仅用于换算
-        let displayScale: CGFloat // px / point
+        let selectionRectInPoints: CGRect
+        let displayScale: CGFloat
     }
 
-    enum Error: LocalizedError {
+    enum Error: LocalizedError, Equatable {
         case cancelled
         case noSegment
+        case needsAccessibility
 
         var errorDescription: String? {
             switch self {
             case .cancelled: return "已取消长截图"
             case .noSegment: return "未能截取到长截图内容"
+            case .needsAccessibility: return "长截图需要「辅助功能」权限才能自动滚动"
             }
         }
     }
 
-    static func capture(session: Session, maxSegments: Int = 14) async throws -> CGImage {
+    private struct Segment {
+        let image: CGImage
+        /// 相对上一段向下滚动的像素数（新内容高度）
+        let freshHeight: Int
+        let staticTop: Int
+    }
+
+    static func capture(session: Session, maxSegments: Int = 20) async throws -> CGImage {
         try Task.checkCancellation()
 
-        let expectedWidthPx = max(1, Int((session.selectionRectInPoints.width * session.displayScale).rounded()))
-        let expectedHeightPx = max(1, Int((session.selectionRectInPoints.height * session.displayScale).rounded()))
-        let expectedSize = CGSize(width: expectedWidthPx, height: expectedHeightPx)
+        guard ensureAccessibility() else {
+            throw Error.needsAccessibility
+        }
 
-        // 取消监控：按 Esc 立即停止
+        let widthPx = max(1, Int((session.selectionRectInPoints.width * session.displayScale).rounded()))
+        let heightPx = max(1, Int((session.selectionRectInPoints.height * session.displayScale).rounded()))
+        let targetSize = CGSize(width: widthPx, height: heightPx)
+
         let cancelMonitor = EscCancelMonitor()
         defer { cancelMonitor.stop() }
 
-        // 聚焦到选区：点一下中心位置，保证 PageDown 生效
-        let focusPointInScreen = CGPoint(
+        let focusPoint = CGPoint(
             x: session.displayBoundsInPoints.minX + session.selectionRectInPoints.midX,
             y: session.displayBoundsInPoints.minY + session.selectionRectInPoints.midY
         )
-        focus(focusPointInScreen)
 
-        // 第一段不滚动，直接截
+        // 等遮罩消失后再点选区，避免点到 Flare 自己
+        try await Task.sleep(nanoseconds: 180_000_000)
+        focus(at: focusPoint)
+        try await Task.sleep(nanoseconds: 120_000_000)
+
         let first = try await captureSegment(
             displayID: session.displayID,
             selectionRectInPoints: session.selectionRectInPoints,
-            targetSize: expectedSize,
-            excludeSelf: true
+            targetSize: targetSize
         )
-        var segments: [CapturedSegment] = [
-            CapturedSegment(image: first, shiftFromPrevious: 0, staticTopInset: 0, staticBottomInset: 0)
+
+        var segments: [Segment] = [
+            Segment(image: first, freshHeight: heightPx, staticTop: 0)
         ]
+        var last = first
+        var unchanged = 0
 
-        // 连续“基本无变化”计数
-        var unchangedCount = 0
-        var lastSegment = first
+        // 每段滚动约半屏，重叠越大拼接越稳
+        let wheelSteps: Int32 = -18
+        let minFresh = max(32, heightPx / 10)
 
-        for _ in 0..<maxSegments - 1 {
+        for _ in 1..<maxSegments {
             if cancelMonitor.isCancelled { throw Error.cancelled }
 
-            guard let step = try await smartScroll(
-                lastSegment: lastSegment,
+            scrollWheel(at: focusPoint, lines: wheelSteps)
+            try await Task.sleep(nanoseconds: 380_000_000)
+            if cancelMonitor.isCancelled { throw Error.cancelled }
+
+            let next = try await captureSegment(
                 displayID: session.displayID,
                 selectionRectInPoints: session.selectionRectInPoints,
-                targetSize: expectedSize,
-                cancelMonitor: cancelMonitor
-            ) else {
-                break
+                targetSize: targetSize
+            )
+
+            if nearlySame(a: last, b: next) {
+                unchanged += 1
+                if unchanged >= 2 { break }
+                // 再滚深一点再试
+                scrollWheel(at: focusPoint, lines: wheelSteps)
+                try await Task.sleep(nanoseconds: 320_000_000)
+                continue
+            }
+            unchanged = 0
+
+            let staticTop = detectStaticTop(previous: last, current: next)
+            let shift = estimateScrollShift(
+                previous: last,
+                current: next,
+                staticTop: staticTop
+            ) ?? max(minFresh, heightPx / 2)
+
+            let fresh = min(max(shift, minFresh), heightPx - max(staticTop, 1))
+            // 滚动过小说明几乎没动，再试一轮
+            if fresh < minFresh {
+                unchanged += 1
+                if unchanged >= 2 { break }
+                continue
             }
 
-            let next = step.image
-
-            // 如果连续两次几乎没变化，就认为到头了
-            if nearlySame(a: lastSegment, b: next) {
-                unchangedCount += 1
-                if unchangedCount >= 2 { break }
-            } else {
-                unchangedCount = 0
-            }
-
-            segments.append(step)
-            lastSegment = next
+            segments.append(Segment(image: next, freshHeight: fresh, staticTop: staticTop))
+            last = next
         }
 
         guard !segments.isEmpty else { throw Error.noSegment }
-        return stitchVertical(segments: segments)
+        return stitchTopDown(segments: segments)
     }
 
-    // MARK: - Segment capture
+    // MARK: - Accessibility
+
+    @discardableResult
+    static func ensureAccessibility(prompt: Bool = true) -> Bool {
+        if AXIsProcessTrusted() { return true }
+        if prompt {
+            let opts = [kAXTrustedCheckOptionPrompt.takeUnretainedValue() as String: true] as CFDictionary
+            _ = AXIsProcessTrustedWithOptions(opts)
+        }
+        return AXIsProcessTrusted()
+    }
+
+    // MARK: - Capture
 
     private static func captureSegment(
         displayID: CGDirectDisplayID,
         selectionRectInPoints: CGRect,
-        targetSize: CGSize,
-        excludeSelf: Bool
+        targetSize: CGSize
     ) async throws -> CGImage {
-        let frame = try await ScreenCapturer.captureDisplay(displayID, excludeSelf: excludeSelf)
+        let frame = try await ScreenCapturer.captureDisplay(displayID, excludeSelf: true)
 
-        let cropPixel = CGRect(
+        // selection 为 AppKit 点坐标（左上原点）；CGImage 裁剪为左下原点
+        let crop = CGRect(
             x: selectionRectInPoints.origin.x * frame.scale,
             y: (frame.bounds.height - selectionRectInPoints.origin.y - selectionRectInPoints.height) * frame.scale,
             width: selectionRectInPoints.width * frame.scale,
             height: selectionRectInPoints.height * frame.scale
         ).integral
 
-        guard let cropped = frame.image.cropping(to: cropPixel) else {
+        guard let cropped = frame.image.cropping(to: crop) else {
             throw Error.noSegment
         }
-        // 统一尺寸，避免拼接时因 scale 微小抖动导致的宽高不一致
-        if CGSize(width: cropped.width, height: cropped.height) == targetSize {
+        if cropped.width == Int(targetSize.width), cropped.height == Int(targetSize.height) {
             return cropped
         }
         return resized(cropped, to: targetSize)
     }
 
-    // MARK: - Scroll control
+    // MARK: - Input
 
-    private static func focus(_ pointInScreen: CGPoint) {
-        // 把鼠标移到目标区域附近并点击一次，让滚动事件落到对应窗口
-        let loc = pointInScreen
-        guard let move = CGEvent(source: nil) else { return }
-        move.type = .mouseMoved
-        move.location = CGPoint(x: loc.x, y: loc.y)
-        move.post(tap: .cghidEventTap)
-
-        guard let down = CGEvent(source: nil) else { return }
-        down.type = .leftMouseDown
-        down.location = CGPoint(x: loc.x, y: loc.y)
-        down.post(tap: .cghidEventTap)
-
-        guard let up = CGEvent(source: nil) else { return }
-        up.type = .leftMouseUp
-        up.location = CGPoint(x: loc.x, y: loc.y)
-        up.post(tap: .cghidEventTap)
+    private static func focus(at point: CGPoint) {
+        postMouse(.mouseMoved, at: point)
+        postMouse(.leftMouseDown, at: point)
+        postMouse(.leftMouseUp, at: point)
     }
 
-    private static func scrollDownPage() {
-        let source = CGEventSource(stateID: .combinedSessionState)
-        guard let keyDown = CGEvent(keyboardEventSource: source, virtualKey: CGKeyCode(kVK_PageDown), keyDown: true) else { return }
-        let keyUp = CGEvent(keyboardEventSource: source, virtualKey: CGKeyCode(kVK_PageDown), keyDown: false)
-        keyDown.post(tap: .cghidEventTap)
-        keyUp?.post(tap: .cghidEventTap)
+    private static func postMouse(_ type: CGEventType, at point: CGPoint) {
+        guard let event = CGEvent(source: nil) else { return }
+        event.type = type
+        event.location = point
+        event.post(tap: .cghidEventTap)
     }
 
-    private static func scrollDownWheel(lines: Int32) {
+    /// 在指定屏幕位置发送滚轮（必须带 location，否则滚不到目标窗口）
+    private static func scrollWheel(at point: CGPoint, lines: Int32) {
         guard let event = CGEvent(
             scrollWheelEvent2Source: nil,
             units: .line,
@@ -164,358 +187,180 @@ enum LongScreenshot {
             wheel2: 0,
             wheel3: 0
         ) else { return }
+        event.location = point
         event.post(tap: .cghidEventTap)
     }
 
-    private static func smartScroll(
-        lastSegment: CGImage,
-        displayID: CGDirectDisplayID,
-        selectionRectInPoints: CGRect,
-        targetSize: CGSize,
-        cancelMonitor: EscCancelMonitor
-    ) async throws -> CapturedSegment? {
-        let height = lastSegment.height
-        let minUsefulShift = max(24, Int(Double(height) * 0.12))
-        let targetShift = max(minUsefulShift, Int(Double(height) * 0.58))
-        let maxShift = max(targetShift + 40, Int(Double(height) * 0.88))
-        let wheelPlan: [Int32] = [-7, -9, -11, -13]
+    // MARK: - Stitch (top → bottom)
 
-        var bestCandidate: (image: CGImage, shift: Int, topInset: Int, bottomInset: Int)?
-        var sameCount = 0
-
-        for (idx, lines) in wheelPlan.enumerated() {
-            if cancelMonitor.isCancelled { throw Error.cancelled }
-
-            if idx == 0 {
-                scrollDownPage()
-            } else {
-                scrollDownWheel(lines: lines)
-            }
-
-            try await Task.sleep(nanoseconds: 320_000_000)
-            if cancelMonitor.isCancelled { throw Error.cancelled }
-
-            let candidate = try await captureSegment(
-                displayID: displayID,
-                selectionRectInPoints: selectionRectInPoints,
-                targetSize: targetSize,
-                excludeSelf: true
-            )
-
-            if nearlySame(a: lastSegment, b: candidate) {
-                sameCount += 1
-                if sameCount >= 2 { return nil }
-                continue
-            }
-
-            let staticInsets = detectStaticInsets(previous: lastSegment, current: candidate)
-            guard let shift = estimateScrollShift(
-                previous: lastSegment,
-                current: candidate,
-                maxShift: maxShift,
-                staticTopInset: staticInsets.top,
-                staticBottomInset: staticInsets.bottom
-            ) else {
-                bestCandidate = bestCandidate ?? (candidate, minUsefulShift, staticInsets.top, staticInsets.bottom)
-                continue
-            }
-
-            if shift < minUsefulShift {
-                bestCandidate = (candidate, shift, staticInsets.top, staticInsets.bottom)
-                continue
-            }
-
-            bestCandidate = (candidate, shift, staticInsets.top, staticInsets.bottom)
-            if shift >= targetShift { break }
-        }
-
-        guard let bestCandidate else { return nil }
-        let clampedShift = bestCandidate.shift.clamped(to: 1...(height - 1))
-        return CapturedSegment(
-            image: bestCandidate.image,
-            shiftFromPrevious: clampedShift,
-            staticTopInset: bestCandidate.topInset,
-            staticBottomInset: bestCandidate.bottomInset
-        )
-    }
-
-    // MARK: - Stitching
-
-    private static func stitchVertical(segments: [CapturedSegment]) -> CGImage {
+    private static func stitchTopDown(segments: [Segment]) -> CGImage {
         let width = segments[0].image.width
         let height = segments[0].image.height
-        for s in segments where s.image.width != width || s.image.height != height {
-            // 保险：理论上 captureSegment 已统一尺寸；不一致直接降级拼接（以第一个为基准）
-            // 这里简单 return，避免复杂重采样逻辑影响稳定性
-            return segments[0].image
+
+        var totalHeight = height
+        for seg in segments.dropFirst() {
+            totalHeight += seg.freshHeight
         }
 
-        // 先用第 1 段作为底图
-        var stitchedHeight = height
-        var stitchedContext = CGContext(
+        let ctx = CGContext(
             data: nil,
             width: width,
-            height: stitchedHeight,
+            height: totalHeight,
             bitsPerComponent: 8,
             bytesPerRow: 0,
             space: CGColorSpaceCreateDeviceRGB(),
             bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue
         )!
-        stitchedContext.draw(segments[0].image, in: CGRect(x: 0, y: 0, width: width, height: height))
 
-        // 逐段拼接
-        for next in segments.dropFirst() {
-            let shift = next.shiftFromPrevious.clamped(to: 1...(height - 1))
-            let overlap = height - shift
-            let newHeight = stitchedHeight + shift
+        // CG 原点在左下：把「页面顶部」画在高 Y，后续内容往下（低 Y）拼
+        var topY = totalHeight
+        // 第一段整张
+        topY -= height
+        ctx.draw(segments[0].image, in: CGRect(x: 0, y: topY, width: width, height: height))
 
-            guard let newContext = CGContext(
-                data: nil,
-                width: width,
-                height: newHeight,
-                bitsPerComponent: 8,
-                bytesPerRow: 0,
-                space: CGColorSpaceCreateDeviceRGB(),
-                bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue
-            ) else { break }
-
-            // draw 现有 stitched
-            let stitchedCG = stitchedContext.makeImage()
-            if let stitchedCG { newContext.draw(stitchedCG, in: CGRect(x: 0, y: 0, width: width, height: stitchedHeight)) }
-
-            // 自动判断新增内容位于图像的哪一侧，避免把浏览器顶部栏反复拼进去
-            if let freshPart = cropFreshPart(
-                from: next.image,
-                shift: shift,
-                previous: stitchedContext.makeImage(),
-                staticTopInset: next.staticTopInset,
-                staticBottomInset: next.staticBottomInset
-            ) {
-                newContext.draw(freshPart, in: CGRect(x: 0, y: stitchedHeight, width: width, height: shift))
-            } else {
-                newContext.draw(next.image, in: CGRect(x: 0, y: stitchedHeight - overlap, width: width, height: height))
-            }
-
-            stitchedContext = newContext
-            stitchedHeight = newHeight
+        for seg in segments.dropFirst() {
+            let fresh = seg.freshHeight
+            // 新内容在视口底部。CGImage y=0 是图像底边 → 直接裁底部 fresh 行
+            let cropRect = CGRect(x: 0, y: 0, width: width, height: fresh)
+            guard let strip = seg.image.cropping(to: cropRect) else { continue }
+            topY -= fresh
+            ctx.draw(strip, in: CGRect(x: 0, y: topY, width: width, height: fresh))
         }
 
-        return stitchedContext.makeImage()!
+        return ctx.makeImage()!
     }
 
-    private static func cropFreshPart(
-        from next: CGImage,
-        shift: Int,
-        previous: CGImage?,
-        staticTopInset: Int,
-        staticBottomInset: Int
-    ) -> CGImage? {
-        let width = next.width
-        let height = next.height
-        guard shift > 0, shift < height else { return nil }
+    // MARK: - Analysis
 
-        let lowerY = staticBottomInset.clamped(to: 0...(height - 1))
-        let upperY = (height - staticTopInset - shift).clamped(to: 0...(height - shift))
-        let lowerCrop = CGRect(x: 0, y: lowerY, width: width, height: shift)
-        let upperCrop = CGRect(x: 0, y: upperY, width: width, height: shift)
+    /// 估计向下滚动了多少像素（上一张内容在下一张里上移的量）
+    private static func estimateScrollShift(previous: CGImage, current: CGImage, staticTop: Int) -> Int? {
+        let h = previous.height
+        let minShift = max(16, h / 12)
+        let maxShift = max(minShift + 8, Int(Double(h) * 0.85))
 
-        guard let lower = next.cropping(to: lowerCrop) else { return nil }
-        guard let upper = next.cropping(to: upperCrop) else { return lower }
-        guard let previous else { return upper }
+        let tw = 160
+        let a = downsampleGray(previous, targetWidth: tw)
+        let b = downsampleGray(current, targetWidth: tw)
+        guard a.width == b.width, a.height == b.height, a.height > 24 else { return nil }
 
-        let lowerScore = seamScore(previous: previous, fresh: lower)
-        let upperScore = seamScore(previous: previous, fresh: upper)
-        return upperScore <= lowerScore ? upper : lower
-    }
+        let scaleY = Double(a.height) / Double(h)
+        let topSkip = max(2, Int(Double(max(staticTop, Int(Double(h) * 0.06))) * scaleY))
+        let bottomSkip = max(2, Int(Double(h) * 0.04 * scaleY))
+        let minD = max(1, Int(Double(minShift) * scaleY))
+        let maxD = min(a.height - topSkip - bottomSkip - 2, Int(Double(maxShift) * scaleY))
+        guard maxD > minD else { return nil }
 
-    private static func seamScore(previous: CGImage, fresh: CGImage) -> Double {
-        let sampleHeight = min(48, previous.height, fresh.height)
-        guard sampleHeight > 4 else { return 0 }
-
-        let prevRect = CGRect(x: 0, y: 0, width: previous.width, height: sampleHeight)
-        let freshRect = CGRect(x: 0, y: fresh.height - sampleHeight, width: fresh.width, height: sampleHeight)
-        guard let prevTail = previous.cropping(to: prevRect),
-              let freshHead = fresh.cropping(to: freshRect) else { return .greatestFiniteMagnitude }
-
-        let a = downsampleGray(prevTail, targetWidth: 96)
-        let b = downsampleGray(freshHead, targetWidth: 96)
-        guard a.width == b.width, a.height == b.height, !a.bytes.isEmpty else { return .greatestFiniteMagnitude }
-
-        var acc = 0.0
-        for i in 0..<min(a.bytes.count, b.bytes.count) {
-            acc += Double(abs(Int(a.bytes[i]) - Int(b.bytes[i])))
-        }
-        return acc / Double(min(a.bytes.count, b.bytes.count))
-    }
-
-    private static func estimateScrollShift(
-        previous: CGImage,
-        current: CGImage,
-        maxShift: Int,
-        staticTopInset: Int,
-        staticBottomInset: Int
-    ) -> Int? {
-        let segmentHeight = previous.height
-        let minShift = max(8, Int(Double(segmentHeight) * 0.06))
-        let cappedMaxShift = min(maxShift, segmentHeight - 1)
-        guard cappedMaxShift > minShift else { return nil }
-
-        let targetWidth = 180
-        let trimFraction = 0.08
-        let downA = downsampleGray(previous, targetWidth: targetWidth)
-        let downB = downsampleGray(current, targetWidth: targetWidth)
-        guard downA.width == downB.width, downA.height == downB.height else { return nil }
-
-        let scaleY = Double(downA.height) / Double(segmentHeight)
-        let minShiftDown = max(1, Int(Double(minShift) * scaleY))
-        let maxShiftDown = max(minShiftDown + 1, Int(Double(cappedMaxShift) * scaleY))
-        let trimY = Int(Double(downA.height) * trimFraction)
-        let topInsetDown = Int(Double(staticTopInset) * scaleY)
-        let bottomInsetDown = Int(Double(staticBottomInset) * scaleY)
-        let safeTop = min(downA.height - 2, topInsetDown + trimY)
-        let safeBottom = max(safeTop + 8, downA.height - bottomInsetDown - trimY)
-        let usableHeight = safeBottom - safeTop
-        guard usableHeight > maxShiftDown + 8 else { return nil }
-
-        var bestShiftDown = minShiftDown
+        var best = minD
         var bestScore = Double.greatestFiniteMagnitude
-        let xStep = 2
+        let x0 = a.width / 10
+        let x1 = a.width - x0
 
-        for shiftDown in stride(from: minShiftDown, through: maxShiftDown, by: 2) {
+        // previous[y+shift] ≈ current[y]（内容上移）
+        for shift in stride(from: minD, through: maxD, by: 1) {
             var acc = 0.0
-            var count = 0
-            for y in safeTop..<(safeBottom - shiftDown) {
-                let aRow = (y + shiftDown) * downA.width
-                let bRow = y * downB.width
-                let xStart = Int(Double(downA.width) * 0.10)
-                let xEnd = max(xStart + 4, downA.width - xStart)
-                var x = xStart
-                while x < xEnd {
-                    let av = downA.bytes[aRow + x]
-                    let bv = downB.bytes[bRow + x]
-                    acc += Double(abs(Int(av) - Int(bv)))
-                    count += 1
-                    x += xStep
+            var n = 0
+            let yStart = topSkip
+            let yEnd = a.height - bottomSkip - shift
+            guard yEnd > yStart else { continue }
+            var y = yStart
+            while y < yEnd {
+                let ra = (y + shift) * a.width
+                let rb = y * b.width
+                var x = x0
+                while x < x1 {
+                    acc += Double(abs(Int(a.bytes[ra + x]) - Int(b.bytes[rb + x])))
+                    n += 1
+                    x += 2
                 }
+                y += 2
             }
-
-            guard count > 0 else { continue }
-            let score = acc / Double(count)
+            guard n > 0 else { continue }
+            let score = acc / Double(n)
             if score < bestScore {
                 bestScore = score
-                bestShiftDown = shiftDown
+                best = shift
             }
         }
 
-        guard bestScore < 18 else { return nil }
-        return Int(Double(bestShiftDown) / scaleY).clamped(to: 1...(segmentHeight - 1))
+        // 匹配太差就退回半屏
+        guard bestScore < 22 else {
+            return h / 2
+        }
+        return Int((Double(best) / scaleY).rounded()).clamped(to: 1...(h - 1))
     }
 
-    private static func detectStaticInsets(previous: CGImage, current: CGImage) -> (top: Int, bottom: Int) {
-        let targetWidth = 180
-        let a = downsampleGray(previous, targetWidth: targetWidth)
-        let b = downsampleGray(current, targetWidth: targetWidth)
-        guard a.width == b.width, a.height == b.height, a.height > 40 else { return (0, 0) }
+    private static func detectStaticTop(previous: CGImage, current: CGImage) -> Int {
+        let a = downsampleGray(previous, targetWidth: 140)
+        let b = downsampleGray(current, targetWidth: 140)
+        guard a.width == b.width, a.height == b.height else { return 0 }
 
-        let xStart = Int(Double(a.width) * 0.10)
-        let xEnd = max(xStart + 8, a.width - xStart)
-        let madThreshold = 4.2
-        let gapTolerance = 3
+        let x0 = a.width / 10
+        let x1 = a.width - x0
+        var staticRows = 0
+        var gap = 0
+        let limit = min(a.height / 3, 100)
 
-        func rowMAD(_ rowA: Int, _ rowB: Int) -> Double {
+        for y in 0..<limit {
             var acc = 0.0
-            var count = 0
-            let baseA = rowA * a.width
-            let baseB = rowB * b.width
-            var x = xStart
-            while x < xEnd {
-                acc += Double(abs(Int(a.bytes[baseA + x]) - Int(b.bytes[baseB + x])))
-                count += 1
+            var n = 0
+            let ba = y * a.width
+            let bb = y * b.width
+            var x = x0
+            while x < x1 {
+                acc += Double(abs(Int(a.bytes[ba + x]) - Int(b.bytes[bb + x])))
+                n += 1
                 x += 2
             }
-            return count > 0 ? acc / Double(count) : .greatestFiniteMagnitude
-        }
-
-        func scanTop() -> Int {
-            var staticRows = 0
-            var gap = 0
-            for y in 0..<min(a.height / 3, 120) {
-                if rowMAD(y, y) <= madThreshold {
-                    staticRows += 1
-                    gap = 0
-                } else if staticRows > 0 {
-                    gap += 1
-                    if gap > gapTolerance { break }
-                }
+            let mad = n > 0 ? acc / Double(n) : 999
+            // 图像顶 = CG 高 y；downsample 的 y=0 对应图像顶（绘制时 top-down 进 gray context）
+            if mad <= 4.5 {
+                staticRows += 1
+                gap = 0
+            } else if staticRows > 0 {
+                gap += 1
+                if gap > 2 { break }
+            } else {
+                break
             }
-            return staticRows
         }
 
-        func scanBottom() -> Int {
-            var staticRows = 0
-            var gap = 0
-            let limit = min(a.height / 3, 120)
-            for offset in 0..<limit {
-                let y = a.height - 1 - offset
-                if rowMAD(y, y) <= madThreshold {
-                    staticRows += 1
-                    gap = 0
-                } else if staticRows > 0 {
-                    gap += 1
-                    if gap > gapTolerance { break }
-                }
-            }
-            return staticRows
-        }
-
-        let topDown = scanTop()
-        let bottomDown = scanBottom()
-        let scaleBack = Double(previous.height) / Double(a.height)
-        let top = topDown >= 12 ? Int(Double(topDown) * scaleBack) : 0
-        let bottom = bottomDown >= 12 ? Int(Double(bottomDown) * scaleBack) : 0
-        return (top, bottom)
+        guard staticRows >= 8 else { return 0 }
+        let scale = Double(previous.height) / Double(a.height)
+        return Int(Double(staticRows) * scale)
     }
 
     private static func nearlySame(a: CGImage, b: CGImage) -> Bool {
-        // 粗略判定：把两张图下采样到固定大小，比对像素平均差异
-        let targetWidth = 120
-        let da = downsampleGray(a, targetWidth: targetWidth)
-        let db = downsampleGray(b, targetWidth: targetWidth)
-        guard da.width == db.width, da.height == db.height else { return false }
-
+        let da = downsampleGray(a, targetWidth: 100)
+        let db = downsampleGray(b, targetWidth: 100)
+        guard da.width == db.width, da.height == db.height, !da.bytes.isEmpty else { return false }
         var acc = 0.0
-        for i in 0..<min(da.bytes.count, db.bytes.count) {
+        for i in 0..<da.bytes.count {
             acc += Double(abs(Int(da.bytes[i]) - Int(db.bytes[i])))
         }
-        let avg = acc / Double(min(da.bytes.count, db.bytes.count))
-        // 阈值：越小越“没变化”
-        return avg < 7.5
+        return (acc / Double(da.bytes.count)) < 6.5
     }
 
     private static func downsampleGray(_ image: CGImage, targetWidth: Int) -> (bytes: [UInt8], width: Int, height: Int) {
-        let w = image.width
-        let h = image.height
-        let scale = Double(targetWidth) / Double(max(1, w))
+        let scale = Double(targetWidth) / Double(max(1, image.width))
         let newW = targetWidth
-        let newH = max(1, Int(Double(h) * scale))
-
-        let bytesPerRow = newW
-        let bitsPerComponent = 8
+        let newH = max(1, Int(Double(image.height) * scale))
         let ctx = CGContext(
             data: nil,
             width: newW,
             height: newH,
-            bitsPerComponent: bitsPerComponent,
-            bytesPerRow: bytesPerRow,
+            bitsPerComponent: 8,
+            bytesPerRow: newW,
             space: CGColorSpaceCreateDeviceGray(),
             bitmapInfo: CGImageAlphaInfo.none.rawValue
         )!
         ctx.interpolationQuality = .low
+        // 注意：默认 CG 会把图像底画在 y=0；这里用翻转，让 bytes 行 0 = 视觉顶部，便于扫「顶栏」
+        ctx.translateBy(x: 0, y: CGFloat(newH))
+        ctx.scaleBy(x: 1, y: -1)
         ctx.draw(image, in: CGRect(x: 0, y: 0, width: newW, height: newH))
-
         guard let data = ctx.data else { return ([], newW, newH) }
-        let buffer = data.bindMemory(to: UInt8.self, capacity: newW * newH)
-        return (Array(UnsafeBufferPointer(start: buffer, count: newW * newH)), newW, newH)
+        let buf = data.bindMemory(to: UInt8.self, capacity: newW * newH)
+        return (Array(UnsafeBufferPointer(start: buf, count: newW * newH)), newW, newH)
     }
 
     private static func resized(_ image: CGImage, to size: CGSize) -> CGImage {
@@ -536,27 +381,33 @@ enum LongScreenshot {
     }
 }
 
-// MARK: - Utilities
+// MARK: - Esc
 
 private final class EscCancelMonitor {
     private(set) var isCancelled = false
-    private var monitor: Any?
+    private var local: Any?
+    private var global: Any?
 
     init() {
-        monitor = NSEvent.addLocalMonitorForEvents(matching: .keyDown) { [weak self] event in
-            guard let self else { return event }
-            // Esc
+        local = NSEvent.addLocalMonitorForEvents(matching: .keyDown) { [weak self] event in
             if event.keyCode == 53 {
-                self.isCancelled = true
+                self?.isCancelled = true
                 return nil
             }
             return event
         }
+        global = NSEvent.addGlobalMonitorForEvents(matching: .keyDown) { [weak self] event in
+            if event.keyCode == 53 {
+                self?.isCancelled = true
+            }
+        }
     }
 
     func stop() {
-        if let monitor { NSEvent.removeMonitor(monitor) }
-        monitor = nil
+        if let local { NSEvent.removeMonitor(local) }
+        if let global { NSEvent.removeMonitor(global) }
+        local = nil
+        global = nil
     }
 }
 
@@ -565,4 +416,3 @@ private extension Int {
         Swift.min(Swift.max(self, range.lowerBound), range.upperBound)
     }
 }
-
