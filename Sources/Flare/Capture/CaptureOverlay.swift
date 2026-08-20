@@ -727,7 +727,7 @@ final class CaptureOverlayView: NSView {
             let start = makeBarButton(title: "开始长截图", glyph: .screen, primary: true) { [weak self] in
                 self?.commitLongSelection()
             }
-            start.toolTip = "自动滚动并拼接长图 (回车)"
+            start.toolTip = "自动滚动拼接；尽量框网页内容（可含地址栏，顶栏只会保留一次）"
             bar.addArrangedSubview(start)
 
             let cancel = makeBarButton(title: "取消", glyph: .close, primary: false) { [weak self] in

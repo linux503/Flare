@@ -20,7 +20,7 @@
 </p>
 
 <p align="center">
-  <a href="https://github.com/linux503/Flare/releases/download/v1.3.9/Flare-Pro-1.3.9-Universal.dmg"><strong>下载 DMG</strong></a>
+  <a href="https://github.com/linux503/Flare/releases/download/v1.3.10/Flare-Pro-1.3.10-Universal.dmg"><strong>下载 DMG</strong></a>
   ·
   <a href="https://linux503.github.io/Flare/">官网</a>
   ·
@@ -99,7 +99,7 @@ Flare Pro 是给 macOS 用的原生屏幕工具：截得快、录得清、改得
 
 ## 安装
 
-1. 下载 [Flare-Pro-1.3.9-Universal.dmg](https://github.com/linux503/Flare/releases/download/v1.3.9/Flare-Pro-1.3.9-Universal.dmg)
+1. 下载 [Flare-Pro-1.3.10-Universal.dmg](https://github.com/linux503/Flare/releases/download/v1.3.10/Flare-Pro-1.3.10-Universal.dmg)
 2. 将 **Flare Pro** 拖入「应用程序」
 3. 只从 `/Applications/Flare Pro.app` 运行（不要直接跑仓库里的 `dist/`）
 
