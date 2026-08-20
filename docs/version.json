@@ -1,10 +1,10 @@
 {
-  "version": "1.3.0",
-  "build": 14,
-  "notes": "菜单栏常驻、截图后不再弹出主界面；新图标；官网下载与更多软件菜单已更新。macOS / Windows EXE / Android APK 均可下载。",
-  "downloadURL": "https://github.com/linux503/Flare/releases/download/v1.3.0/Flare-Pro-1.3.0-Universal.dmg",
-  "windowsURL": "https://github.com/linux503/Flare/releases/download/v1.3.0/Flare-Windows-x64.exe",
-  "androidURL": "https://github.com/linux503/Flare/releases/download/v1.3.0/Flare-Android.apk",
+  "version": "1.3.1",
+  "build": 15,
+  "notes": "可更换菜单栏 Logo（闪光 / 镜头 / 闪电，或自选图片）；新默认图标；macOS 新建文档。Windows EXE / Android APK 可下载。",
+  "downloadURL": "https://github.com/linux503/Flare/releases/download/v1.3.1/Flare-Pro-1.3.1-Universal.dmg",
+  "windowsURL": "https://github.com/linux503/Flare/releases/download/v1.3.1/Flare-Windows-x64.exe",
+  "androidURL": "https://github.com/linux503/Flare/releases/download/v1.3.1/Flare-Android.apk",
   "minOS": "14.0",
   "publishedAt": "2026-08-20"
 }

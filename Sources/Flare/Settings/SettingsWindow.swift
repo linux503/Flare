@@ -48,8 +48,10 @@ struct SettingsPane: View {
                     }
                 }
 
-                settingsBlock(title: "外观", subtitle: "黑白主题与窗口透明度") {
+                settingsBlock(title: "外观", subtitle: "Logo、主题与窗口透明度") {
                     VStack(alignment: .leading, spacing: 16) {
+                        LogoPickerRow()
+                        Divider().overlay(theme.stroke)
                         ThemePickerGrid()
                         Divider().overlay(theme.stroke)
                         WindowOpacitySlider()
@@ -427,6 +429,91 @@ struct SettingsPane: View {
         if panel.runModal() == .OK, let url = panel.url {
             AppSettings.shared.documentDirectory = url
             documentPath = url.path
+        }
+    }
+}
+
+private struct LogoPickerRow: View {
+    @Environment(\.flareTheme) private var theme
+    @State private var kind = AppSettings.shared.logoKind
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            Text("菜单栏与应用内 Logo")
+                .font(.system(size: 12, weight: .medium))
+                .foregroundStyle(theme.textPrimary)
+            HStack(spacing: 12) {
+                ForEach(AppLogoKind.presets) { item in
+                    Button {
+                        AppSettings.shared.logoKind = item
+                        kind = item
+                    } label: {
+                        VStack(spacing: 6) {
+                            logoThumb(LogoCatalog.presetImage(item), selected: kind == item)
+                            Text(item.title)
+                                .font(.system(size: 11, weight: kind == item ? .semibold : .regular))
+                                .foregroundStyle(kind == item ? theme.accent : theme.textMuted)
+                        }
+                    }
+                    .buttonStyle(.plain)
+                }
+
+                Button(action: pickCustom) {
+                    VStack(spacing: 6) {
+                        logoThumb(
+                            kind == .custom ? LogoCatalog.currentImage() : nil,
+                            selected: kind == .custom,
+                            placeholder: "自选"
+                        )
+                        Text("自选图片")
+                            .font(.system(size: 11, weight: kind == .custom ? .semibold : .regular))
+                            .foregroundStyle(kind == .custom ? theme.accent : theme.textMuted)
+                    }
+                }
+                .buttonStyle(.plain)
+            }
+        }
+        .onReceive(NotificationCenter.default.publisher(for: .flareSettingsChanged)) { _ in
+            kind = AppSettings.shared.logoKind
+        }
+    }
+
+    private func logoThumb(_ image: NSImage?, selected: Bool, placeholder: String? = nil) -> some View {
+        ZStack {
+            RoundedRectangle(cornerRadius: 12, style: .continuous)
+                .fill(Color(red: 0.12, green: 0.12, blue: 0.13))
+            if let image {
+                Image(nsImage: image)
+                    .resizable()
+                    .interpolation(.high)
+                    .aspectRatio(contentMode: .fit)
+                    .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
+            } else if let placeholder {
+                Text(placeholder)
+                    .font(.system(size: 10, weight: .semibold))
+                    .foregroundStyle(.white.opacity(0.7))
+            }
+        }
+        .frame(width: 52, height: 52)
+        .overlay(
+            RoundedRectangle(cornerRadius: 12, style: .continuous)
+                .strokeBorder(selected ? theme.accent : theme.stroke, lineWidth: selected ? 2 : 1)
+        )
+    }
+
+    private func pickCustom() {
+        let panel = NSOpenPanel()
+        panel.canChooseFiles = true
+        panel.canChooseDirectories = false
+        panel.allowsMultipleSelection = false
+        panel.allowedFileTypes = ["png", "jpg", "jpeg", "heic", "tif", "tiff", "webp"]
+        panel.title = "选择 Logo 图片"
+        guard panel.runModal() == .OK, let url = panel.url else { return }
+        if LogoCatalog.installCustom(from: url) {
+            kind = .custom
+            ToastController.shared.show("已更换 Logo")
+        } else {
+            ToastController.shared.show("无法读取这张图片")
         }
     }
 }

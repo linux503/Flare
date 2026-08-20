@@ -5,7 +5,7 @@ enum FlareBrand {
     /// 对外品牌名
     static let name = "Flare Pro"
     static let tagline = "一拍即得"
-    static let version = "1.3.0"
+    static let version = "1.3.1"
 
     /// 官网 / 下载 / 更新源（GitHub Pages）
     static let websiteURL = "https://linux503.github.io/Flare/"
@@ -54,22 +54,9 @@ enum FlareBrand {
         )
     }
 
-    /// 应用内完整 Logo（优先 Dock icns，与程序坞一致）
+    /// 当前选用的 Logo（设置里可换预设或自选图片）
     static func appMarkImage() -> NSImage? {
-        if let url = Bundle.main.url(forResource: "AppIcon", withExtension: "icns"),
-           let img = NSImage(contentsOf: url) {
-            return img
-        }
-        for name in ["FlareIcon", "StatusBarIcon"] {
-            if let url = Bundle.main.url(forResource: name, withExtension: "png"),
-               let img = NSImage(contentsOf: url) {
-                return img
-            }
-            if let img = NSImage(named: name) {
-                return img
-            }
-        }
-        return nil
+        LogoCatalog.currentImage()
     }
 }
 
@@ -78,10 +65,10 @@ struct FlareBrandMark: View {
     var size: CGFloat = 36
     var cornerRadius: CGFloat = 9
     @Environment(\.flareTheme) private var theme
+    @State private var stamp = 0
 
     var body: some View {
         ZStack {
-            // 浅色垫底，避免深色 Logo 融进墨黑侧栏
             RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
                 .fill(Color(red: 0.12, green: 0.12, blue: 0.13))
             Group {
@@ -101,6 +88,10 @@ struct FlareBrandMark: View {
             RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
                 .strokeBorder(theme.strokeStrong, lineWidth: 1)
         )
+        .id(stamp)
+        .onReceive(NotificationCenter.default.publisher(for: .flareSettingsChanged)) { _ in
+            stamp += 1
+        }
         .accessibilityLabel(FlareBrand.name)
     }
 }

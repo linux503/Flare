@@ -66,6 +66,11 @@ final class AppSettings {
         set { defaults.set(newValue, forKey: "showInDock"); notify() }
     }
 
+    var logoKind: AppLogoKind {
+        get { AppLogoKind(rawValue: defaults.string(forKey: "logoKind") ?? "spark") ?? .spark }
+        set { defaults.set(newValue.rawValue, forKey: "logoKind"); notify() }
+    }
+
     var afterCaptureAction: AfterCaptureAction {
         get { AfterCaptureAction(rawValue: defaults.string(forKey: "afterCaptureAction") ?? "editor") ?? .editor }
         set { defaults.set(newValue.rawValue, forKey: "afterCaptureAction"); notify() }
@@ -313,6 +318,7 @@ final class AppSettings {
     }
 
     private func notify() {
+        LogoCatalog.invalidate()
         NotificationCenter.default.post(name: .flareSettingsChanged, object: nil)
     }
 }
