@@ -94,7 +94,7 @@ if [[ -f "$ROOT/Resources/FlareIcon.png" ]]; then
   # 缩到 256 边长再打包，兼顾清晰度与体积
   sips -z 256 256 "$ROOT/Resources/FlareIcon.png" --out "$RESOURCES/FlareIcon.png" >/dev/null
 fi
-for logo in LogoSpark LogoIris LogoBolt; do
+for logo in LogoSpark LogoIris LogoBolt LogoDusk LogoCoral; do
   if [[ -f "$ROOT/Resources/${logo}.png" ]]; then
     sips -z 256 256 "$ROOT/Resources/${logo}.png" --out "$RESOURCES/${logo}.png" >/dev/null
   fi

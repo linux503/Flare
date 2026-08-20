@@ -4,15 +4,19 @@ enum AppLogoKind: String, CaseIterable, Identifiable {
     case spark
     case iris
     case bolt
+    case dusk
+    case coral
     case custom
 
     var id: String { rawValue }
 
     var title: String {
         switch self {
-        case .spark: return "闪光"
-        case .iris: return "镜头"
-        case .bolt: return "闪电"
+        case .spark: return "翠绿闪光"
+        case .iris: return "日落镜头"
+        case .bolt: return "电光蓝"
+        case .dusk: return "暮紫轨道"
+        case .coral: return "珊瑚取景"
         case .custom: return "自选"
         }
     }
@@ -22,11 +26,13 @@ enum AppLogoKind: String, CaseIterable, Identifiable {
         case .spark: return "LogoSpark"
         case .iris: return "LogoIris"
         case .bolt: return "LogoBolt"
+        case .dusk: return "LogoDusk"
+        case .coral: return "LogoCoral"
         case .custom: return nil
         }
     }
 
-    static var presets: [AppLogoKind] { [.spark, .iris, .bolt] }
+    static var presets: [AppLogoKind] { [.spark, .iris, .bolt, .dusk, .coral] }
 }
 
 enum LogoCatalog {

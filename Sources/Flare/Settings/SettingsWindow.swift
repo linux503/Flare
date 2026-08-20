@@ -442,7 +442,7 @@ private struct LogoPickerRow: View {
             Text("菜单栏与应用内 Logo")
                 .font(.system(size: 12, weight: .medium))
                 .foregroundStyle(theme.textPrimary)
-            HStack(spacing: 12) {
+            LazyVGrid(columns: [GridItem(.adaptive(minimum: 72), spacing: 10)], alignment: .leading, spacing: 12) {
                 ForEach(AppLogoKind.presets) { item in
                     Button {
                         AppSettings.shared.logoKind = item
@@ -451,9 +451,11 @@ private struct LogoPickerRow: View {
                         VStack(spacing: 6) {
                             logoThumb(LogoCatalog.presetImage(item), selected: kind == item)
                             Text(item.title)
-                                .font(.system(size: 11, weight: kind == item ? .semibold : .regular))
+                                .font(.system(size: 10, weight: kind == item ? .semibold : .regular))
                                 .foregroundStyle(kind == item ? theme.accent : theme.textMuted)
+                                .lineLimit(1)
                         }
+                        .frame(maxWidth: .infinity)
                     }
                     .buttonStyle(.plain)
                 }
@@ -466,9 +468,10 @@ private struct LogoPickerRow: View {
                             placeholder: "自选"
                         )
                         Text("自选图片")
-                            .font(.system(size: 11, weight: kind == .custom ? .semibold : .regular))
+                            .font(.system(size: 10, weight: kind == .custom ? .semibold : .regular))
                             .foregroundStyle(kind == .custom ? theme.accent : theme.textMuted)
                     }
+                    .frame(maxWidth: .infinity)
                 }
                 .buttonStyle(.plain)
             }

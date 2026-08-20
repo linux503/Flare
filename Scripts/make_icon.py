@@ -150,6 +150,107 @@ def bolt_mask(nx: float, ny: float) -> float:
     return smoothstep(0.018, -0.012, d)
 
 
+def viewfinder_corners(nx: float, ny: float) -> float:
+    arm, thick, inset = 0.22, 0.038, 0.50
+    d = 1e9
+    for cx, cy, sx, sy in (
+        (-inset, inset, 1, -1),
+        (inset, inset, -1, -1),
+        (-inset, -inset, 1, 1),
+        (inset, -inset, -1, 1),
+    ):
+        d = min(d, sd_box(nx - (cx + sx * arm * 0.5), ny - cy, arm * 0.5, thick))
+        d = min(d, sd_box(nx - cx, ny - (cy + sy * arm * 0.5), thick, arm * 0.5))
+    return smoothstep(0.016, -0.01, d)
+
+
+def orbit_mask(nx: float, ny: float) -> float:
+    ring = abs(math.hypot(nx, ny) - 0.36) - 0.042
+    planet = sd_circle(nx - 0.30, ny + 0.18, 0.10)
+    core = sd_circle(nx, ny, 0.075)
+    m = smoothstep(0.018, -0.01, ring)
+    m = max(m, smoothstep(0.016, -0.01, planet))
+    m = max(m, smoothstep(0.016, -0.01, core))
+    return m
+
+
+def paint_bg(style: str, gloss: float, bloom: float, corner: float, vignette: float) -> tuple[float, float, float]:
+    if style == "iris":
+        return (
+            52 + gloss * 36 + bloom * 40 + corner * 28 - vignette * 10,
+            22 + gloss * 18 + bloom * 22 + corner * 14 - vignette * 8,
+            10 + gloss * 10 + bloom * 8 + corner * 6 - vignette * 6,
+        )
+    if style == "bolt":
+        return (
+            10 + gloss * 22 + bloom * 12 + corner * 8 - vignette * 8,
+            22 + gloss * 28 + bloom * 40 + corner * 36 - vignette * 10,
+            48 + gloss * 36 + bloom * 80 + corner * 70 - vignette * 8,
+        )
+    if style == "dusk":
+        return (
+            32 + gloss * 18 + bloom * 40 + corner * 22 - vignette * 8,
+            10 + gloss * 12 + bloom * 16 + corner * 10 - vignette * 6,
+            58 + gloss * 28 + bloom * 70 + corner * 50 - vignette * 10,
+        )
+    if style == "coral":
+        return (
+            58 + gloss * 28 + bloom * 36 + corner * 22 - vignette * 10,
+            12 + gloss * 10 + bloom * 12 + corner * 8 - vignette * 6,
+            24 + gloss * 14 + bloom * 18 + corner * 12 - vignette * 8,
+        )
+    return (
+        6 + gloss * 14 + bloom * 28 + corner * 10 - vignette * 8,
+        36 + gloss * 38 + bloom * 90 + corner * 70 - vignette * 12,
+        32 + gloss * 28 + bloom * 70 + corner * 48 - vignette * 10,
+    )
+
+
+def paint_mark(style: str, px: float, py: float, r: float, g: float, b: float) -> tuple[float, float, float]:
+    if style == "iris":
+        iris, slash = iris_mark(px, py)
+        r += iris * (255 - r) * 0.88
+        g += iris * (236 - g) * 0.80
+        b += iris * (210 - b) * 0.55
+        r += slash * (255 - r)
+        g += slash * (214 - g) * 0.85
+        b += slash * (140 - b) * 0.5
+        return r, g, b
+    if style == "bolt":
+        bolt = bolt_mask(px, py)
+        glow = bolt * 0.45
+        r += bolt * (255 - r) + glow * 30
+        g += bolt * (248 - g) + glow * 24
+        b += bolt * (210 - b) + glow * 18
+        return r, g, b
+    if style == "dusk":
+        mark = orbit_mask(px, py)
+        glow = mark * 0.4
+        r += mark * (255 - r) + glow * 36
+        g += mark * (200 - g) + glow * 8
+        b += mark * (255 - b) + glow * 28
+        return r, g, b
+    if style == "coral":
+        corners = viewfinder_corners(px, py)
+        core = smoothstep(0.02, -0.01, sd_circle(px, py, 0.14))
+        mark = max(corners, core)
+        glow = core * 0.35
+        r += mark * (255 - r) + glow * 20
+        g += mark * (230 - g) + glow * 8
+        b += mark * (228 - b) + glow * 10
+        return r, g, b
+    frame = frame_mask(px, py)
+    spark = spark_mask(px, py)
+    glow = spark * 0.55
+    r += frame * (236 - r) * 0.92
+    g += frame * (248 - g) * 0.92
+    b += frame * (242 - b) * 0.92
+    r += spark * (255 - r) + glow * 20
+    g += spark * (252 - g) + glow * 28
+    b += spark * (230 - b) * 0.55 + glow * 8
+    return r, g, b
+
+
 def render(size: int = 1024, style: str = "spark") -> bytes:
     rgba = bytearray(size * size * 4)
     for y in range(size):
@@ -160,46 +261,12 @@ def render(size: int = 1024, style: str = "spark") -> bytes:
             alpha = 1.0 - smoothstep(-0.030, 0.010, sdf)
             if alpha < 0.002:
                 continue
-
             gloss = smoothstep(-0.15, 1.0, py)
             bloom = math.exp(-(px * px + py * py) * 2.8)
             corner = math.exp(-(math.hypot(px + 0.38, py - 0.42) ** 2) * 2.2)
             vignette = smoothstep(0.2, 1.18, math.hypot(px, py))
-
-            if style == "iris":
-                r = 8 + gloss * 18 + bloom * 18 + corner * 14 - vignette * 6
-                g = 28 + gloss * 42 + bloom * 70 + corner * 95 - vignette * 10
-                b = 24 + gloss * 32 + bloom * 50 + corner * 62 - vignette * 8
-                iris, slash = iris_mark(px, py)
-                r += iris * (228 - r) * 0.92
-                g += iris * (240 - g) * 0.92
-                b += iris * (236 - b) * 0.92
-                r += slash * (255 - r) * 0.98
-                g += slash * (236 - g) * 0.92
-                b += slash * (168 - b) * 0.55
-            elif style == "bolt":
-                r = 10 + gloss * 22 + bloom * 12 + corner * 8 - vignette * 8
-                g = 22 + gloss * 28 + bloom * 40 + corner * 36 - vignette * 10
-                b = 48 + gloss * 36 + bloom * 80 + corner * 70 - vignette * 8
-                bolt = bolt_mask(px, py)
-                glow = bolt * 0.45
-                r += bolt * (255 - r) + glow * 30
-                g += bolt * (248 - g) + glow * 24
-                b += bolt * (210 - b) + glow * 18
-            else:
-                r = 6 + gloss * 14 + bloom * 28 + corner * 10 - vignette * 8
-                g = 36 + gloss * 38 + bloom * 90 + corner * 70 - vignette * 12
-                b = 32 + gloss * 28 + bloom * 70 + corner * 48 - vignette * 10
-                frame = frame_mask(px, py)
-                spark = spark_mask(px, py)
-                glow = spark * 0.55
-                r += frame * (236 - r) * 0.92
-                g += frame * (248 - g) * 0.92
-                b += frame * (242 - b) * 0.92
-                r += spark * (255 - r) + glow * 20
-                g += spark * (252 - g) + glow * 28
-                b += spark * (230 - b) * 0.55 + glow * 8
-
+            r, g, b = paint_bg(style, gloss, bloom, corner, vignette)
+            r, g, b = paint_mark(style, px, py, r, g, b)
             i = (y * size + x) * 4
             rgba[i] = int(max(0, min(255, r)))
             rgba[i + 1] = int(max(0, min(255, g)))
@@ -279,7 +346,13 @@ def main() -> None:
     write_png(OUT_PNG, 1024, 1024, render(1024, "spark"))
     print(f"    PNG: {OUT_PNG}")
     write_png(OUT_PLAIN, 256, 256, render(256, "spark"))
-    for style, name in (("spark", "LogoSpark"), ("iris", "LogoIris"), ("bolt", "LogoBolt")):
+    for style, name in (
+        ("spark", "LogoSpark"),
+        ("iris", "LogoIris"),
+        ("bolt", "LogoBolt"),
+        ("dusk", "LogoDusk"),
+        ("coral", "LogoCoral"),
+    ):
         path = ROOT / "Resources" / f"{name}.png"
         write_png(path, 512, 512, render(512, style))
         print(f"    Preset {name}: {path}")
