@@ -20,6 +20,7 @@ struct SettingsPane: View {
     @State private var playSound = AppSettings.shared.playSound
     @State private var showMagnifier = AppSettings.shared.showMagnifier
     @State private var afterAction = AppSettings.shared.afterCaptureAction
+    @State private var historyRetention = AppSettings.shared.historyRetention
     @State private var savePath = AppSettings.shared.saveDirectory.path
     @State private var documentPath = AppSettings.shared.documentDirectory.path
     @State private var showInDock = AppSettings.shared.showInDock
@@ -59,37 +60,90 @@ struct SettingsPane: View {
                     }
                 }
 
-                settingsBlock(title: "截图后", subtitle: "确认选区后的默认动作") {
-                    VStack(alignment: .leading, spacing: 12) {
-                        HStack {
+                settingsBlock(title: "截图后", subtitle: "确认选区后的默认动作与历史保留") {
+                    VStack(alignment: .leading, spacing: 16) {
+                        VStack(alignment: .leading, spacing: 8) {
                             Text("默认动作")
-                                .font(.system(size: 12, weight: .medium))
+                                .font(.system(size: 12, weight: .semibold))
                                 .foregroundStyle(theme.textPrimary)
-                            Spacer()
-                            Picker("", selection: $afterAction) {
+                            LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: 8) {
                                 ForEach(AfterCaptureAction.allCases) { action in
-                                    Text(action.displayName).tag(action)
+                                    Button {
+                                        afterAction = action
+                                        AppSettings.shared.afterCaptureAction = action
+                                    } label: {
+                                        VStack(alignment: .leading, spacing: 4) {
+                                            Text(action.displayName)
+                                                .font(.system(size: 12, weight: .semibold))
+                                                .foregroundStyle(theme.textPrimary)
+                                            Text(action.hint)
+                                                .font(.system(size: 10))
+                                                .foregroundStyle(theme.textMuted)
+                                                .lineLimit(2)
+                                                .fixedSize(horizontal: false, vertical: true)
+                                        }
+                                        .frame(maxWidth: .infinity, alignment: .leading)
+                                        .padding(10)
+                                        .background(
+                                            RoundedRectangle(cornerRadius: 10, style: .continuous)
+                                                .fill(afterAction == action ? theme.accent.opacity(0.16) : theme.fill)
+                                        )
+                                        .overlay(
+                                            RoundedRectangle(cornerRadius: 10, style: .continuous)
+                                                .stroke(afterAction == action ? theme.accent.opacity(0.55) : theme.stroke, lineWidth: 1)
+                                        )
+                                    }
+                                    .buttonStyle(.plain)
                                 }
-                            }
-                            .labelsHidden()
-                            .frame(maxWidth: 180)
-                            .onChange(of: afterAction) { _, newValue in
-                                AppSettings.shared.afterCaptureAction = newValue
                             }
                         }
 
-                        labeledToggle("同时复制到剪贴板", isOn: $copyClipboard) {
-                            AppSettings.shared.copyToClipboard = $0
+                        Divider().overlay(theme.stroke)
+
+                        VStack(alignment: .leading, spacing: 8) {
+                            HStack {
+                                Text("历史保留")
+                                    .font(.system(size: 12, weight: .semibold))
+                                    .foregroundStyle(theme.textPrimary)
+                                Spacer()
+                                Text(historyRetention.displayName)
+                                    .font(.system(size: 11, weight: .medium))
+                                    .foregroundStyle(theme.textMuted)
+                            }
+                            Picker("", selection: $historyRetention) {
+                                ForEach(HistoryRetention.allCases) { item in
+                                    Text(item.displayName).tag(item)
+                                }
+                            }
+                            .pickerStyle(.segmented)
+                            .labelsHidden()
+                            .onChange(of: historyRetention) { _, newValue in
+                                AppSettings.shared.historyRetention = newValue
+                                HistoryStore.shared.pruneExpired()
+                                ToastController.shared.show("历史保留：\(newValue.displayName)")
+                            }
+                            Text("超过所选时长的记录会自动删除（仅清理应用管理的截图文件）。")
+                                .font(.system(size: 10))
+                                .foregroundStyle(theme.textMuted)
+                                .fixedSize(horizontal: false, vertical: true)
                         }
-                        labeledToggle("截图提示音", isOn: $playSound) {
-                            AppSettings.shared.playSound = $0
-                        }
-                        labeledToggle("显示放大镜与取色", isOn: $showMagnifier) {
-                            AppSettings.shared.showMagnifier = $0
-                        }
-                        labeledToggle("在程序坞显示图标", isOn: $showInDock) { newValue in
-                            AppSettings.shared.showInDock = newValue
-                            NSApp.setActivationPolicy(newValue ? .regular : .accessory)
+
+                        Divider().overlay(theme.stroke)
+
+                        VStack(alignment: .leading, spacing: 10) {
+                            labeledToggle("同时复制到剪贴板", isOn: $copyClipboard) {
+                                AppSettings.shared.copyToClipboard = $0
+                            }
+                            labeledToggle("截图提示音", isOn: $playSound) {
+                                AppSettings.shared.playSound = $0
+                            }
+                            labeledToggle("显示放大镜与取色", isOn: $showMagnifier) {
+                                AppSettings.shared.showMagnifier = $0
+                            }
+                            labeledToggle("在程序坞显示图标", isOn: $showInDock) { newValue in
+                                AppSettings.shared.showInDock = newValue
+                                NSApp.setActivationPolicy(newValue ? .regular : .accessory)
+                            }
                         }
                     }
                 }

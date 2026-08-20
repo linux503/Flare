@@ -41,7 +41,7 @@ final class StatusBarController: NSObject {
         if let button = item.button {
             button.image = FlareBrand.statusBarSymbol()
             button.imageScaling = .scaleNone
-            button.toolTip = "\(FlareBrand.name) — 单击截图 · 右键菜单"
+            button.toolTip = "\(FlareBrand.name) — 单击打开菜单"
             button.target = self
             button.action = #selector(statusButtonClicked(_:))
             button.sendAction(on: [.leftMouseUp, .rightMouseUp])
@@ -64,10 +64,10 @@ final class StatusBarController: NSObject {
             let t = ScreenRecorder.shared.isPaused
                 ? "录屏已暂停 \(clock)"
                 : (ScreenRecorder.shared.isCountingDown ? "录屏倒计时" : "正在录屏 \(clock)")
-            button.toolTip = "\(FlareBrand.name) — \(t) · 单击停止 · 右键菜单"
+            button.toolTip = "\(FlareBrand.name) — \(t) · 单击打开菜单"
         } else {
             button.image = FlareBrand.statusBarSymbol()
-            button.toolTip = "\(FlareBrand.name) — 单击截图 · 右键菜单"
+            button.toolTip = "\(FlareBrand.name) — 单击打开菜单"
         }
     }
 
@@ -76,17 +76,7 @@ final class StatusBarController: NSObject {
     }
 
     @objc private func statusButtonClicked(_ sender: Any?) {
-        guard let event = NSApp.currentEvent else {
-            onCaptureArea()
-            return
-        }
-        if event.type == .rightMouseUp || event.modifierFlags.contains(.control) {
-            popMenu()
-        } else if ScreenRecorder.shared.isRecording || ScreenRecorder.shared.isCountingDown {
-            ScreenRecorder.shared.stop()
-        } else {
-            onCaptureArea()
-        }
+        popMenu()
     }
 
     private func popMenu() {

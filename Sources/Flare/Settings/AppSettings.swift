@@ -76,6 +76,12 @@ final class AppSettings {
         set { defaults.set(newValue.rawValue, forKey: "afterCaptureAction"); notify() }
     }
 
+    /// 历史记录保留时长；到期后自动清理应用管理的截图
+    var historyRetention: HistoryRetention {
+        get { HistoryRetention(rawValue: defaults.string(forKey: "historyRetention") ?? HistoryRetention.week.rawValue) ?? .week }
+        set { defaults.set(newValue.rawValue, forKey: "historyRetention"); notify() }
+    }
+
     var appTheme: AppThemeKind {
         get { AppThemeKind.migrated(from: defaults.string(forKey: "appTheme")) }
         set { defaults.set(newValue.rawValue, forKey: "appTheme"); notify() }
@@ -355,6 +361,41 @@ enum AfterCaptureAction: String, CaseIterable, Identifiable {
         case .clipboard: return "复制到剪贴板"
         case .save: return "保存到文件"
         case .pin: return "钉在屏幕上"
+        }
+    }
+    var hint: String {
+        switch self {
+        case .editor: return "选区确认后默认进入标注"
+        case .clipboard: return "完成后直接复制"
+        case .save: return "完成后写入保存目录"
+        case .pin: return "完成后钉在桌面"
+        }
+    }
+}
+
+enum HistoryRetention: String, CaseIterable, Identifiable {
+    case hour
+    case day
+    case week
+    case month
+
+    var id: String { rawValue }
+
+    var displayName: String {
+        switch self {
+        case .hour: return "1 小时"
+        case .day: return "1 天"
+        case .week: return "1 周"
+        case .month: return "1 月"
+        }
+    }
+
+    var timeInterval: TimeInterval {
+        switch self {
+        case .hour: return 60 * 60
+        case .day: return 24 * 60 * 60
+        case .week: return 7 * 24 * 60 * 60
+        case .month: return 30 * 24 * 60 * 60
         }
     }
 }

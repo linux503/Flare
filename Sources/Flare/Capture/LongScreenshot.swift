@@ -88,6 +88,23 @@ enum LongScreenshot {
             return TopDownImage(width: width, height: rowCount, rgba: out)
         }
 
+        /// 对齐到目标宽度（居中裁切或补黑边），避免缩放糊图
+        func aligned(toWidth targetW: Int) -> TopDownImage {
+            if width == targetW { return self }
+            let rb = targetW * 4
+            var out = [UInt8](repeating: 0, count: rb * height)
+            let copyW = min(width, targetW)
+            let srcX = max(0, (width - copyW) / 2)
+            let dstX = max(0, (targetW - copyW) / 2)
+            let srcRB = width * 4
+            for r in 0..<height {
+                let src = r * srcRB + srcX * 4
+                let dst = r * rb + dstX * 4
+                out.replaceSubrange(dst..<(dst + copyW * 4), with: rgba[src..<(src + copyW * 4)])
+            }
+            return TopDownImage(width: targetW, height: height, rgba: out)
+        }
+
         func toCGImage() -> CGImage {
             let rowBytes = width * 4
             let ctx = CGContext(
@@ -185,7 +202,7 @@ enum LongScreenshot {
             if cancelMonitor.isCancelled { throw Error.cancelled }
 
             scrollWheel(at: focusPoint, lines: wheel)
-            try await Task.sleep(nanoseconds: 450_000_000)
+            try await Task.sleep(nanoseconds: 520_000_000)
             if cancelMonitor.isCancelled { throw Error.cancelled }
 
             let next = try await captureSegment(
@@ -261,6 +278,7 @@ enum LongScreenshot {
 
     private static func stitch(frames: [Captured]) -> CGImage {
         let firstTD = TopDownImage(cgImage: frames[0].image)
+        let w = firstTD.width
         let h = firstTD.height
 
         // 与采集循环一致：取各帧 stickyTop 的最大值，避免裁切偏少导致顶栏重复
@@ -281,8 +299,12 @@ enum LongScreenshot {
                 print("    strip sticky=\(frameSticky) fresh=\(fresh) startRow=\(startRow) rows=\(rowCount)")
             }
 
-            let td = TopDownImage(cgImage: frame.image)
-            parts.append(td.crop(startRow: startRow, rowCount: rowCount))
+            let td = TopDownImage(cgImage: frame.image).aligned(toWidth: w)
+            let hh = td.height
+            let safeStart = min(startRow, max(0, hh - 9))
+            let safeCount = min(rowCount, hh - safeStart)
+            guard safeCount > 8 else { continue }
+            parts.append(td.crop(startRow: safeStart, rowCount: safeCount))
         }
 
         return TopDownImage.composeVertical(parts)
@@ -444,10 +466,17 @@ enum LongScreenshot {
             height: selectionRectInPoints.height * frame.scale
         ).integral
         guard let cropped = frame.image.cropping(to: crop) else { throw Error.noSegment }
-        if cropped.width == Int(targetSize.width), cropped.height == Int(targetSize.height) {
+        // 优先保留原生像素，避免 1px 误差触发整图缩放导致发糊
+        let tw = Int(targetSize.width)
+        let th = Int(targetSize.height)
+        if abs(cropped.width - tw) <= 2, abs(cropped.height - th) <= 2 {
             return cropped
         }
-        return resized(cropped, to: targetSize)
+        // 宁可略大也不要缩小糊图
+        if cropped.width >= tw, cropped.height >= th {
+            return cropped
+        }
+        return resized(cropped, to: CGSize(width: max(cropped.width, tw), height: max(cropped.height, th)))
     }
 
     private static func focus(at point: CGPoint) {
@@ -487,7 +516,7 @@ enum LongScreenshot {
         return (acc / Double(da.bytes.count)) < 5.0
     }
 
-    private static func resized(_ image: CGImage, to size: CGSize) -> CGImage {
+        private static func resized(_ image: CGImage, to size: CGSize) -> CGImage {
         let w = Int(size.width)
         let h = Int(size.height)
         let ctx = CGContext(
@@ -500,6 +529,7 @@ enum LongScreenshot {
             bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue
         )!
         ctx.interpolationQuality = .high
+        ctx.setShouldAntialias(false)
         ctx.draw(image, in: CGRect(x: 0, y: 0, width: w, height: h))
         return ctx.makeImage()!
     }

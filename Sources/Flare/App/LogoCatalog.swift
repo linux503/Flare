@@ -16,7 +16,7 @@ enum AppLogoKind: String, CaseIterable, Identifiable {
         case .iris: return "琥珀镜头"
         case .bolt: return "电光快拍"
         case .dusk: return "录制红点"
-        case .coral: return "长截滚页"
+        case .coral: return "墨白长截"
         case .custom: return "自选"
         }
     }

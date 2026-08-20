@@ -27,6 +27,12 @@ enum CaptureFinishAction: Equatable {
     }
 }
 
+/// 无边框截图层也必须能成为 key window，否则标注「文字」输入框收不到键盘事件。
+private final class KeyableBorderlessWindow: NSWindow {
+    override var canBecomeKey: Bool { true }
+    override var canBecomeMain: Bool { true }
+}
+
 final class CaptureOverlayController {
     var onCancel: (() -> Void)?
     var onAreaSelected: ((CGImage, CGFloat, CaptureFinishAction) -> Void)?
@@ -39,7 +45,7 @@ final class CaptureOverlayController {
 
     init(frame: CapturedFrame, mode: CaptureMode, windows: [WindowCapturer.WindowInfo] = []) {
         let screenFrame = frame.bounds
-        window = NSWindow(
+        window = KeyableBorderlessWindow(
             contentRect: screenFrame,
             styleMask: .borderless,
             backing: .buffered,
@@ -151,6 +157,10 @@ final class CaptureOverlayView: NSView {
     private var annotateDocument: AnnotationDocument?
     private var annotateCanvas: AnnotationCanvasView?
     private var annotateBar: NSView?
+
+    /// 选区已冻结时：按下后未拖动 → 单击进编辑；拖动则移动选区
+    private var pendingSelectionTap: (anchor: CGPoint, startRect: CGRect)?
+    private var selectionTapMoved = false
 
     private let dim: CGFloat = 0.48
     /// 选区描边固定高对比色（不跟主题 accent，避免墨黑主题白底白字）
@@ -509,13 +519,16 @@ final class CaptureOverlayView: NSView {
             return
         }
 
+        // 双击选区 → 完成截图；无选区双击 → 吸附窗口
         if isAreaLike, event.clickCount >= 2 {
+            pendingSelectionTap = nil
+            selectionTapMoved = false
             if let frozen = frozenSelection,
                frozen.width > 24, frozen.height > 24,
                frozen.insetBy(dx: -6, dy: -6).contains(point) {
                 if mode == .recordArea { commitRecordArea() }
                 else if mode == .longArea { commitLongSelection() }
-                else { enterInlineAnnotate() }
+                else { commitSelection(.useSettings) }
                 return
             }
             if snapSelectionToWindow(at: point) { return }
@@ -525,18 +538,21 @@ final class CaptureOverlayView: NSView {
 
         if let frozen = frozenSelection {
             if let handle = hitHandle(at: point, in: frozen) {
+                pendingSelectionTap = nil
                 hideActionBar()
                 dragSession = .resize(handle: handle, startRect: frozen, anchor: point)
                 return
             }
             if frozen.contains(point) {
+                // 单击预备：未拖动则进编辑；拖动则移动选区
+                pendingSelectionTap = (anchor: point, startRect: frozen)
+                selectionTapMoved = false
                 hideActionBar()
-                dragSession = .move(startRect: frozen, anchor: point)
-                NSCursor.closedHand.set()
                 return
             }
         }
 
+        pendingSelectionTap = nil
         hideActionBar()
         frozenSelection = nil
         dragSession = .create(start: point)
@@ -547,6 +563,20 @@ final class CaptureOverlayView: NSView {
         guard isAreaLike, !isAnnotating else { return }
         let point = convert(event.locationInWindow, from: nil)
         mouseLocation = point
+
+        if let pending = pendingSelectionTap, dragSession == nil {
+            let dx = point.x - pending.anchor.x
+            let dy = point.y - pending.anchor.y
+            if hypot(dx, dy) > 4 {
+                selectionTapMoved = true
+                dragSession = .move(startRect: pending.startRect, anchor: pending.anchor)
+                pendingSelectionTap = nil
+                NSCursor.closedHand.set()
+            } else {
+                return
+            }
+        }
+
         switch dragSession {
         case .create:
             needsDisplay = true
@@ -569,11 +599,32 @@ final class CaptureOverlayView: NSView {
         let point = convert(event.locationInWindow, from: nil)
         mouseLocation = point
 
+        // 选区上单击（未拖动）→ 进入编辑
+        if pendingSelectionTap != nil {
+            let wasTap = !selectionTapMoved
+            pendingSelectionTap = nil
+            selectionTapMoved = false
+            if wasTap, mode == .area, event.clickCount == 1 {
+                enterInlineAnnotate()
+                return
+            }
+            if let rect = frozenSelection, rect.width > 4, rect.height > 4 {
+                showActionBar(near: rect)
+            }
+            updateCursor(at: point)
+            return
+        }
+
         switch dragSession {
         case .create(let start):
             let rect = normalizedRect(start, point)
             dragSession = nil
             guard rect.width > 4, rect.height > 4 else {
+                // 无选区时单击：尝试吸附当前悬停窗口
+                if mode == .area, hypot(point.x - start.x, point.y - start.y) < 4,
+                   snapSelectionToWindow(at: point) {
+                    return
+                }
                 frozenSelection = nil
                 needsDisplay = true
                 return
@@ -736,7 +787,7 @@ final class CaptureOverlayView: NSView {
             let start = makeBarButton(title: "开始录屏", glyph: .record, primary: true) { [weak self] in
                 self?.commitRecordArea()
             }
-            start.toolTip = "录制当前选区 (回车)"
+            start.toolTip = "录制当前选区（双击选区 / 回车）"
             bar.addArrangedSubview(start)
 
             let cancel = makeBarButton(title: "取消", glyph: .close, primary: false) { [weak self] in
@@ -748,7 +799,7 @@ final class CaptureOverlayView: NSView {
             let start = makeBarButton(title: "开始长截图", glyph: .screen, primary: true) { [weak self] in
                 self?.commitLongSelection()
             }
-            start.toolTip = "自动滚动拼接；尽量框网页内容（可含地址栏，顶栏只会保留一次）"
+            start.toolTip = "自动滚动拼接（双击选区 / 回车）；尽量框网页内容"
             bar.addArrangedSubview(start)
 
             let cancel = makeBarButton(title: "取消", glyph: .close, primary: false) { [weak self] in
@@ -777,7 +828,7 @@ final class CaptureOverlayView: NSView {
         let annotate = makeBarButton(title: "标注", glyph: .edit, primary: editPrimary) { [weak self] in
             self?.enterInlineAnnotate()
         }
-        annotate.toolTip = "在选区内直接标注（双击选区 / ⌘E）"
+        annotate.toolTip = "在选区内直接标注（单击选区 / ⌘E）"
         bar.addArrangedSubview(annotate)
 
         let items: [(String, SnapGlyph, CaptureFinishAction, String)] = [
@@ -906,7 +957,7 @@ final class CaptureOverlayView: NSView {
 
         showAnnotateBar(near: rect)
         needsDisplay = true
-        ToastController.shared.show("选区内标注 · Esc 返回选区")
+        ToastController.shared.show("选区内标注 · 单击选文字 · Esc 返回")
     }
 
     private func exitInlineAnnotate(keepSelection: Bool) {

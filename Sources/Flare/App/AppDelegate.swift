@@ -86,7 +86,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
                             ]
                         )
                         if ok, !first {
-                            ToastController.shared.show("\(FlareBrand.name) 已就绪 · 单击菜单栏截图")
+                            ToastController.shared.show("\(FlareBrand.name) 已就绪 · 单击菜单栏打开菜单")
                         } else if !ok {
                             Permissions.showReauthorizationHintIfNeeded()
                             Permissions.startPolling()

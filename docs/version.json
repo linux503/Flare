@@ -1,9 +1,9 @@
 {
-  "version": "1.3.13",
-  "build": 27,
-  "notes": "框选后可双击/标注就地编辑；Esc 直接退出截图；全屏截图定位修复。",
-  "downloadURL": "https://github.com/linux503/Flare/releases/download/v1.3.13/Flare-Pro-1.3.13-Universal.dmg",
-  "windowsURL": "https://github.com/linux503/Flare/releases/download/v1.3.13/Flare-Windows-x64.exe",
+  "version": "1.3.14",
+  "build": 28,
+  "notes": "单击进标注、双击完成；修复文字输入；历史可设保留时长；长截更清晰；墨白长截 Logo。",
+  "downloadURL": "https://github.com/linux503/Flare/releases/download/v1.3.14/Flare-Pro-1.3.14-Universal.dmg",
+  "windowsURL": "https://github.com/linux503/Flare/releases/download/v1.3.12/Flare-Windows-x64.exe",
   "androidURL": "https://github.com/linux503/Flare/releases/download/v1.3.13/Flare-Android.apk",
   "minOS": "14.0",
   "publishedAt": "2026-08-20"

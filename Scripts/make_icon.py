@@ -47,9 +47,9 @@ STYLES: dict[str, dict[str, tuple[float, float, float] | str]] = {
     },
     "coral": {
         "label": "长截滚页",
-        "bg": (8, 24, 20),
-        "mark": (72, 220, 170),
-        "accent": (180, 255, 220),
+        "bg": (14, 14, 16),
+        "mark": (236, 236, 240),
+        "accent": (180, 180, 186),
     },
 }
 
@@ -186,18 +186,22 @@ def record_mark(nx: float, ny: float) -> float:
 
 
 def scroll_mark(nx: float, ny: float) -> float:
-    top = abs(sd_round_box(nx, ny + 0.20, 0.36, 0.11, 0.035)) - 0.034
-    mid = abs(sd_round_box(nx, ny, 0.36, 0.11, 0.035)) - 0.034
-    bot = abs(sd_round_box(nx, ny - 0.20, 0.36, 0.11, 0.035)) - 0.034
-    m = max(
-        smoothstep(0.018, -0.012, top),
-        smoothstep(0.018, -0.012, mid) * 0.92,
-        smoothstep(0.018, -0.012, bot) * 0.84,
-    )
+    # 黑白：竖向文档页 + 双侧滚动刻度，区别于旧青绿条带
+    page = abs(sd_round_box(nx, ny + 0.02, 0.28, 0.42, 0.055)) - 0.042
+    m = smoothstep(0.018, -0.012, page)
+    # 页内横线
+    for yy in (-0.18, -0.02, 0.14):
+        line = abs(sd_round_box(nx, ny - yy, 0.16, 0.018, 0.008)) - 0.01
+        m = max(m, smoothstep(0.016, -0.01, line) * 0.85)
+    # 右侧滚动条
+    rail = abs(sd_round_box(nx - 0.18, ny + 0.02, 0.035, 0.34, 0.012)) - 0.012
+    thumb = abs(sd_round_box(nx - 0.18, ny + 0.12, 0.028, 0.12, 0.01)) - 0.01
+    m = max(m, smoothstep(0.016, -0.01, rail) * 0.7)
+    m = max(m, smoothstep(0.016, -0.01, thumb))
+    # 底部向下箭头提示长截
     chev = min(
-        sd_segment(nx, ny - 0.42, 0.0, 0.0, -0.10, -0.08, 0.038),
-        sd_segment(nx, ny - 0.42, 0.0, 0.0, 0.10, -0.08, 0.038),
-        sd_segment(nx, ny - 0.42, -0.10, -0.08, 0.10, -0.08, 0.030),
+        sd_segment(nx, ny - 0.48, 0.0, 0.0, -0.09, -0.07, 0.034),
+        sd_segment(nx, ny - 0.48, 0.0, 0.0, 0.09, -0.07, 0.034),
     )
     m = max(m, smoothstep(0.018, -0.012, chev))
     return m

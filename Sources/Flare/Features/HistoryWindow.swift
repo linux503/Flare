@@ -20,7 +20,9 @@ struct HistoryPane: View {
         VStack(alignment: .leading, spacing: 0) {
             FlarePageHeader(
                 title: "历史记录",
-                subtitle: store.items.isEmpty ? "截图会出现在这里" : "共 \(store.items.count) 张 · 点击打开编辑"
+                subtitle: store.items.isEmpty
+                    ? "截图会出现在这里 · 保留 \(AppSettings.shared.historyRetention.displayName)"
+                    : "共 \(store.items.count) 张 · 保留 \(AppSettings.shared.historyRetention.displayName)"
             ) {
                 FlareSecondaryButton(title: "清空", glyph: .trash) {
                     confirmClear = true

@@ -55,6 +55,30 @@ final class HistoryStore: ObservableObject {
             return
         }
         items = decoded.sorted { $0.createdAt > $1.createdAt }
+        pruneExpired(persistAfter: true)
+    }
+
+    /// 按设置的保留时长清理过期记录
+    func pruneExpired(persistAfter: Bool = true) {
+        let limit = AppSettings.shared.historyRetention.timeInterval
+        let cutoff = Date().addingTimeInterval(-limit)
+        let expired = items.filter { $0.createdAt < cutoff }
+        guard !expired.isEmpty else { return }
+        let ids = Set(expired.map(\.id))
+        items.removeAll { ids.contains($0.id) }
+        for item in expired {
+            thumbCache.removeObject(forKey: item.id.uuidString as NSString)
+            imageCache.removeObject(forKey: item.id.uuidString as NSString)
+        }
+        if persistAfter { persist() }
+        ioQueue.async { [weak self] in
+            for item in expired {
+                self?.removeFiles(for: item)
+            }
+            DispatchQueue.main.async {
+                self?.objectWillChange.send()
+            }
+        }
     }
 
     /// 立刻更新列表；无 fileURL 时后台写入 Captures 原图 + 缩略图
@@ -74,9 +98,12 @@ final class HistoryStore: ObservableObject {
         imageCache.setObject(image, forKey: id.uuidString as NSString, cost: Self.roughCost(image))
 
         items.insert(item, at: 0)
-        var removed: [HistoryItem] = []
+        // 先按时间清理，再按数量封顶
+        let cutoff = Date().addingTimeInterval(-AppSettings.shared.historyRetention.timeInterval)
+        var removed = items.filter { $0.createdAt < cutoff && $0.id != item.id }
+        items.removeAll { removed.contains($0) }
         if items.count > 100 {
-            removed = Array(items.suffix(from: 100))
+            removed.append(contentsOf: items.suffix(from: 100))
             items = Array(items.prefix(100))
         }
         persist()
