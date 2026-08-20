@@ -10,7 +10,11 @@
     { id: "zipx", name: "ZipX", short: "Zx", accent: "#e84d32", desc: { zh: "解压压缩", en: "Compress & extract" }, url: "https://linux503.github.io/ZipX/" },
     { id: "mactext", name: "MacText", short: "Mt", accent: "#3b5bdb", desc: { zh: "文本编辑", en: "Text editor" }, url: "https://linux503.github.io/MacText/" },
     { id: "suptools", name: "SupTools", short: "St", accent: "#0d7a6c", desc: { zh: "macOS 超级工具箱", en: "macOS super toolbox" }, url: "https://linux503.github.io/suptools/" },
-    { id: "macfan", name: "MacFan", short: "Mf", accent: "#0891b2", desc: { zh: "精准控制 Mac 风扇转速", en: "Precise Mac fan control" }, url: "https://linux503.github.io/MacFan/" }
+    { id: "macfan", name: "MacFan", short: "Mf", accent: "#0891b2", desc: { zh: "精准控制 Mac 风扇转速", en: "Precise Mac fan control" }, url: "https://linux503.github.io/MacFan/" },
+    { id: "filesdesk", name: "FilesDesk", short: "Fd", accent: "#7c3aed", desc: { zh: "Mac 智能批量重命名", en: "Smart batch rename" }, url: "https://linux503.github.io/FilesDesk/" },
+    { id: "locadesk", name: "LocaDesk", short: "Ld", accent: "#2563eb", desc: { zh: "把 iPhone 定位模拟", en: "iPhone location spoofing" }, url: "https://linux503.github.io/LocaDesk/" },
+    { id: "battybar", name: "BattyBar", short: "Bb", accent: "#ca8a04", desc: { zh: "掌控你的 MacBook 电池", en: "MacBook battery control" }, url: "https://linux503.github.io/BattyBar/" },
+    { id: "remotex", name: "RemoteX", short: "Rx", accent: "#4f46e5", desc: { zh: "远程桌面，随时随地安全连接", en: "Remote desktop" }, url: "https://linux503.github.io/RemoteX/" }
   ];
 
   function detectLang(el) {
