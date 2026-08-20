@@ -15,7 +15,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@500;600;700;800&family=Noto+Sans+SC:wght@400;500;600;700&display=swap" rel="stylesheet" />
-  <link rel="stylesheet" href="styles.css?v=15" />
+  <link rel="stylesheet" href="styles.css?v=16" />
   <link rel="stylesheet" href="more-apps.css?v=7" />
 </head>
 <body>
@@ -69,15 +69,23 @@
   <main>
     <section class="hero">
       <div class="hero-inner">
+        <p class="now-badge">现已支持 Windows 与 Android</p>
         <p class="brand-xl">Flare Pro</p>
         <h1>一拍即得</h1>
-        <p class="subtitle">macOS 原生截图与录屏；Windows EXE 与 Android APK 可直接下载，支持网页长截图。标注和 OCR 都在顺手的位置。</p>
-        <div class="hero-actions">
+        <p class="subtitle">macOS 完整截图与录屏。Windows 下载 EXE、Android 下载 APK，打开网页即可自动滚动拼接长图。</p>
+        <div class="hero-dls">
           <div class="dl-stack">
-            <a class="btn primary" data-download href="https://github.com/linux503/Flare/releases/download/v1.2.9/Flare-Pro-1.2.9-Universal.dmg">免费下载</a>
+            <a class="btn primary" data-download href="https://github.com/linux503/Flare/releases/download/v1.2.9/Flare-Pro-1.2.9-Universal.dmg">macOS</a>
             <span class="dl-ver" data-app-version>v1.2.9</span>
           </div>
-          <a class="btn soft" href="https://github.com/linux503/Flare" target="_blank" rel="noopener">查看源码</a>
+          <div class="dl-stack">
+            <a class="btn soft" data-download-windows href="https://github.com/linux503/Flare/releases/download/v1.2.9/Flare-Windows-x64.exe">Windows</a>
+            <span class="dl-ver" data-app-version>v1.2.9</span>
+          </div>
+          <div class="dl-stack">
+            <a class="btn soft" data-download-android href="https://github.com/linux503/Flare/releases/download/v1.2.9/Flare-Android.apk">Android</a>
+            <span class="dl-ver" data-app-version>v1.2.9</span>
+          </div>
         </div>
       </div>
 
@@ -95,18 +103,21 @@
       </div>
     </section>
 
-    <section class="strip">
+    <section class="strip os-strip">
       <article>
-        <h2>截得快</h2>
-        <p>macOS 单击菜单栏即可截图；Windows EXE 与 Android APK 支持网页长截图。</p>
+        <p class="os-kicker">macOS</p>
+        <h2>截图 · 录屏 · 标注</h2>
+        <p>原生菜单栏工具。区域 / 窗口 / 全屏 / 长截图，支持 OCR 与钉图。</p>
       </article>
       <article>
-        <h2>录得清</h2>
-        <p>全屏或框选区域录制，可选系统声音与清晰度；独立菜单与面板，支持暂停、倒计时。</p>
+        <p class="os-kicker">Windows</p>
+        <h2>EXE 网页长截图</h2>
+        <p>下载即可用。打开网页，自动滚动并拼接成一张长图。</p>
       </article>
       <article>
-        <h2>改得完</h2>
-        <p>标注、OCR、历史串在同一路径，截完就能说明问题。</p>
+        <p class="os-kicker">Android</p>
+        <h2>APK 网页长截图</h2>
+        <p>安装 APK 后打开链接，滚动截取并保存到相册。</p>
       </article>
     </section>
 

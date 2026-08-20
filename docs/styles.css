@@ -132,12 +132,38 @@ body {
   color: var(--muted);
   font-size: clamp(14px, 1.5vw, 16px);
 }
-.hero-actions {
+.now-badge {
+  margin: 0 0 12px;
+  display: inline-flex;
+  align-items: center;
+  padding: 5px 11px;
+  border-radius: 999px;
+  background: var(--green-soft);
+  color: #065f46;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+}
+.hero-actions,
+.hero-dls {
   display: flex;
   flex-wrap: wrap;
   align-items: flex-start;
   gap: 10px;
   margin-top: 22px;
+}
+.hero-dls .btn {
+  min-width: 108px;
+  justify-content: center;
+}
+.os-kicker {
+  margin: 0 0 6px;
+  font-family: var(--display);
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--green);
 }
 .dl-stack {
   display: flex;
