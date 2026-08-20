@@ -9,12 +9,12 @@
     { id: "flare", name: "Flare", short: "Fl", accent: "#0f9f6e", desc: { zh: "截图录屏", en: "Screenshot & recording" }, url: "https://linux503.github.io/Flare/", icon: "https://linux503.github.io/Flare/logo.png" },
     { id: "zipx", name: "ZipX", short: "Zx", accent: "#e84d32", desc: { zh: "解压压缩", en: "Compress & extract" }, url: "https://linux503.github.io/ZipX/", icon: "https://linux503.github.io/ZipX/assets/logo.png" },
     { id: "mactext", name: "MacText", short: "Mt", accent: "#3b5bdb", desc: { zh: "文本编辑", en: "Text editor" }, url: "https://linux503.github.io/MacText/", icon: "https://linux503.github.io/MacText/assets/icon-256.png" },
-    { id: "suptools", name: "SupTools", short: "St", accent: "#0d7a6c", desc: { zh: "macOS 超级工具箱", en: "macOS super toolbox" }, url: "https://linux503.github.io/suptools/", icon: "https://linux503.github.io/suptools/assets/icon-256.png" },
-    { id: "macfan", name: "MacFan", short: "Mf", accent: "#0891b2", desc: { zh: "精准控制 Mac 风扇转速", en: "Precise Mac fan control" }, url: "https://linux503.github.io/MacFan/", icon: "https://linux503.github.io/MacFan/assets/logo-512.png" },
-    { id: "filesdesk", name: "FilesDesk", short: "Fd", accent: "#7c3aed", desc: { zh: "Mac 智能批量重命名", en: "Smart batch rename" }, url: "https://linux503.github.io/FilesDesk/", icon: "https://linux503.github.io/FilesDesk/assets/apple-touch-180.png" },
-    { id: "locadesk", name: "LocaDesk", short: "Ld", accent: "#2563eb", desc: { zh: "把 iPhone 定位模拟", en: "iPhone location spoofing" }, url: "https://linux503.github.io/LocaDesk/", icon: "https://linux503.github.io/LocaDesk/assets/icon.png" },
-    { id: "battybar", name: "BattyBar", short: "Bb", accent: "#ca8a04", desc: { zh: "掌控你的 MacBook 电池", en: "MacBook battery control" }, url: "https://linux503.github.io/BattyBar/", icon: "https://linux503.github.io/BattyBar/assets/apple-touch-icon.png" },
-    { id: "remotex", name: "RemoteX", short: "Rx", accent: "#4f46e5", desc: { zh: "远程桌面，随时随地安全连接", en: "Remote desktop" }, url: "https://linux503.github.io/RemoteX/", icon: "https://linux503.github.io/RemoteX/icon.png" }
+    { id: "suptools", name: "SupTools", short: "St", accent: "#0d7a6c", desc: { zh: "超级工具箱", en: "Super toolbox" }, url: "https://linux503.github.io/suptools/", icon: "https://linux503.github.io/suptools/assets/icon-256.png" },
+    { id: "macfan", name: "MacFan", short: "Mf", accent: "#0891b2", desc: { zh: "风扇转速", en: "Fan control" }, url: "https://linux503.github.io/MacFan/", icon: "https://linux503.github.io/MacFan/assets/logo-512.png" },
+    { id: "filesdesk", name: "FilesDesk", short: "Fd", accent: "#7c3aed", desc: { zh: "批量重命名", en: "Batch rename" }, url: "https://linux503.github.io/FilesDesk/", icon: "https://linux503.github.io/FilesDesk/assets/apple-touch-180.png" },
+    { id: "locadesk", name: "LocaDesk", short: "Ld", accent: "#2563eb", desc: { zh: "定位模拟", en: "Location spoof" }, url: "https://linux503.github.io/LocaDesk/", icon: "https://linux503.github.io/LocaDesk/assets/icon.png" },
+    { id: "battybar", name: "BattyBar", short: "Bb", accent: "#ca8a04", desc: { zh: "电池管理", en: "Battery" }, url: "https://linux503.github.io/BattyBar/", icon: "https://linux503.github.io/BattyBar/assets/apple-touch-icon.png" },
+    { id: "remotex", name: "RemoteX", short: "Rx", accent: "#4f46e5", desc: { zh: "远程桌面", en: "Remote desktop" }, url: "https://linux503.github.io/RemoteX/", icon: "https://linux503.github.io/RemoteX/icon.png" }
   ];
 
   function detectLang(el) {
@@ -23,15 +23,13 @@
   }
 
   function panelHTML(items, lang) {
-    var head = lang === "en" ? "Other tools by linux503" : "linux503 其他工具";
+    var head = lang === "en" ? "More apps" : "其他工具";
     var html = '<div class="more-apps-head">' + head + "</div>";
     items.forEach(function (app) {
       html +=
         '<a href="' + app.url + '" target="_blank" rel="noopener noreferrer" role="menuitem" style="--app-accent:' + app.accent + '">' +
-        '<img class="more-apps-icon" src="' + app.icon + '" alt="" width="20" height="20" />' +
-        '<span class="app-name">' + app.name + "</span>" +
-        '<span class="app-desc">' + (app.desc[lang] || app.desc.zh) + "</span>" +
-        '<span class="more-apps-arrow" aria-hidden="true">↗</span></a>';
+        '<img class="more-apps-icon" src="' + app.icon + '" alt="" width="18" height="18" />' +
+        '<span class="app-meta"><span class="app-name">' + app.name + '</span><span class="app-desc">' + (app.desc[lang] || app.desc.zh) + "</span></span></a>";
     });
     return html;
   }
