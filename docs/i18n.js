@@ -16,6 +16,8 @@
       "nav.rec": "录屏",
       "nav.docs": "文档",
       "nav.start": "上手",
+      "nav.get": "下载",
+      "nav.menu": "菜单",
       "apps.more": "更多软件",
       "apps.other": "其他工具",
       "apps.zipx": "解压压缩",
@@ -27,6 +29,8 @@
       "apps.battybar": "电池管理",
       "apps.remotex": "远程桌面",
       "dl.pill": "下载",
+      "dl.go": "下载",
+      "dl.for": "适合你",
       "dl.pillAria": "下载 Flare Pro for macOS",
       "hero.badge": "现已支持 Windows 与 Android",
       "hero.h1": "一拍即得",
@@ -126,6 +130,8 @@
       "nav.rec": "Record",
       "nav.docs": "Files",
       "nav.start": "Start",
+      "nav.get": "Get",
+      "nav.menu": "Menu",
       "apps.more": "More apps",
       "apps.other": "Other tools",
       "apps.zipx": "Zip & unzip",
@@ -137,6 +143,8 @@
       "apps.battybar": "Battery",
       "apps.remotex": "Remote desktop",
       "dl.pill": "Download",
+      "dl.go": "Get",
+      "dl.for": "For you",
       "dl.pillAria": "Download Flare Pro for macOS",
       "hero.badge": "Now on Windows and Android",
       "hero.h1": "Capture in one shot",
@@ -278,8 +286,8 @@
       if (key && dict[key]) el.setAttribute("alt", dict[key]);
     });
 
-    document.querySelectorAll("[data-set-lang]").forEach((btn) => {
-      btn.classList.toggle("on", btn.getAttribute("data-set-lang") === lang);
+    document.querySelectorAll("[data-lang-toggle]").forEach((btn) => {
+      btn.textContent = lang === "en" ? "中文" : "EN";
     });
     try {
       localStorage.setItem("flare-lang", lang);
@@ -290,10 +298,10 @@
   apply(lang);
 
   document.addEventListener("click", (e) => {
-    const btn = e.target.closest("[data-set-lang]");
+    const btn = e.target.closest("[data-lang-toggle]");
     if (!btn) return;
-    const next = btn.getAttribute("data-set-lang");
-    if (next !== "en" && next !== "zh") return;
+    const cur = document.documentElement.lang === "en" ? "en" : "zh";
+    const next = cur === "en" ? "zh" : "en";
     const url = new URL(location.href);
     url.searchParams.set("lang", next);
     history.replaceState({}, "", url);

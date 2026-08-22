@@ -31,10 +31,13 @@
   <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@500;600;700;800&family=Noto+Sans+SC:wght@400;500;600;700&family=Noto+Serif+SC:wght@600;700&display=swap" rel="stylesheet" />
   <link rel="alternate" hreflang="zh-Hans" href="https://linux503.github.io/Flare/?lang=zh" />
   <link rel="alternate" hreflang="en" href="https://linux503.github.io/Flare/?lang=en" />
-  <link rel="stylesheet" href="styles.css?v=28" />
+  <link rel="stylesheet" href="styles.css?v=34" />
   <link rel="stylesheet" href="more-apps.css?v=13" />
 </head>
 <body>
+  <div class="aurora" aria-hidden="true"></div>
+  <div class="cursor-orb" aria-hidden="true"></div>
+  <div class="scroll-progress" aria-hidden="true"></div>
   <a class="skip-link" href="#main" data-i18n="skip">跳至正文</a>
   <header class="site-header">
     <a class="brand" href="./" data-i18n-aria="brand.home" aria-label="Flare Pro 首页">
@@ -44,64 +47,67 @@
         <em data-i18n="brand.tag">一拍即得</em>
       </span>
     </a>
-    <nav>
-      <div class="nav-cluster">
+    <nav id="site-nav" class="site-nav">
+      <div class="nav-links">
         <a href="#shot" data-i18n="nav.shot">截图</a>
         <a href="#rec" data-i18n="nav.rec">录屏</a>
         <a href="#docs" data-i18n="nav.docs">文档</a>
         <a href="#start" data-i18n="nav.start">上手</a>
-        <details class="more-apps" data-more-apps="flare">
-          <summary>
-            <span class="more-apps-ico" aria-hidden="true"><i></i><i></i><i></i><i></i></span>
-            <span class="more-apps-label" data-i18n="apps.more">更多软件</span>
-            <span class="more-apps-chevron" aria-hidden="true"></span>
-          </summary>
-          <div class="more-apps-panel" role="menu">
-            <div class="more-apps-head" data-i18n="apps.other">其他工具</div>
-            <a href="https://linux503.github.io/ZipX/" target="_blank" rel="noopener noreferrer" role="menuitem" style="--app-accent:#e84d32">
-              <img class="more-apps-icon" src="https://linux503.github.io/ZipX/assets/logo.png" alt="" width="40" height="40" loading="lazy" decoding="async" />
-              <span class="app-meta"><span class="app-name">ZipX</span><span class="app-desc" data-i18n="apps.zipx">解压压缩</span></span>
-            </a>
-            <a href="https://linux503.github.io/MacText/" target="_blank" rel="noopener noreferrer" role="menuitem" style="--app-accent:#3b5bdb">
-              <img class="more-apps-icon" src="https://linux503.github.io/MacText/assets/icon-256.png" alt="" width="40" height="40" loading="lazy" decoding="async" />
-              <span class="app-meta"><span class="app-name">MacText</span><span class="app-desc" data-i18n="apps.mactext">文本编辑</span></span>
-            </a>
-            <a href="https://linux503.github.io/suptools/" target="_blank" rel="noopener noreferrer" role="menuitem" style="--app-accent:#0d7a6c">
-              <img class="more-apps-icon" src="https://linux503.github.io/suptools/assets/icon-256.png" alt="" width="40" height="40" loading="lazy" decoding="async" />
-              <span class="app-meta"><span class="app-name">SupTools</span><span class="app-desc" data-i18n="apps.suptools">超级工具箱</span></span>
-            </a>
-            <a href="https://linux503.github.io/MacFan/" target="_blank" rel="noopener noreferrer" role="menuitem" style="--app-accent:#0891b2">
-              <img class="more-apps-icon" src="https://linux503.github.io/MacFan/assets/logo-512.png" alt="" width="40" height="40" loading="lazy" decoding="async" />
-              <span class="app-meta"><span class="app-name">MacFan</span><span class="app-desc" data-i18n="apps.macfan">风扇转速</span></span>
-            </a>
-            <a href="https://linux503.github.io/FilesDesk/" target="_blank" rel="noopener noreferrer" role="menuitem" style="--app-accent:#7c3aed">
-              <img class="more-apps-icon" src="https://linux503.github.io/FilesDesk/assets/apple-touch-180.png" alt="" width="40" height="40" loading="lazy" decoding="async" />
-              <span class="app-meta"><span class="app-name">FilesDesk</span><span class="app-desc" data-i18n="apps.filesdesk">批量重命名</span></span>
-            </a>
-            <a href="https://linux503.github.io/LocaDesk/" target="_blank" rel="noopener noreferrer" role="menuitem" style="--app-accent:#2563eb">
-              <img class="more-apps-icon" src="https://linux503.github.io/LocaDesk/assets/icon.png" alt="" width="40" height="40" loading="lazy" decoding="async" />
-              <span class="app-meta"><span class="app-name">LocaDesk</span><span class="app-desc" data-i18n="apps.locadesk">定位模拟</span></span>
-            </a>
-            <a href="https://linux503.github.io/BattyBar/" target="_blank" rel="noopener noreferrer" role="menuitem" style="--app-accent:#ca8a04">
-              <img class="more-apps-icon" src="https://linux503.github.io/BattyBar/assets/apple-touch-icon.png" alt="" width="40" height="40" loading="lazy" decoding="async" />
-              <span class="app-meta"><span class="app-name">BattyBar</span><span class="app-desc" data-i18n="apps.battybar">电池管理</span></span>
-            </a>
-            <a href="https://linux503.github.io/RemoteX/" target="_blank" rel="noopener noreferrer" role="menuitem" style="--app-accent:#4f46e5">
-              <img class="more-apps-icon" src="https://linux503.github.io/RemoteX/icon.png" alt="" width="40" height="40" loading="lazy" decoding="async" />
-              <span class="app-meta"><span class="app-name">RemoteX</span><span class="app-desc" data-i18n="apps.remotex">远程桌面</span></span>
-            </a>
-          </div>
-        </details>
+        <a href="#get" data-i18n="nav.get">下载</a>
       </div>
-      <div class="lang-switch" role="group" data-i18n-aria="lang.aria" aria-label="语言">
-        <button type="button" data-set-lang="zh" class="on">中文</button>
-        <button type="button" data-set-lang="en">EN</button>
+      <details class="more-apps" data-more-apps="flare">
+        <summary>
+          <span class="more-apps-ico" aria-hidden="true"><i></i><i></i><i></i><i></i></span>
+          <span class="more-apps-label" data-i18n="apps.more">更多软件</span>
+          <span class="more-apps-chevron" aria-hidden="true"></span>
+        </summary>
+        <div class="more-apps-panel" role="menu">
+          <div class="more-apps-head" data-i18n="apps.other">其他工具</div>
+          <a href="https://linux503.github.io/ZipX/" target="_blank" rel="noopener noreferrer" role="menuitem" style="--app-accent:#e84d32">
+            <img class="more-apps-icon" src="https://linux503.github.io/ZipX/assets/logo.png" alt="" width="40" height="40" loading="lazy" decoding="async" />
+            <span class="app-meta"><span class="app-name">ZipX</span><span class="app-desc" data-i18n="apps.zipx">解压压缩</span></span>
+          </a>
+          <a href="https://linux503.github.io/MacText/" target="_blank" rel="noopener noreferrer" role="menuitem" style="--app-accent:#3b5bdb">
+            <img class="more-apps-icon" src="https://linux503.github.io/MacText/assets/icon-256.png" alt="" width="40" height="40" loading="lazy" decoding="async" />
+            <span class="app-meta"><span class="app-name">MacText</span><span class="app-desc" data-i18n="apps.mactext">文本编辑</span></span>
+          </a>
+          <a href="https://linux503.github.io/suptools/" target="_blank" rel="noopener noreferrer" role="menuitem" style="--app-accent:#0d7a6c">
+            <img class="more-apps-icon" src="https://linux503.github.io/suptools/assets/icon-256.png" alt="" width="40" height="40" loading="lazy" decoding="async" />
+            <span class="app-meta"><span class="app-name">SupTools</span><span class="app-desc" data-i18n="apps.suptools">超级工具箱</span></span>
+          </a>
+          <a href="https://linux503.github.io/MacFan/" target="_blank" rel="noopener noreferrer" role="menuitem" style="--app-accent:#0891b2">
+            <img class="more-apps-icon" src="https://linux503.github.io/MacFan/assets/logo-512.png" alt="" width="40" height="40" loading="lazy" decoding="async" />
+            <span class="app-meta"><span class="app-name">MacFan</span><span class="app-desc" data-i18n="apps.macfan">风扇转速</span></span>
+          </a>
+          <a href="https://linux503.github.io/FilesDesk/" target="_blank" rel="noopener noreferrer" role="menuitem" style="--app-accent:#7c3aed">
+            <img class="more-apps-icon" src="https://linux503.github.io/FilesDesk/assets/apple-touch-180.png" alt="" width="40" height="40" loading="lazy" decoding="async" />
+            <span class="app-meta"><span class="app-name">FilesDesk</span><span class="app-desc" data-i18n="apps.filesdesk">批量重命名</span></span>
+          </a>
+          <a href="https://linux503.github.io/LocaDesk/" target="_blank" rel="noopener noreferrer" role="menuitem" style="--app-accent:#2563eb">
+            <img class="more-apps-icon" src="https://linux503.github.io/LocaDesk/assets/icon.png" alt="" width="40" height="40" loading="lazy" decoding="async" />
+            <span class="app-meta"><span class="app-name">LocaDesk</span><span class="app-desc" data-i18n="apps.locadesk">定位模拟</span></span>
+          </a>
+          <a href="https://linux503.github.io/BattyBar/" target="_blank" rel="noopener noreferrer" role="menuitem" style="--app-accent:#ca8a04">
+            <img class="more-apps-icon" src="https://linux503.github.io/BattyBar/assets/apple-touch-icon.png" alt="" width="40" height="40" loading="lazy" decoding="async" />
+            <span class="app-meta"><span class="app-name">BattyBar</span><span class="app-desc" data-i18n="apps.battybar">电池管理</span></span>
+          </a>
+          <a href="https://linux503.github.io/RemoteX/" target="_blank" rel="noopener noreferrer" role="menuitem" style="--app-accent:#4f46e5">
+            <img class="more-apps-icon" src="https://linux503.github.io/RemoteX/icon.png" alt="" width="40" height="40" loading="lazy" decoding="async" />
+            <span class="app-meta"><span class="app-name">RemoteX</span><span class="app-desc" data-i18n="apps.remotex">远程桌面</span></span>
+          </a>
+        </div>
+      </details>
+      <div class="nav-tools">
+        <button type="button" class="lang-switch" data-lang-toggle data-i18n-aria="lang.aria" aria-label="语言">EN</button>
+        <a class="pill" data-download href="https://github.com/linux503/Flare/releases/download/v1.3.17/Flare-Pro-1.3.17-Universal.dmg" data-i18n-aria="dl.pillAria" aria-label="下载 Flare Pro for macOS">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M12 3a1 1 0 0 1 1 1v8.6l2.3-2.3a1 1 0 1 1 1.4 1.4l-4 4a1 1 0 0 1-1.4 0l-4-4a1 1 0 1 1 1.4-1.4L11 12.6V4a1 1 0 0 1 1-1ZM5 18a1 1 0 0 1 1-1h12a1 1 0 1 1 0 2H6a1 1 0 0 1-1-1Z"/></svg>
+          <span data-i18n="dl.pill">下载</span>
+        </a>
       </div>
-      <a class="pill" data-download href="https://github.com/linux503/Flare/releases/download/v1.3.17/Flare-Pro-1.3.17-Universal.dmg" data-i18n-aria="dl.pillAria" aria-label="下载 Flare Pro for macOS">
-        <svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M12 3a1 1 0 0 1 1 1v8.6l2.3-2.3a1 1 0 1 1 1.4 1.4l-4 4a1 1 0 0 1-1.4 0l-4-4a1 1 0 1 1 1.4-1.4L11 12.6V4a1 1 0 0 1 1-1ZM5 18a1 1 0 0 1 1-1h12a1 1 0 1 1 0 2H6a1 1 0 0 1-1-1Z"/></svg>
-        <span data-i18n="dl.pill">下载</span>
-      </a>
     </nav>
+    <button type="button" class="nav-toggle" aria-expanded="false" aria-controls="site-nav" data-i18n-aria="nav.menu" aria-label="菜单">
+      <i></i><i></i>
+    </button>
   </header>
 
   <main id="main">
@@ -120,7 +126,11 @@
               <strong>macOS</strong>
               <em>DMG · Universal</em>
             </span>
-            <span class="dl-ver" data-app-version>v1.3.17</span>
+            <span class="dl-meta">
+              <span class="dl-for" data-i18n="dl.for">适合你</span>
+              <span class="dl-ver" data-app-version>v1.3.17</span>
+              <span class="dl-go" data-i18n="dl.go">下载</span>
+            </span>
           </a>
           <a class="dl-btn win" data-download-windows href="https://github.com/linux503/Flare/releases/download/v1.3.17/Flare-Windows-x64.exe">
             <span class="dl-ico" aria-hidden="true">
@@ -130,7 +140,11 @@
               <strong>Windows</strong>
               <em>EXE · x64</em>
             </span>
-            <span class="dl-ver" data-app-version>v1.3.17</span>
+            <span class="dl-meta">
+              <span class="dl-for" data-i18n="dl.for">适合你</span>
+              <span class="dl-ver" data-app-version>v1.3.17</span>
+              <span class="dl-go" data-i18n="dl.go">下载</span>
+            </span>
           </a>
           <a class="dl-btn android" data-download-android href="https://github.com/linux503/Flare/releases/download/v1.3.17/Flare-Android.apk">
             <span class="dl-ico" aria-hidden="true">
@@ -140,7 +154,11 @@
               <strong>Android</strong>
               <em>APK</em>
             </span>
-            <span class="dl-ver" data-app-version>v1.3.17</span>
+            <span class="dl-meta">
+              <span class="dl-for" data-i18n="dl.for">适合你</span>
+              <span class="dl-ver" data-app-version>v1.3.17</span>
+              <span class="dl-go" data-i18n="dl.go">下载</span>
+            </span>
           </a>
         </div>
       </div>
@@ -150,6 +168,7 @@
           <img class="on" src="poster-capture.jpg?v=8" alt="截图" data-i18n-alt="img.shot" data-i="0" width="1536" height="1024" fetchpriority="high" decoding="async" />
           <img src="poster-record.jpg?v=8" alt="录屏" data-i18n-alt="img.rec" data-i="1" width="1536" height="1024" loading="lazy" decoding="async" />
           <img src="poster-annotate.jpg?v=8" alt="标注" data-i18n-alt="img.ann" data-i="2" width="1536" height="1024" loading="lazy" decoding="async" />
+          <span class="stage-shine" aria-hidden="true"></span>
         </div>
         <div class="switcher" role="tablist" data-i18n-aria="switch.aria" aria-label="演示切换">
           <button type="button" class="on" data-goto="0" role="tab" aria-selected="true"><b data-i18n="tab.shot">截图</b><span data-i18n="tab.shotSub">框选 · 窗口 · 全屏</span></button>
@@ -159,8 +178,15 @@
       </div>
     </section>
 
+    <div class="ticker" aria-hidden="true">
+      <div class="ticker-track">
+        <span>Screenshot</span><span>Recording</span><span>OCR</span><span>Pin</span><span>TXT</span><span>Word</span><span>PPT</span><span>Excel</span><span>macOS</span><span>Windows</span><span>Android</span>
+        <span>Screenshot</span><span>Recording</span><span>OCR</span><span>Pin</span><span>TXT</span><span>Word</span><span>PPT</span><span>Excel</span><span>macOS</span><span>Windows</span><span>Android</span>
+      </div>
+    </div>
+
     <section class="strip os-strip">
-      <article class="os-mac" data-reveal style="--d:0">
+      <article class="os-mac" data-reveal data-spot style="--d:0">
         <div class="os-aura" aria-hidden="true"></div>
         <header class="os-head">
           <span class="os-icon" aria-hidden="true">
@@ -179,7 +205,7 @@
           <li data-i18n="os.mac.p3">一键创建 TXT / Word / PPT / Excel</li>
         </ul>
       </article>
-      <article class="os-win" data-reveal style="--d:1">
+      <article class="os-win" data-reveal data-spot style="--d:1">
         <div class="os-aura" aria-hidden="true"></div>
         <header class="os-head">
           <span class="os-icon" aria-hidden="true">
@@ -198,7 +224,7 @@
           <li data-i18n="os.win.p3">适合电商页、文档页、资讯页</li>
         </ul>
       </article>
-      <article class="os-android" data-reveal style="--d:2">
+      <article class="os-android" data-reveal data-spot style="--d:2">
         <div class="os-aura" aria-hidden="true"></div>
         <header class="os-head">
           <span class="os-icon" aria-hidden="true">
@@ -289,17 +315,17 @@
       </div>
       <ol class="steps">
         <li data-reveal style="--d:0">
-          <span>1</span>
+          <span class="step-n">1</span>
           <h3 data-i18n="step.1">授权</h3>
           <p data-i18n="step.1p">macOS：系统设置 → 隐私与安全性 → 屏幕与系统音频录制，打开 Flare Pro，然后完全退出再打开。Windows / Android 无需此步骤，下载 EXE 或 APK 即可。</p>
         </li>
         <li data-reveal style="--d:1">
-          <span>2</span>
+          <span class="step-n">2</span>
           <h3 data-i18n="step.2">截图</h3>
           <p data-i18n="step.2p">单击菜单栏图标进入区域截图；右键可打开完整功能菜单。</p>
         </li>
         <li data-reveal style="--d:2">
-          <span>3</span>
+          <span class="step-n">3</span>
           <h3 data-i18n="step.3">录屏</h3>
           <p data-i18n-html="step.3p">用「录制」菜单或 <code>⌘⌥R</code>。需要时再进主面板调整录制选项。</p>
         </li>
@@ -314,7 +340,7 @@
     </section>
 
     <section id="get" class="get">
-      <div class="get-card" data-reveal>
+      <div class="get-card" data-reveal data-spot>
         <div>
           <p class="tag">Download</p>
           <h2 data-i18n="get.h2">下载 Flare Pro</h2>
@@ -386,8 +412,8 @@
     </div>
   </footer>
 
-  <script src="i18n.js?v=2" defer></script>
-  <script src="site.js?v=16" defer></script>
+  <script src="i18n.js?v=5" defer></script>
+  <script src="site.js?v=20" defer></script>
   <script src="more-apps.js?v=13" defer></script>
 </body>
 </html>
