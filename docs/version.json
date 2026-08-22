@@ -1,10 +1,10 @@
 {
-  "version": "1.3.16",
-  "build": 30,
-  "notes": "选区双击复制完成，三击打开编辑器。",
-  "downloadURL": "https://github.com/linux503/Flare/releases/download/v1.3.16/Flare-Pro-1.3.16-Universal.dmg",
+  "version": "1.3.17",
+  "build": 31,
+  "notes": "窗口圆角裁切；标注可选中调节箭头/颜色/粗细；钉住可拖动。",
+  "downloadURL": "https://github.com/linux503/Flare/releases/download/v1.3.17/Flare-Pro-1.3.17-Universal.dmg",
   "windowsURL": "https://github.com/linux503/Flare/releases/download/v1.3.12/Flare-Windows-x64.exe",
   "androidURL": "https://github.com/linux503/Flare/releases/download/v1.3.13/Flare-Android.apk",
   "minOS": "14.0",
-  "publishedAt": "2026-08-20"
+  "publishedAt": "2026-08-22"
 }
