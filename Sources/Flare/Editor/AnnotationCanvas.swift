@@ -14,6 +14,10 @@ final class AnnotationCanvasView: NSView {
     private var textField: NSTextField?
     private var textFieldOrigin: CGPoint = .zero
     private var freehandPoints: [CGPoint] = []
+    private var editHit: AnnotationHit?
+    private var editID: UUID?
+    private var lastDragPoint: CGPoint?
+    private var didPushEditUndo = false
 
     override var acceptsFirstResponder: Bool { true }
     override var isFlipped: Bool { false }
@@ -30,6 +34,9 @@ final class AnnotationCanvasView: NSView {
                 in: bounds,
                 baseImage: document.baseImage
             )
+        }
+        if let id = document.selectedID, let item = document.items.first(where: { $0.id == id }) {
+            AnnotationRenderer.drawSelection(for: item)
         }
     }
 
@@ -65,6 +72,21 @@ final class AnnotationCanvasView: NSView {
             needsDisplay = true
         case .select:
             window?.makeFirstResponder(self)
+            if let (item, hit) = document.item(at: point) {
+                document.selectedID = item.id
+                if let style = itemStyle(item) {
+                    document.style = style
+                }
+                editID = item.id
+                editHit = hit
+                lastDragPoint = point
+                didPushEditUndo = false
+            } else {
+                document.selectedID = nil
+                editID = nil
+                editHit = nil
+            }
+            needsDisplay = true
         }
     }
 
@@ -81,6 +103,8 @@ final class AnnotationCanvasView: NSView {
         case .arrow, .line, .rect, .ellipse, .blur:
             dragCurrent = point
             needsDisplay = true
+        case .select:
+            moveSelection(to: point)
         default:
             break
         }
@@ -119,6 +143,10 @@ final class AnnotationCanvasView: NSView {
         dragCurrent = nil
         draftingShape = nil
         freehandPoints = []
+        editID = nil
+        editHit = nil
+        lastDragPoint = nil
+        didPushEditUndo = false
         needsDisplay = true
     }
 
@@ -167,7 +195,11 @@ final class AnnotationCanvasView: NSView {
             }
         }
         if event.keyCode == 51 || event.keyCode == 117 {
-            document?.undo()
+            if document?.selectedID != nil {
+                document?.deleteSelected()
+            } else {
+                document?.undo()
+            }
             needsDisplay = true
             return
         }
@@ -179,6 +211,43 @@ final class AnnotationCanvasView: NSView {
         draftingShape = kind
         dragStart = point
         dragCurrent = point
+        document.selectedID = nil
+    }
+
+    private func itemStyle(_ item: AnnotationItem) -> AnnotationStyle? {
+        switch item {
+        case .freehand(_, _, let style, _), .shape(_, _, _, _, let style),
+             .text(_, _, _, let style), .counter(_, _, _, let style):
+            return style
+        case .blur:
+            return nil
+        }
+    }
+
+    private func moveSelection(to point: CGPoint) {
+        guard let document, let id = editID,
+              var item = document.items.first(where: { $0.id == id }),
+              let hit = editHit, let last = lastDragPoint
+        else { return }
+        if !didPushEditUndo {
+            document.pushUndo()
+            didPushEditUndo = true
+        }
+        let delta = CGPoint(x: point.x - last.x, y: point.y - last.y)
+        switch hit {
+        case .body:
+            item = item.translated(by: delta)
+        case .start, .end:
+            if case .shape(let sid, let kind, var start, var end, let style) = item {
+                if hit == .start { start = point } else { end = point }
+                item = .shape(id: sid, kind: kind, start: start, end: end, style: style)
+            } else {
+                item = item.translated(by: delta)
+            }
+        }
+        document.replace(item)
+        lastDragPoint = point
+        needsDisplay = true
     }
 
     private func promptText(at point: CGPoint) {

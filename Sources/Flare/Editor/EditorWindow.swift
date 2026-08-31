@@ -172,16 +172,7 @@ struct EditorRootView: View {
 
     private var theme: FlarePalette { themeController.palette }
 
-    private let colors: [NSColor] = [
-        NSColor(calibratedRed: 1, green: 0.23, blue: 0.19, alpha: 1),
-        NSColor(calibratedRed: 1, green: 0.58, blue: 0, alpha: 1),
-        NSColor(calibratedRed: 1, green: 0.8, blue: 0, alpha: 1),
-        NSColor(calibratedWhite: 0.85, alpha: 1),
-        NSColor(calibratedWhite: 0.55, alpha: 1),
-        NSColor(calibratedWhite: 0.28, alpha: 1),
-        NSColor.white,
-        NSColor.black
-    ]
+    private let colors: [NSColor] = AnnotationStyle.palette
 
     var body: some View {
         VStack(spacing: 0) {
@@ -222,26 +213,26 @@ struct EditorRootView: View {
                     .clipShape(Capsule())
             }
 
-            HStack(spacing: 8) {
-                ForEach(AnnotationTool.allCases.filter { $0 != .select && $0 != .step }) { tool in
+            HStack(spacing: 4) {
+                ForEach(AnnotationTool.allCases.filter { $0 != .step }) { tool in
                     toolButton(tool)
                 }
 
-                Divider().frame(height: 22).overlay(theme.strokeStrong)
+                Divider().frame(height: 18).overlay(theme.strokeStrong)
 
                 ForEach(Array(colors.enumerated()), id: \.offset) { _, color in
                     Button {
-                        document.style.color = color
+                        document.setColor(color)
                     } label: {
                         Circle()
                             .fill(Color(nsColor: color))
-                            .frame(width: 16, height: 16)
+                            .frame(width: 12, height: 12)
                             .overlay(
                                 Circle().strokeBorder(
                                     approximatelyEqual(document.style.color, color)
                                         ? theme.textPrimary
                                         : theme.strokeStrong,
-                                    lineWidth: approximatelyEqual(document.style.color, color) ? 2 : 1
+                                    lineWidth: approximatelyEqual(document.style.color, color) ? 1.5 : 0.8
                                 )
                             )
                     }
@@ -249,18 +240,31 @@ struct EditorRootView: View {
                     .help(color.hexString)
                 }
 
-                HStack(spacing: 6) {
+                HStack(spacing: 4) {
                     SnapIcon(.stroke, size: .caption, opacity: 0.55, tint: theme.textMuted)
                     Slider(value: Binding(
                         get: { document.style.lineWidth },
-                        set: { document.style.lineWidth = $0 }
-                    ), in: 1...12)
+                        set: { document.setLineWidth($0) }
+                    ), in: 1...20)
                     .tint(theme.accent)
-                    .frame(width: 88)
+                    .frame(width: 72)
                     Text("\(Int(document.style.lineWidth))")
-                        .font(.system(size: 11, design: .monospaced))
+                        .font(.system(size: 10, design: .monospaced))
                         .foregroundStyle(theme.textSecondary)
-                        .frame(width: 18)
+                        .frame(width: 16)
+                }
+
+                if document.tool == .text {
+                    HStack(spacing: 4) {
+                        SnapIcon(.toolText, size: .caption, opacity: 0.55, tint: theme.textMuted)
+                        Slider(value: Binding(
+                            get: { document.style.fontSize },
+                            set: { document.setFontSize($0) }
+                        ), in: 12...42)
+                        .tint(theme.accent)
+                        .frame(width: 56)
+                    }
+                    .help("文字大小")
                 }
 
                 Spacer(minLength: 4)
@@ -270,9 +274,9 @@ struct EditorRootView: View {
                 actionButton("清空", glyph: .trash) { document.clear() }
             }
         }
-        .padding(.horizontal, 16)
-        .padding(.top, 14)
-        .padding(.bottom, 12)
+        .padding(.horizontal, 12)
+        .padding(.top, 10)
+        .padding(.bottom, 8)
     }
 
     private var sizeLabel: String {
@@ -325,18 +329,27 @@ struct EditorRootView: View {
 
     private func toolButton(_ tool: AnnotationTool) -> some View {
         let selected = document.tool == tool
+        let isText = tool == .text
         return Button {
             document.tool = tool
         } label: {
-            SnapIcon(
-                tool.glyph,
-                size: .menu,
-                opacity: selected ? 1 : 0.75,
-                tint: selected ? theme.inverseText : theme.textSecondary
-            )
-            .frame(width: 30, height: 28)
+            Group {
+                if isText {
+                    Text("文字")
+                        .font(.system(size: 10, weight: .semibold))
+                        .foregroundStyle(selected ? theme.inverseText : theme.textSecondary)
+                } else {
+                    SnapIcon(
+                        tool.glyph,
+                        size: .menu,
+                        opacity: selected ? 1 : 0.75,
+                        tint: selected ? theme.inverseText : theme.textSecondary
+                    )
+                }
+            }
+            .frame(width: isText ? 36 : 28, height: 28)
             .background(
-                RoundedRectangle(cornerRadius: 7, style: .continuous)
+                RoundedRectangle(cornerRadius: 6, style: .continuous)
                     .fill(selected ? theme.inverseFill : theme.fill)
             )
             .help(tool.title)
@@ -351,8 +364,8 @@ struct EditorRootView: View {
                 Text(title)
                     .font(.system(size: 12, weight: .medium))
             }
-            .padding(.horizontal, 10)
-            .padding(.vertical, 6)
+            .padding(.horizontal, 8)
+            .padding(.vertical, 5)
             .background(theme.fillStrong)
             .foregroundStyle(theme.textPrimary)
             .clipShape(RoundedRectangle(cornerRadius: 7, style: .continuous))

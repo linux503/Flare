@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<!-- Mac App Store 必须开启沙盒 -->
+	<key>com.apple.security.app-sandbox</key>
+	<true/>
+
+	<!-- 保存截图 / 用户选文件夹 -->
+	<key>com.apple.security.files.user-selected.read-write</key>
+	<true/>
+	<key>com.apple.security.files.bookmarks.app-scope</key>
+	<true/>
+
+	<!-- 默认保存到「图片/Flare」 -->
+	<key>com.apple.security.assets.pictures.read-write</key>
+	<true/>
+
+	<!-- 录屏收录麦克风 -->
+	<key>com.apple.security.device.audio-input</key>
+	<true/>
+
+	<!-- 仅用于打开官网 / 反馈链接（App Store 版不自检更新） -->
+	<key>com.apple.security.network.client</key>
+	<true/>
+</dict>
+</plist>

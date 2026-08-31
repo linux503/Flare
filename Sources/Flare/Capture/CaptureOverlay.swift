@@ -19,7 +19,7 @@ enum CaptureFinishAction: Equatable {
 
     static func from(after action: AfterCaptureAction) -> CaptureFinishAction {
         switch action {
-        case .editor: return .clipboard
+        case .editor: return .editor
         case .clipboard: return .clipboard
         case .save: return .save
         case .pin: return .pin
@@ -145,6 +145,8 @@ final class CaptureOverlayView: NSView {
     private var dragSession: DragSession?
     private var frozenSelection: CGRect?
     private var hoverWindow: WindowCapturer.WindowInfo?
+    /// 双击吸附到系统窗口时，按窗口圆角裁切；手动画的矩形保持直角
+    private var clipCropAsWindow = false
     private var mouseLocation: CGPoint = .zero
     private var tracking: NSTrackingArea?
     private var didComplete = false
@@ -287,10 +289,11 @@ final class CaptureOverlayView: NSView {
     private func drawWindowHighlight(_ hover: WindowCapturer.WindowInfo) {
         let local = convertFromScreenTopLeft(hover.bounds).intersection(bounds)
         guard local.width > 4, local.height > 4 else { return }
+        let r = min(WindowCornerClipper.systemDefaultRadiusPoints(), min(local.width, local.height) / 4)
         accent.withAlphaComponent(0.18).setFill()
-        NSBezierPath(roundedRect: local, xRadius: 6, yRadius: 6).fill()
+        NSBezierPath(roundedRect: local, xRadius: r, yRadius: r).fill()
         accent.setStroke()
-        let p = NSBezierPath(roundedRect: local, xRadius: 6, yRadius: 6)
+        let p = NSBezierPath(roundedRect: local, xRadius: r, yRadius: r)
         p.lineWidth = 2
         p.stroke()
         let label = "\(hover.owner)\(hover.name.isEmpty ? "" : " — \(hover.name)")"
@@ -545,6 +548,7 @@ final class CaptureOverlayView: NSView {
                 pendingSelectionTap = nil
                 hideActionBar()
                 dragSession = .resize(handle: handle, startRect: frozen, anchor: point)
+                clipCropAsWindow = false
                 return
             }
             if frozen.contains(point) {
@@ -559,6 +563,7 @@ final class CaptureOverlayView: NSView {
         pendingSelectionTap = nil
         hideActionBar()
         frozenSelection = nil
+        clipCropAsWindow = false
         dragSession = .create(start: point)
         needsDisplay = true
     }
@@ -574,6 +579,7 @@ final class CaptureOverlayView: NSView {
             if hypot(dx, dy) > 4 {
                 selectionTapMoved = true
                 dragSession = .move(startRect: pending.startRect, anchor: pending.anchor)
+                clipCropAsWindow = false
                 pendingSelectionTap = nil
                 NSCursor.closedHand.set()
             } else {
@@ -666,7 +672,31 @@ final class CaptureOverlayView: NSView {
             return
         }
 
-        if isAnnotating { return }
+        if isAnnotating {
+            // 标注模式下仍支持导出快捷键（画布未处理时由这里兜底）
+            let chars = event.charactersIgnoringModifiers ?? ""
+            if event.modifierFlags.contains(.command) {
+                switch chars {
+                case "c": finishInlineAnnotate(.clipboard); return
+                case "s": finishInlineAnnotate(.save); return
+                case "p": finishInlineAnnotate(.pin); return
+                case "z":
+                    if event.modifierFlags.contains(.shift) {
+                        annotateDocument?.redo()
+                    } else {
+                        annotateDocument?.undo()
+                    }
+                    annotateCanvas?.needsDisplay = true
+                    return
+                default: break
+                }
+            }
+            if event.keyCode == 36 || event.keyCode == 76 {
+                finishInlineAnnotate(.from(after: AppSettings.shared.afterCaptureAction))
+                return
+            }
+            return
+        }
 
         // 方向键微调选区
         if frozenSelection != nil, [123, 124, 125, 126].contains(event.keyCode) {
@@ -680,7 +710,13 @@ final class CaptureOverlayView: NSView {
                 switch chars {
                 case "c": commitSelection(.clipboard); return
                 case "s": commitSelection(.save); return
-                case "e": enterInlineAnnotate(); return
+                case "e":
+                    if event.modifierFlags.contains(.shift) {
+                        commitSelection(.editor)
+                    } else {
+                        enterInlineAnnotate()
+                    }
+                    return
                 case "p": commitSelection(.pin); return
                 case "t": commitSelection(.ocr); return
                 default: break
@@ -789,6 +825,14 @@ final class CaptureOverlayView: NSView {
             start.toolTip = "录制当前选区（双击选区 / 回车）"
             bar.addArrangedSubview(start)
 
+            addBarDivider(to: bar)
+
+            let again = makeBarButton(title: "重选", glyph: nil, primary: false) { [weak self] in
+                self?.barReselect()
+            }
+            again.toolTip = "清除选区重新框选"
+            bar.addArrangedSubview(again)
+
             let cancel = makeBarButton(title: "取消", glyph: .close, primary: false) { [weak self] in
                 self?.barCancel()
             }
@@ -807,13 +851,7 @@ final class CaptureOverlayView: NSView {
             cancel.toolTip = "退出 (Esc)"
             bar.addArrangedSubview(cancel)
 
-            let divider = NSView(frame: NSRect(x: 0, y: 0, width: 1, height: 22))
-            divider.wantsLayer = true
-            divider.layer?.backgroundColor = NSColor.white.withAlphaComponent(0.18).cgColor
-            divider.translatesAutoresizingMaskIntoConstraints = false
-            divider.widthAnchor.constraint(equalToConstant: 1).isActive = true
-            divider.heightAnchor.constraint(equalToConstant: 22).isActive = true
-            bar.addArrangedSubview(divider)
+            addBarDivider(to: bar)
 
             let again = makeBarButton(title: "重选", glyph: nil, primary: false) { [weak self] in
                 self?.barReselect()
@@ -823,12 +861,20 @@ final class CaptureOverlayView: NSView {
 
         } else {
         let preferred = AppSettings.shared.afterCaptureAction
-        let editPrimary = preferred == .editor
-        let annotate = makeBarButton(title: "标注", glyph: .edit, primary: editPrimary) { [weak self] in
+
+        let annotate = makeBarButton(title: "标注", glyph: .edit, primary: preferred == .editor) { [weak self] in
             self?.enterInlineAnnotate()
         }
-        annotate.toolTip = "在选区内直接标注（⌘E）"
+        annotate.toolTip = "选区内快速标注（⌘E）"
         bar.addArrangedSubview(annotate)
+
+        let editor = makeBarButton(title: "编辑器", glyph: .edit, primary: false) { [weak self] in
+            self?.commitSelection(.editor)
+        }
+        editor.toolTip = "打开完整编辑窗口（⌘⇧E）"
+        bar.addArrangedSubview(editor)
+
+        addBarDivider(to: bar)
 
         let items: [(String, SnapGlyph, CaptureFinishAction, String)] = [
             ("复制", .copy, .clipboard, "复制到剪贴板（双击选区 / ⌘C）"),
@@ -847,6 +893,8 @@ final class CaptureOverlayView: NSView {
             button.toolTip = tip
             bar.addArrangedSubview(button)
         }
+
+        addBarDivider(to: bar)
 
         let again = makeBarButton(title: "重选", glyph: nil, primary: false) { [weak self] in
             self?.barReselect()
@@ -878,32 +926,79 @@ final class CaptureOverlayView: NSView {
         actionBar = bar
     }
 
+    private func addBarDivider(to bar: NSStackView) {
+        let divider = NSView(frame: NSRect(x: 0, y: 0, width: 1, height: 22))
+        divider.wantsLayer = true
+        divider.layer?.backgroundColor = NSColor.white.withAlphaComponent(0.18).cgColor
+        divider.translatesAutoresizingMaskIntoConstraints = false
+        divider.widthAnchor.constraint(equalToConstant: 1).isActive = true
+        divider.heightAnchor.constraint(equalToConstant: 22).isActive = true
+        bar.addArrangedSubview(divider)
+    }
+
     private func hideActionBar() {
         actionBar?.removeFromSuperview()
         actionBar = nil
     }
 
-    private func makeBarButton(title: String, glyph: SnapGlyph?, primary: Bool, handler: @escaping () -> Void) -> NSButton {
+    private func makeBarButton(title: String, glyph: SnapGlyph?, primary: Bool, compact: Bool = false, handler: @escaping () -> Void) -> NSButton {
         let b = ClosureButton(title: title, handler: handler)
         b.bezelStyle = .inline
         b.isBordered = false
         b.wantsLayer = true
         b.translatesAutoresizingMaskIntoConstraints = false
-        b.layer?.cornerRadius = 8
+        b.layer?.cornerRadius = compact ? 6 : 8
         if #available(macOS 10.15, *) {
             b.layer?.cornerCurve = .continuous
         }
         b.layer?.backgroundColor = (primary ? NSColor.white : NSColor.white.withAlphaComponent(0.10)).cgColor
         b.contentTintColor = primary ? NSColor.black.withAlphaComponent(0.88) : .white
-        b.font = .systemFont(ofSize: 12, weight: .semibold)
-        if let glyph, let img = FlareBrand.menuSymbol(glyph, pointSize: 11) {
+        b.font = .systemFont(ofSize: compact ? 11 : 12, weight: .semibold)
+        let iconSize: CGFloat = compact ? 10 : 11
+        if let glyph, let img = FlareBrand.menuSymbol(glyph, pointSize: iconSize) {
             b.image = img
             b.imagePosition = .imageLeading
             b.imageHugsTitle = true
         }
-        let width: CGFloat = title == "OCR" ? 58 : (title.count >= 2 ? 64 : 52)
+        let width: CGFloat
+        let height: CGFloat
+        if compact {
+            width = title.count >= 3 ? 56 : (title.count >= 2 ? 48 : 40)
+            height = 24
+        } else {
+            width = title.count >= 3 ? 72 : (title == "OCR" ? 58 : (title.count >= 2 ? 64 : 52))
+            height = 28
+        }
         NSLayoutConstraint.activate([
             b.widthAnchor.constraint(equalToConstant: width),
+            b.heightAnchor.constraint(equalToConstant: height)
+        ])
+        return b
+    }
+
+    private func makeAnnotateToolButton(tool: AnnotationTool, selected: Bool, handler: @escaping () -> Void) -> NSButton {
+        let isText = tool == .text
+        let b = ClosureButton(title: isText ? "文字" : "", handler: handler)
+        b.bezelStyle = .inline
+        b.isBordered = false
+        b.wantsLayer = true
+        b.translatesAutoresizingMaskIntoConstraints = false
+        b.layer?.cornerRadius = 6
+        if #available(macOS 10.15, *) {
+            b.layer?.cornerCurve = .continuous
+        }
+        b.layer?.backgroundColor = (selected ? NSColor.white : NSColor.white.withAlphaComponent(0.10)).cgColor
+        b.contentTintColor = selected ? NSColor.black.withAlphaComponent(0.88) : .white
+        if isText {
+            b.font = .systemFont(ofSize: 10, weight: .semibold)
+            b.image = nil
+            b.imagePosition = .noImage
+        } else {
+            b.image = FlareBrand.menuSymbol(tool.glyph, pointSize: 12)
+            b.imagePosition = .imageOnly
+        }
+        NSLayoutConstraint.activate([
+            b.widthAnchor.constraint(equalToConstant: isText ? 36 : 28),
             b.heightAnchor.constraint(equalToConstant: 28)
         ])
         return b
@@ -913,6 +1008,7 @@ final class CaptureOverlayView: NSView {
         exitInlineAnnotate(keepSelection: false)
         hideActionBar()
         frozenSelection = nil
+        clipCropAsWindow = false
         dragSession = nil
         needsDisplay = true
         NSCursor.crosshair.set()
@@ -980,8 +1076,8 @@ final class CaptureOverlayView: NSView {
 
         let bar = NSStackView()
         bar.orientation = .horizontal
-        bar.spacing = 5
-        bar.edgeInsets = NSEdgeInsets(top: 8, left: 10, bottom: 8, right: 10)
+        bar.spacing = 4
+        bar.edgeInsets = NSEdgeInsets(top: 6, left: 8, bottom: 6, right: 8)
         bar.wantsLayer = true
         bar.layer?.backgroundColor = NSColor.black.withAlphaComponent(0.86).cgColor
         bar.layer?.cornerRadius = 12
@@ -992,18 +1088,21 @@ final class CaptureOverlayView: NSView {
         }
 
         let tools: [(AnnotationTool, String)] = [
+            (.select, "选择并调节箭头/形状"),
             (.arrow, "箭头"),
             (.pen, "画笔"),
             (.highlight, "高亮"),
             (.rect, "矩形"),
             (.ellipse, "椭圆"),
+            (.line, "直线"),
             (.blur, "马赛克"),
             (.number, "序号"),
+            (.step, "步骤编号"),
             (.text, "文字")
         ]
         for (tool, tip) in tools {
             let primary = tool == (annotateDocument?.tool ?? .arrow)
-            let button = makeBarButton(title: tool.title, glyph: tool.glyph, primary: primary) { [weak self] in
+            let button = makeAnnotateToolButton(tool: tool, selected: primary) { [weak self] in
                 self?.annotateDocument?.tool = tool
                 if let r = self?.frozenSelection {
                     self?.showAnnotateBar(near: r)
@@ -1015,48 +1114,93 @@ final class CaptureOverlayView: NSView {
             bar.addArrangedSubview(button)
         }
 
-        let divider = NSView(frame: NSRect(x: 0, y: 0, width: 1, height: 22))
-        divider.wantsLayer = true
-        divider.layer?.backgroundColor = NSColor.white.withAlphaComponent(0.18).cgColor
-        divider.translatesAutoresizingMaskIntoConstraints = false
-        divider.widthAnchor.constraint(equalToConstant: 1).isActive = true
-        divider.heightAnchor.constraint(equalToConstant: 22).isActive = true
-        bar.addArrangedSubview(divider)
+        for color in AnnotationStyle.palette {
+            let swatch = ClosureButton(title: "") { [weak self] in
+                self?.annotateDocument?.setColor(color)
+                self?.annotateCanvas?.needsDisplay = true
+            }
+            swatch.bezelStyle = .inline
+            swatch.isBordered = false
+            swatch.wantsLayer = true
+            swatch.layer?.backgroundColor = color.cgColor
+            swatch.layer?.cornerRadius = 6
+            swatch.layer?.borderWidth = 1
+            swatch.layer?.borderColor = NSColor.white.withAlphaComponent(0.35).cgColor
+            swatch.toolTip = color.hexString
+            swatch.translatesAutoresizingMaskIntoConstraints = false
+            NSLayoutConstraint.activate([
+                swatch.widthAnchor.constraint(equalToConstant: 12),
+                swatch.heightAnchor.constraint(equalToConstant: 12)
+            ])
+            bar.addArrangedSubview(swatch)
+        }
 
-        let undo = makeBarButton(title: "撤销", glyph: nil, primary: false) { [weak self] in
+        let widthSlider = ClosureSlider(value: Double(annotateDocument?.style.lineWidth ?? 3), min: 1, max: 20) { [weak self] value in
+            self?.annotateDocument?.setLineWidth(CGFloat(value))
+            self?.annotateCanvas?.needsDisplay = true
+        }
+        widthSlider.toolTip = "画笔 / 箭头粗细"
+        widthSlider.translatesAutoresizingMaskIntoConstraints = false
+        NSLayoutConstraint.activate([
+            widthSlider.widthAnchor.constraint(equalToConstant: 56),
+            widthSlider.heightAnchor.constraint(equalToConstant: 16)
+        ])
+        bar.addArrangedSubview(widthSlider)
+
+        addBarDivider(to: bar)
+
+        let undo = makeBarButton(title: "撤销", glyph: nil, primary: false, compact: true) { [weak self] in
             self?.annotateDocument?.undo()
             self?.annotateCanvas?.needsDisplay = true
         }
         undo.toolTip = "撤销 (⌘Z)"
         bar.addArrangedSubview(undo)
 
-        let copy = makeBarButton(title: "复制", glyph: .copy, primary: true) { [weak self] in
+        let redo = makeBarButton(title: "重做", glyph: nil, primary: false, compact: true) { [weak self] in
+            self?.annotateDocument?.redo()
+            self?.annotateCanvas?.needsDisplay = true
+        }
+        redo.toolTip = "重做 (⌘⇧Z)"
+        bar.addArrangedSubview(redo)
+
+        addBarDivider(to: bar)
+
+        let preferred = AppSettings.shared.afterCaptureAction
+        let copy = makeBarButton(title: "复制", glyph: .copy, primary: preferred == .clipboard, compact: true) { [weak self] in
             self?.finishInlineAnnotate(.clipboard)
         }
         copy.toolTip = "复制标注结果 (⌘C)"
         bar.addArrangedSubview(copy)
 
-        let save = makeBarButton(title: "保存", glyph: .save, primary: false) { [weak self] in
+        let save = makeBarButton(title: "保存", glyph: .save, primary: preferred == .save, compact: true) { [weak self] in
             self?.finishInlineAnnotate(.save)
         }
+        save.toolTip = "保存到文件 (⌘S)"
         bar.addArrangedSubview(save)
 
-        let pin = makeBarButton(title: "钉住", glyph: .pin, primary: false) { [weak self] in
+        let pin = makeBarButton(title: "钉住", glyph: .pin, primary: preferred == .pin, compact: true) { [weak self] in
             self?.finishInlineAnnotate(.pin)
         }
+        pin.toolTip = "钉在屏幕上 (⌘P)"
         bar.addArrangedSubview(pin)
 
-        let done = makeBarButton(title: "完成", glyph: .success, primary: false) { [weak self] in
+        let editor = makeBarButton(title: "编辑器", glyph: .edit, primary: preferred == .editor, compact: true) { [weak self] in
+            self?.finishInlineAnnotate(.editor)
+        }
+        editor.toolTip = "打开完整编辑窗口"
+        bar.addArrangedSubview(editor)
+
+        let done = makeBarButton(title: "完成", glyph: .success, primary: false, compact: true) { [weak self] in
             self?.finishInlineAnnotate(.from(after: AppSettings.shared.afterCaptureAction))
         }
-        done.toolTip = "按默认设置完成"
+        done.toolTip = "按设置默认动作完成（回车）"
         bar.addArrangedSubview(done)
 
         bar.translatesAutoresizingMaskIntoConstraints = false
         addSubview(bar)
         bar.layoutSubtreeIfNeeded()
         let size = bar.fittingSize
-        let barSize = NSSize(width: ceil(size.width), height: max(44, ceil(size.height)))
+        let barSize = NSSize(width: ceil(size.width), height: max(36, ceil(size.height)))
         bar.setFrameSize(barSize)
 
         var origin = NSPoint(x: rect.midX - barSize.width / 2, y: rect.maxY + 12)
@@ -1107,6 +1251,7 @@ final class CaptureOverlayView: NSView {
         hideActionBar()
         dragSession = nil
         frozenSelection = local
+        clipCropAsWindow = true
         needsDisplay = true
         showActionBar(near: local)
         updateCursor(at: point)
@@ -1131,7 +1276,11 @@ final class CaptureOverlayView: NSView {
         ).integral
         crop = crop.intersection(CGRect(x: 0, y: 0, width: captured.image.width, height: captured.image.height))
         guard crop.width > 1, crop.height > 1 else { return nil }
-        return captured.image.cropping(to: crop)
+        guard let image = captured.image.cropping(to: crop) else { return nil }
+        if clipCropAsWindow || mode == .window {
+            return WindowCornerClipper.roundIfNeeded(image, scale: scale)
+        }
+        return image
     }
 }
 
@@ -1150,6 +1299,26 @@ private final class ClosureButton: NSButton {
     required init?(coder: NSCoder) { fatalError() }
 
     @objc private func tap() { handler() }
+}
+
+private final class ClosureSlider: NSSlider {
+    private let onChange: (Double) -> Void
+
+    init(value: Double, min: Double, max: Double, onChange: @escaping (Double) -> Void) {
+        self.onChange = onChange
+        super.init(frame: .zero)
+        minValue = min
+        maxValue = max
+        doubleValue = value
+        target = self
+        action = #selector(changed)
+        controlSize = .small
+        isContinuous = true
+    }
+
+    required init?(coder: NSCoder) { fatalError() }
+
+    @objc private func changed() { onChange(doubleValue) }
 }
 
 extension NSColor {

@@ -59,8 +59,9 @@ final class MainMenuController: NSObject {
             } else if rec.isCountingDown {
                 m.addItem(item("取消倒计时", #selector(stopRecord), key: "", glyph: .close))
             } else {
-                m.addItem(hotItem("全屏录屏", .screen, #selector(startRecordFull)))
-                m.addItem(hotItem("区域录屏", .area, #selector(startRecordArea)))
+                // 与设置中心「屏幕录制」快捷键一致
+                m.addItem(hotItem("全屏录屏", .record, #selector(startRecordFull), glyph: .record))
+                m.addItem(item("区域录屏", #selector(startRecordArea), key: "", glyph: .area))
                 m.addItem(item("立即开始（全屏）", #selector(startRecordNow), key: "", glyph: .play))
             }
             m.addItem(.separator())

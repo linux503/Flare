@@ -31,7 +31,14 @@ final class HotKeyManager {
         installHandler()
     }
 
+    private var isRegistering = false
+
     func registerDefaults() {
+        // AppDelegate 会在 settingsChanged 时再次调用；回写快捷键时避免重入死循环
+        if isRegistering { return }
+        isRegistering = true
+        defer { isRegistering = false }
+
         unregisterAll()
         stopMonitors()
         monitorBindings.removeAll()
@@ -48,16 +55,22 @@ final class HotKeyManager {
         ]
 
         var usedFallbackMonitor = false
+        var didRewriteShortcut = false
+        var conflictToast: String?
         for (id, action) in pairs {
             let shortcut = settings.shortcut(for: action)
+            if CaptureConflict.isSystemScreenshotShortcut(shortcut), conflictToast == nil {
+                conflictToast = CaptureConflict.hotkeyConflictMessage(shortcut: shortcut)
+            }
             if register(id: id, shortcut: shortcut) {
                 continue
             }
 
-            // 系统占用 ⌘⇧3/4/5 时，自动切到 ⌘⌥ 同键位
+            // 系统占用 ⌘⇧3/4/5 时，自动切到 ⌘⌥ 同键位，并同步回设置中心 / 菜单栏
             let alt = HotKeyShortcut(keyCode: shortcut.keyCode, modifiers: HotKeyDefaults.cmdOption)
             if alt != shortcut, register(id: id, shortcut: alt) {
                 settings.setShortcut(alt, for: action, notifyObservers: false)
+                didRewriteShortcut = true
                 log.info("hotkey \(action.rawValue) fell back to \(alt.displayString, privacy: .public)")
                 continue
             }
@@ -65,12 +78,27 @@ final class HotKeyManager {
             monitorBindings.append((shortcut, id))
             usedFallbackMonitor = true
             log.error("RegisterEventHotKey failed for \(action.rawValue) \(shortcut.displayString, privacy: .public)")
+            if conflictToast == nil {
+                conflictToast = CaptureConflict.hotkeyConflictMessage(shortcut: shortcut)
+            }
         }
 
         if usedFallbackMonitor {
             startMonitors()
+        }
+        if let conflictToast {
             DispatchQueue.main.async {
-                ToastController.shared.show("部分快捷键改用备用监听")
+                ToastController.shared.show(conflictToast, duration: 4.0)
+            }
+        } else if usedFallbackMonitor {
+            DispatchQueue.main.async {
+                ToastController.shared.show("部分快捷键改用备用监听", duration: 3.2)
+            }
+        }
+        // 回写后通知 UI（设置中心 / 主菜单）刷新到同一套快捷键
+        if didRewriteShortcut {
+            DispatchQueue.main.async {
+                NotificationCenter.default.post(name: .flareSettingsChanged, object: nil)
             }
         }
     }

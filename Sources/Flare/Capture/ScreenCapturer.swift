@@ -99,12 +99,14 @@ enum ScreenCapturer {
             config.pixelFormat = kCVPixelFormatType_32BGRA
             let image = try await SCScreenshotManager.captureImage(contentFilter: filter, configuration: config)
             let realScale = CGFloat(image.width) / max(scWindow.frame.width, 1)
-            return (image, realScale)
+            let rounded = WindowCornerClipper.roundIfNeeded(image, scale: realScale)
+            return (rounded, realScale)
         }
 
         // 回退：旧 API
         if let image = CGWindowListCreateImage(.null, .optionIncludingWindow, id, [.boundsIgnoreFraming, .bestResolution]) {
-            return (image, NSScreen.main?.backingScaleFactor ?? 2.0)
+            let scale = NSScreen.main?.backingScaleFactor ?? 2.0
+            return (WindowCornerClipper.roundIfNeeded(image, scale: scale), scale)
         }
         throw CaptureError.windowNotFound
     }

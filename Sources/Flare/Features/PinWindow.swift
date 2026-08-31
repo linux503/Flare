@@ -40,13 +40,14 @@ final class PinnedImageWindow: NSObject {
         window.hasShadow = true
         window.level = .floating
         window.collectionBehavior = [.canJoinAllSpaces, .fullScreenAuxiliary]
+        window.isMovable = true
         window.isMovableByWindowBackground = true
         window.minSize = NSSize(width: 100, height: 80)
 
         let root = NSView(frame: NSRect(origin: .zero, size: frameSize))
         root.wantsLayer = true
 
-        imageView = NSImageView(frame: NSRect(origin: .zero, size: frameSize))
+        imageView = PinDragImageView(frame: NSRect(origin: .zero, size: frameSize))
         imageView.image = image
         imageView.imageScaling = .scaleProportionallyUpOrDown
         imageView.autoresizingMask = [.width, .height]
@@ -142,5 +143,30 @@ final class PinnedImageWindow: NSObject {
         if let url = try? ImageExporter.save(image) {
             ToastController.shared.show("已保存：\(url.lastPathComponent)")
         }
+    }
+}
+
+/// 钉住图：拖图像就能移动窗口（普通 NSImageView 会把拖动手势吃掉）
+private final class PinDragImageView: NSImageView {
+    private var lastScreen: NSPoint?
+
+    override var mouseDownCanMoveWindow: Bool { true }
+
+    override func mouseDown(with event: NSEvent) {
+        lastScreen = NSEvent.mouseLocation
+    }
+
+    override func mouseDragged(with event: NSEvent) {
+        guard let window, let last = lastScreen else { return }
+        let now = NSEvent.mouseLocation
+        var origin = window.frame.origin
+        origin.x += now.x - last.x
+        origin.y += now.y - last.y
+        window.setFrameOrigin(origin)
+        lastScreen = now
+    }
+
+    override func mouseUp(with event: NSEvent) {
+        lastScreen = nil
     }
 }

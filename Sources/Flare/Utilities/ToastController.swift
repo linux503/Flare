@@ -10,22 +10,24 @@ final class ToastController {
 
     private init() {}
 
-    func show(_ text: String, on screen: NSScreen? = nil) {
+    func show(_ text: String, on screen: NSScreen? = nil, duration: TimeInterval = 1.7, fontSize: CGFloat = 13) {
         hideWork?.cancel()
 
+        let font = NSFont.systemFont(ofSize: fontSize, weight: .semibold)
         let attrs: [NSAttributedString.Key: Any] = [
-            .font: NSFont.systemFont(ofSize: 13, weight: .semibold),
+            .font: font,
             .foregroundColor: NSColor.white
         ]
         let size = (text as NSString).size(withAttributes: attrs)
-        let padX: CGFloat = 18
-        let padY: CGFloat = 12
+        let padX: CGFloat = fontSize < 13 ? 14 : 18
+        let padY: CGFloat = fontSize < 13 ? 9 : 12
         let rect = NSRect(x: 0, y: 0, width: size.width + padX * 2, height: size.height + padY * 2)
 
         let panel: NSPanel
         if let existing = window {
             panel = existing
             panel.setContentSize(rect.size)
+            label?.font = font
             label?.stringValue = text
             label?.frame = NSRect(x: padX, y: padY - 1, width: size.width, height: size.height)
             if let view = panel.contentView {
@@ -90,6 +92,7 @@ final class ToastController {
             })
         }
         hideWork = work
-        DispatchQueue.main.asyncAfter(deadline: .now() + 1.7, execute: work)
+        let hold = max(1.4, min(duration, 6.0))
+        DispatchQueue.main.asyncAfter(deadline: .now() + hold, execute: work)
     }
 }

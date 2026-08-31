@@ -50,7 +50,7 @@ enum FlareMenu {
         return mi
     }
 
-    /// 绑定全局热键：右侧用系统 keyEquivalent 展示，标题不再塞快捷键文字
+    /// 绑定全局热键：与设置中心同一套 `displayString`，避免菜单栏与设置不一致
     static func hotItem(
         _ title: String,
         actionKey: HotKeyAction,
@@ -60,13 +60,20 @@ enum FlareMenu {
     ) -> NSMenuItem {
         let sc = AppSettings.shared.shortcut(for: actionKey)
         let key = sc.menuKeyEquivalent
-        let mi = NSMenuItem(title: title, action: action, keyEquivalent: key)
-        mi.keyEquivalentModifierMask = key.isEmpty ? [] : sc.nsModifierFlags
+        // 可映射为单字符时用系统右侧快捷键展示；否则把与设置中心相同的文案写进标题
+        let mi: NSMenuItem
+        if sc.isValid, !key.isEmpty {
+            mi = NSMenuItem(title: title, action: action, keyEquivalent: key)
+            mi.keyEquivalentModifierMask = sc.nsModifierFlags
+        } else if sc.isValid {
+            mi = NSMenuItem(title: "\(title)\t\(sc.displayString)", action: action, keyEquivalent: "")
+        } else {
+            mi = NSMenuItem(title: title, action: action, keyEquivalent: "")
+        }
         mi.target = target
         mi.isEnabled = true
         mi.image = FlareBrand.menuSymbol(glyph ?? SnapGlyph.forCapture(actionKey))
-        // 多键名无法映射到 keyEquivalent 时，用 tip 提示
-        if key.isEmpty, sc.isValid {
+        if sc.isValid {
             mi.toolTip = sc.displayString
         }
         return mi

@@ -58,62 +58,73 @@ enum SnapGlyph: String, CaseIterable {
     case toolNumber
     case toolStep
 
-    /// 轮廓为主的精致单色风格（状态类可用 filled）
-    var systemName: String {
+    /// 优先用系统符号；macOS 14–15 没有新符号时自动回退，避免空白图标
+    var systemName: String { symbolCandidates[0] }
+
+    var symbolCandidates: [String] {
         switch self {
-        case .brand: return "camera.aperture"
-        case .area: return "viewfinder"
-        case .window: return "macwindow"
-        case .screen: return "display"
-        case .delay: return "timer"
-        case .longShot: return "arrow.up.and.down.square"
-        case .record: return "record.circle"
-        case .pause: return "pause.circle"
-        case .play: return "play.circle"
-        case .stop: return "stop.circle"
-        case .mic: return "mic"
-        case .history: return "clock.arrow.circlepath"
-        case .settings: return "gearshape"
-        case .documents: return "doc.badge.plus"
-        case .home: return "square.grid.2x2"
-        case .txt: return "doc.text"
-        case .word: return "doc.richtext"
-        case .powerpoint: return "play.rectangle"
-        case .spreadsheet: return "tablecells"
-        case .folder: return "folder"
-        case .permission: return "lock.shield"
-        case .success: return "checkmark.circle.fill"
-        case .warning: return "exclamationmark.circle.fill"
-        case .tip: return "lightbulb"
-        case .trash: return "trash"
-        case .copy: return "doc.on.clipboard"
-        case .edit: return "pencil"
-        case .save: return "square.and.arrow.down"
-        case .pin: return "pin"
-        case .ocr: return "text.viewfinder"
-        case .close: return "xmark"
-        case .plus: return "plus.circle"
-        case .power, .quit: return "power"
-        case .refresh: return "arrow.clockwise"
-        case .relaunch: return "arrow.triangle.2.circlepath"
-        case .undo: return "arrow.uturn.backward"
-        case .redo: return "arrow.uturn.forward"
-        case .stroke: return "pencil.tip"
-        case .link: return "link"
-        case .update: return "arrow.down.circle"
-        case .about: return "info.circle"
-        case .toolSelect: return "arrow.up.left.and.arrow.down.right"
-        case .toolPen: return "pencil.tip"
-        case .toolHighlight: return "highlighter"
-        case .toolArrow: return "arrow.up.right"
-        case .toolLine: return "line.diagonal"
-        case .toolRect: return "rectangle"
-        case .toolEllipse: return "oval"
-        case .toolText: return "textformat"
-        case .toolBlur: return "checkerboard.rectangle"
-        case .toolNumber: return "number.circle"
-        case .toolStep: return "list.number"
+        case .brand: return ["camera.aperture", "camera.viewfinder", "camera"]
+        case .area: return ["viewfinder", "plus.viewfinder", "camera.viewfinder"]
+        case .window: return ["macwindow", "rectangle.on.rectangle", "square.on.square"]
+        case .screen: return ["display", "desktopcomputer"]
+        case .delay: return ["timer"]
+        case .longShot: return ["arrow.up.and.down.square", "arrow.up.arrow.down", "rectangle.split.1x2"]
+        case .record: return ["record.circle", "circle.fill"]
+        case .pause: return ["pause.circle", "pause"]
+        case .play: return ["play.circle", "play.fill"]
+        case .stop: return ["stop.circle", "stop.fill"]
+        case .mic: return ["mic"]
+        case .history: return ["clock.arrow.circlepath", "clock"]
+        case .settings: return ["gearshape", "gear"]
+        case .documents: return ["doc.badge.plus", "doc"]
+        case .home: return ["square.grid.2x2", "square.grid.2x2.fill"]
+        case .txt: return ["doc.text"]
+        case .word: return ["doc.richtext", "doc.text"]
+        case .powerpoint: return ["play.rectangle", "play.rectangle.fill"]
+        case .spreadsheet: return ["tablecells"]
+        case .folder: return ["folder"]
+        case .permission: return ["lock.shield", "lock.fill"]
+        case .success: return ["checkmark.circle.fill", "checkmark.circle"]
+        case .warning: return ["exclamationmark.circle.fill", "exclamationmark.circle"]
+        case .tip: return ["lightbulb"]
+        case .trash: return ["trash"]
+        case .copy: return ["doc.on.clipboard", "doc.on.doc"]
+        case .edit: return ["pencil"]
+        case .save: return ["square.and.arrow.down"]
+        case .pin: return ["pin"]
+        case .ocr: return ["text.viewfinder", "doc.text.magnifyingglass", "text.magnifyingglass", "doc.text"]
+        case .close: return ["xmark"]
+        case .plus: return ["plus.circle"]
+        case .power, .quit: return ["power"]
+        case .refresh: return ["arrow.clockwise"]
+        case .relaunch: return ["arrow.triangle.2.circlepath", "arrow.2.circlepath", "arrow.clockwise"]
+        case .undo: return ["arrow.uturn.backward"]
+        case .redo: return ["arrow.uturn.forward"]
+        case .stroke: return ["pencil.tip", "pencil"]
+        case .link: return ["link"]
+        case .update: return ["arrow.down.circle"]
+        case .about: return ["info.circle"]
+        case .toolSelect: return ["arrow.up.left.and.arrow.down.right", "arrow.up.left.and.down.right.magnifyingglass", "cursorarrow"]
+        case .toolPen: return ["pencil.tip", "pencil"]
+        case .toolHighlight: return ["highlighter", "pencil.tip"]
+        case .toolArrow: return ["arrow.up.right"]
+        case .toolLine: return ["line.diagonal", "minus"]
+        case .toolRect: return ["rectangle"]
+        case .toolEllipse: return ["oval"]
+        case .toolText: return ["textformat"]
+        case .toolBlur: return ["checkerboard.rectangle", "square.grid.3x3", "square.grid.2x2"]
+        case .toolNumber: return ["number.circle", "number"]
+        case .toolStep: return ["list.number", "list.bullet"]
         }
+    }
+
+    func resolvedSystemName() -> String {
+        for name in symbolCandidates {
+            if NSImage(systemSymbolName: name, accessibilityDescription: nil) != nil {
+                return name
+            }
+        }
+        return "circle"
     }
 
     static func forCapture(_ action: HotKeyAction) -> SnapGlyph {
@@ -173,7 +184,7 @@ struct SnapIcon: View {
     }
 
     var body: some View {
-        Image(systemName: glyph.systemName)
+        Image(systemName: glyph.resolvedSystemName())
             .font(.system(size: size.points, weight: weight, design: .default))
             .symbolRenderingMode(.monochrome)
             .foregroundStyle(tint ?? theme.textPrimary.opacity(opacity))
@@ -210,7 +221,7 @@ struct SnapIconWell: View {
 extension FlareBrand {
     /// AppKit / 菜单栏统一模板图标
     static func menuSymbol(_ glyph: SnapGlyph, pointSize: CGFloat = 13) -> NSImage? {
-        menuSymbol(glyph.systemName, pointSize: pointSize)
+        menuSymbol(glyph.resolvedSystemName(), pointSize: pointSize)
     }
 
     static func menuSymbol(_ name: String, pointSize: CGFloat = 13) -> NSImage? {

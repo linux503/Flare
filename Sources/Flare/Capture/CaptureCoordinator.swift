@@ -46,6 +46,7 @@ final class CaptureCoordinator: ObservableObject {
             ToastController.shared.show("请先停止录屏")
             return
         }
+        CaptureConflict.warnBeforeCaptureIfNeeded()
 
         let targetDisplayID = resolveTargetDisplayID()
         isCapturing = true
@@ -76,6 +77,7 @@ final class CaptureCoordinator: ObservableObject {
             ToastController.shared.show("请先停止录屏")
             return
         }
+        CaptureConflict.warnBeforeCaptureIfNeeded()
         let targetDisplayID = resolveTargetDisplayID()
         isCapturing = true
         suppressHomeUntil = Date().addingTimeInterval(Double(seconds) + 4)
@@ -115,6 +117,7 @@ final class CaptureCoordinator: ObservableObject {
             ToastController.shared.show("请先停止录屏")
             return
         }
+        CaptureConflict.warnBeforeCaptureIfNeeded()
 
         isCapturing = true
         hideFlareWindows()
@@ -310,7 +313,12 @@ final class CaptureCoordinator: ObservableObject {
         Task {
             do {
                 let (image, scale) = try await ScreenCapturer.captureWindow(id: id)
-                await MainActor.run { self.finish(with: image, scale: scale) }
+                await MainActor.run {
+                    self.finish(with: image, scale: scale)
+                    if CaptureConflict.isMostlyBlack(image) {
+                        ToastController.shared.show(CaptureConflict.explainBlackWindow(id: id), duration: 4.4)
+                    }
+                }
             } catch {
                 await MainActor.run {
                     self.endCaptureSession(restoreHome: true)
@@ -392,7 +400,7 @@ final class CaptureCoordinator: ObservableObject {
             EditorWindowController.shared.present(image: image)
         case .clipboard:
             ImageExporter.copyToClipboard(image)
-            ToastController.shared.show("已复制到剪贴板")
+            ToastController.shared.show("已复制到剪贴板", fontSize: 11)
         case .save:
             do {
                 let url = try ImageExporter.save(image)

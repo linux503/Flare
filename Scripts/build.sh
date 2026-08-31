@@ -42,6 +42,7 @@ build_arch_main() {
     -framework AVFoundation \
     -framework Carbon \
     -framework CoreGraphics \
+    -framework QuartzCore \
     -framework UniformTypeIdentifiers \
     -o "$out" \
     "${SOURCES[@]}"

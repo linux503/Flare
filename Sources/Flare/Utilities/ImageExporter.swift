@@ -6,6 +6,9 @@ enum ImageExporter {
         let pb = NSPasteboard.general
         pb.clearContents()
         pb.writeObjects([image])
+        if let png = pngData(from: image) {
+            pb.setData(png, forType: .png)
+        }
     }
 
     static func save(_ image: NSImage, to directory: URL? = nil, format: ImageFormat? = nil) throws -> URL {
@@ -23,6 +26,10 @@ enum ImageExporter {
     }
 
     static func write(_ image: NSImage, to url: URL, format: ImageFormat) throws {
+        if format == .png, let data = pngData(from: image) {
+            try data.write(to: url, options: .atomic)
+            return
+        }
         guard let tiff = image.tiffRepresentation,
               let rep = NSBitmapImageRep(data: tiff) else {
             throw ExportError.encodingFailed
@@ -46,6 +53,26 @@ enum ImageExporter {
             throw ExportError.encodingFailed
         }
         try data.write(to: url, options: .atomic)
+    }
+
+    static func pngData(from image: NSImage) -> Data? {
+        guard let cg = cgImagePreservingAlpha(image) else { return nil }
+        let data = NSMutableData()
+        guard let dest = CGImageDestinationCreateWithData(data, UTType.png.identifier as CFString, 1, nil) else {
+            return nil
+        }
+        CGImageDestinationAddImage(dest, cg, nil)
+        guard CGImageDestinationFinalize(dest) else { return nil }
+        return data as Data
+    }
+
+    private static func cgImagePreservingAlpha(_ image: NSImage) -> CGImage? {
+        if let cg = image.cgImage(forProposedRect: nil, context: nil, hints: nil) {
+            return cg
+        }
+        guard let tiff = image.tiffRepresentation,
+              let rep = NSBitmapImageRep(data: tiff) else { return nil }
+        return rep.cgImage
     }
 
     static func nsImage(from cgImage: CGImage, scale: CGFloat = 2.0) -> NSImage {

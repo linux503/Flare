@@ -3,6 +3,23 @@ import Foundation
 
 /// 在线版本检查（拉取官网 / GitHub Pages 的 version.json）
 enum UpdateChecker {
+    /// App Store 分发版不走官网自检更新（由 App Store 负责）
+    static var isMacAppStoreBuild: Bool {
+        #if FLARE_MAS
+        return true
+        #else
+        if Bundle.main.object(forInfoDictionaryKey: "FlareDistribution") as? String == "mas" {
+            return true
+        }
+        if let receipt = Bundle.main.appStoreReceiptURL,
+           FileManager.default.fileExists(atPath: receipt.path),
+           receipt.lastPathComponent == "receipt" {
+            return true
+        }
+        return false
+        #endif
+    }
+
     struct RemoteVersion: Decodable {
         let version: String
         let build: Int?
@@ -27,6 +44,9 @@ enum UpdateChecker {
     }
 
     static func check() async -> CheckResult {
+        if isMacAppStoreBuild {
+            return .upToDate(current: currentVersion)
+        }
         guard let url = URL(string: FlareBrand.updateFeedURL) else {
             return .failed("更新地址无效")
         }
@@ -67,6 +87,13 @@ enum UpdateChecker {
 
     @MainActor
     static func checkAndPrompt(silentIfCurrent: Bool = false) async {
+        if isMacAppStoreBuild {
+            ToastController.shared.show("请在 App Store 检查更新")
+            if let url = URL(string: "macappstore://showUpdatesPage") {
+                NSWorkspace.shared.open(url)
+            }
+            return
+        }
         ToastController.shared.show("正在检查更新…")
         let result = await check()
         switch result {

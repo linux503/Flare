@@ -139,8 +139,9 @@ final class StatusBarController: NSObject {
         } else if rec.isCountingDown {
             menu.addItem(item("取消倒计时", .close, "", [], #selector(stopRecord)))
         } else {
-            menu.addItem(hot("全屏录屏", .screen, #selector(startRecordFull)))
-            menu.addItem(hot("区域录屏", .area, #selector(startRecordArea)))
+            // 录屏启动项共用「屏幕录制」快捷键（与设置中心一致），不再误标区域/全屏截图键
+            menu.addItem(hot("全屏录屏", .record, #selector(startRecordFull), glyph: .record))
+            menu.addItem(item("区域录屏", .area, "", [], #selector(startRecordArea)))
             menu.addItem(item("立即开始（全屏）", .play, "", [], #selector(startRecordNow)))
         }
         menu.addItem(item("打开录屏文件夹", .folder, "", [], #selector(openRecordFolder)))

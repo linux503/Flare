@@ -289,6 +289,18 @@ struct SettingsPane: View {
         .onReceive(NotificationCenter.default.publisher(for: .flarePermissionChanged)) { _ in
             refreshPermissionLabel()
         }
+        .onReceive(NotificationCenter.default.publisher(for: .flareSettingsChanged)) { _ in
+            reloadShortcuts()
+            afterAction = AppSettings.shared.afterCaptureAction
+            format = AppSettings.shared.imageFormat
+            copyClipboard = AppSettings.shared.copyToClipboard
+            playSound = AppSettings.shared.playSound
+            showMagnifier = AppSettings.shared.showMagnifier
+            historyRetention = AppSettings.shared.historyRetention
+            savePath = AppSettings.shared.saveDirectory.path
+            documentPath = AppSettings.shared.documentDirectory.path
+            showInDock = AppSettings.shared.showInDock
+        }
     }
 
     private func openURL(_ string: String) {
