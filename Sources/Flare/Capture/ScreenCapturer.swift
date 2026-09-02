@@ -10,8 +10,33 @@ struct CapturedFrame {
 }
 
 enum ScreenCapturer {
+    /// ScreenCaptureKit 偶发失败（唤醒/切换空间后），短暂重试可提高成功率。
+    private static func withRetry<T>(
+        maxAttempts: Int = 3,
+        _ work: () async throws -> T
+    ) async throws -> T {
+        var lastError: Error?
+        for attempt in 0..<maxAttempts {
+            if attempt > 0 {
+                try await Task.sleep(nanoseconds: UInt64(attempt) * 180_000_000)
+            }
+            do {
+                return try await work()
+            } catch {
+                lastError = error
+            }
+        }
+        throw lastError ?? CaptureError.noDisplay
+    }
+
+    private static func shareableContent() async throws -> SCShareableContent {
+        try await withRetry {
+            try await SCShareableContent.excludingDesktopWindows(false, onScreenWindowsOnly: true)
+        }
+    }
+
     static func captureAllDisplays() async throws -> [CapturedFrame] {
-        let content = try await SCShareableContent.excludingDesktopWindows(false, onScreenWindowsOnly: true)
+        let content = try await shareableContent()
         var frames: [CapturedFrame] = []
 
         for display in content.displays {
@@ -36,7 +61,9 @@ enum ScreenCapturer {
             config.pixelFormat = kCVPixelFormatType_32BGRA
             config.colorSpaceName = CGColorSpace.sRGB
 
-            let cgImage = try await SCScreenshotManager.captureImage(contentFilter: filter, configuration: config)
+            let cgImage = try await withRetry {
+                try await SCScreenshotManager.captureImage(contentFilter: filter, configuration: config)
+            }
             let realScale = CGFloat(cgImage.width) / max(pointBounds.width, 1)
             frames.append(CapturedFrame(image: cgImage, displayID: display.displayID, bounds: pointBounds, scale: realScale))
         }
@@ -49,7 +76,7 @@ enum ScreenCapturer {
         _ displayID: CGDirectDisplayID,
         excludeSelf: Bool = false
     ) async throws -> CapturedFrame {
-        let content = try await SCShareableContent.excludingDesktopWindows(false, onScreenWindowsOnly: true)
+        let content = try await shareableContent()
         guard let display = content.displays.first(where: { $0.displayID == displayID }) ?? content.displays.first else {
             throw CaptureError.noDisplay
         }
@@ -79,13 +106,15 @@ enum ScreenCapturer {
         config.pixelFormat = kCVPixelFormatType_32BGRA
         config.colorSpaceName = CGColorSpace.sRGB
 
-        let cgImage = try await SCScreenshotManager.captureImage(contentFilter: filter, configuration: config)
+        let cgImage = try await withRetry {
+            try await SCScreenshotManager.captureImage(contentFilter: filter, configuration: config)
+        }
         let realScale = CGFloat(cgImage.width) / max(pointBounds.width, 1)
         return CapturedFrame(image: cgImage, displayID: display.displayID, bounds: pointBounds, scale: realScale)
     }
 
     static func captureWindow(id: CGWindowID) async throws -> (CGImage, CGFloat) {
-        let content = try await SCShareableContent.excludingDesktopWindows(false, onScreenWindowsOnly: true)
+        let content = try await shareableContent()
         if let scWindow = content.windows.first(where: { $0.windowID == id }) {
             let filter = SCContentFilter(desktopIndependentWindow: scWindow)
             let scale = NSScreen.main?.backingScaleFactor ?? 2.0
@@ -97,7 +126,9 @@ enum ScreenCapturer {
             config.showsCursor = false
             config.scalesToFit = false
             config.pixelFormat = kCVPixelFormatType_32BGRA
-            let image = try await SCScreenshotManager.captureImage(contentFilter: filter, configuration: config)
+            let image = try await withRetry {
+                try await SCScreenshotManager.captureImage(contentFilter: filter, configuration: config)
+            }
             let realScale = CGFloat(image.width) / max(scWindow.frame.width, 1)
             let rounded = WindowCornerClipper.roundIfNeeded(image, scale: realScale)
             return (rounded, realScale)

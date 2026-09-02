@@ -9,6 +9,7 @@ final class CaptureCoordinator: ObservableObject {
     private var overlayControllers: [CaptureOverlayController] = []
     private var hiddenWindows: [NSWindow] = []
     private var suppressHomeUntil = Date.distantPast
+    private var longCaptureInProgress = false
 
     /// 截图层关掉后系统可能触发 reopen，短时间内不要弹出主界面
     var shouldSuppressHomeReveal: Bool {
@@ -41,7 +42,7 @@ final class CaptureCoordinator: ObservableObject {
 
     func startFullScreenCapture() {
         guard Permissions.prepareForCapture() else { return }
-        guard !isCapturing else { return }
+        guard ensureCanStartCapture() else { return }
         if ScreenRecorder.shared.isRecording {
             ToastController.shared.show("请先停止录屏")
             return
@@ -72,7 +73,7 @@ final class CaptureCoordinator: ObservableObject {
 
     func startDelayedCapture(seconds: Int) {
         guard Permissions.prepareForCapture() else { return }
-        guard !isCapturing else { return }
+        guard ensureCanStartCapture() else { return }
         if ScreenRecorder.shared.isRecording {
             ToastController.shared.show("请先停止录屏")
             return
@@ -112,7 +113,7 @@ final class CaptureCoordinator: ObservableObject {
 
     private func beginCapture(_ work: @escaping () async throws -> Void) {
         guard Permissions.prepareForCapture() else { return }
-        guard !isCapturing else { return }
+        guard ensureCanStartCapture() else { return }
         if ScreenRecorder.shared.isRecording {
             ToastController.shared.show("请先停止录屏")
             return
@@ -134,6 +135,19 @@ final class CaptureCoordinator: ObservableObject {
                 }
             }
         }
+    }
+
+    /// 若上次截图状态卡住（无 overlay、非长截图），自动恢复；否则提示用户 Esc 取消。
+    @discardableResult
+    private func ensureCanStartCapture() -> Bool {
+        guard isCapturing else { return true }
+        if overlayControllers.isEmpty && !longCaptureInProgress {
+            endCaptureSession(restoreHome: true)
+            ToastController.shared.show("上次截图未完成，已自动恢复")
+            return true
+        }
+        ToastController.shared.show("截图进行中，按 Esc 取消")
+        return false
     }
 
     private func captureActiveDisplay() async throws -> CapturedFrame {
@@ -275,6 +289,7 @@ final class CaptureCoordinator: ObservableObject {
             return
         }
         ToastController.shared.show("正在长截图…按 Esc 取消")
+        longCaptureInProgress = true
         Task {
             do {
                 let cgImage = try await LongScreenshot.capture(
@@ -290,6 +305,7 @@ final class CaptureCoordinator: ObservableObject {
                 }
             } catch {
                 await MainActor.run {
+                    self.longCaptureInProgress = false
                     self.endCaptureSession(restoreHome: true)
                     if let err = error as? LongScreenshot.Error {
                         switch err {
@@ -350,11 +366,13 @@ final class CaptureCoordinator: ObservableObject {
 
     private func endCaptureSession(restoreHome: Bool) {
         isCapturing = false
+        longCaptureInProgress = false
         suppressHomeUntil = Date().addingTimeInterval(1.5)
         restoreFlareWindows(includingHome: restoreHome)
     }
 
     private func finish(with cgImage: CGImage, scale: CGFloat, action: CaptureFinishAction = .useSettings) {
+        longCaptureInProgress = false
         endCaptureSession(restoreHome: false)
         SoundPlayer.playShutter()
         let image = ImageExporter.nsImage(from: cgImage, scale: scale)
