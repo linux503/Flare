@@ -1774,3 +1774,9 @@ body.is-pointer .cursor-orb { opacity: 1; }
     color: var(--ink);
   }
 }
+
+
+/* homepage refine */
+html { text-rendering: optimizeLegibility; }
+h1, .hero h1, .hero-title { text-wrap: balance; letter-spacing: -0.03em; }
+nav, .site-header, .topbar { backdrop-filter: blur(18px); }
