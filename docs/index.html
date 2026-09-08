@@ -32,7 +32,7 @@
   <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@500;600;700;800&family=Noto+Sans+SC:wght@400;500;600;700&family=Noto+Serif+SC:wght@600;700&display=swap" rel="stylesheet" />
   <link rel="alternate" hreflang="zh-Hans" href="https://linux503.github.io/Flare/?lang=zh" />
   <link rel="alternate" hreflang="en" href="https://linux503.github.io/Flare/?lang=en" />
-  <link rel="stylesheet" href="styles.css?v=41" />
+  <link rel="stylesheet" href="styles.css?v=42" />
   <link rel="stylesheet" href="more-apps.css?v=13" />
   <meta name="twitter:image:alt" content="Flare 官网首页：截图、录屏、一键新建文档" />
   <meta property="og:image:secure_url" content="https://linux503.github.io/Flare/og-home.jpg?v=15" />
@@ -142,7 +142,13 @@
               </a>
             </div>
           </details>
-          <button type="button" class="lang-switch" data-lang-toggle data-i18n-aria="lang.aria" aria-label="语言">EN</button>
+          <button type="button" class="lang-switch" data-lang-toggle data-lang="zh" data-i18n-aria="lang.aria" aria-label="语言">
+            <span class="lang-track" aria-hidden="true">
+              <span class="lang-thumb"></span>
+              <span class="lang-opt" data-side="zh">中</span>
+              <span class="lang-opt" data-side="en">EN</span>
+            </span>
+          </button>
           <a class="pill" data-dl-main href="./downloads/Flare-Pro-1.3.19-Universal.dmg" download data-i18n-aria="dl.pillAria" aria-label="下载 Flare Pro">
             <svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M12 3a1 1 0 0 1 1 1v8.6l2.3-2.3a1 1 0 1 1 1.4 1.4l-4 4a1 1 0 0 1-1.4 0l-4-4a1 1 0 1 1 1.4-1.4L11 12.6V4a1 1 0 0 1 1-1ZM5 18a1 1 0 0 1 1-1h12a1 1 0 1 1 0 2H6a1 1 0 0 1-1-1Z"/></svg>
             <span data-i18n="dl.pill">下载</span>
@@ -501,7 +507,7 @@
     </div>
   </footer>
 
-  <script src="i18n.js?v=8" defer></script>
+  <script src="i18n.js?v=9" defer></script>
   <script src="site.js?v=24" defer></script>
   <script src="more-apps.js?v=13" defer></script>
 </body>

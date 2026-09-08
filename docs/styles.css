@@ -406,21 +406,61 @@ body::before {
   border: 0;
   cursor: pointer;
   font: inherit;
-  font-size: 12px;
-  font-weight: 700;
-  letter-spacing: 0.06em;
-  padding: 8px 12px;
-  min-width: 44px;
+  padding: 0;
+  background: transparent;
   border-radius: 999px;
-  color: var(--nav-text);
-  background: rgba(12, 26, 20, 0.045);
-  box-shadow: inset 0 0 0 1px rgba(12, 26, 20, 0.05);
-  transition: color 0.2s ease, background 0.2s ease, box-shadow 0.2s ease;
+  transition: transform 0.2s ease;
 }
-.lang-switch:hover {
-  color: var(--nav-hover);
-  background: #fff;
-  box-shadow: 0 6px 16px rgba(12, 26, 20, 0.08);
+.lang-switch:hover { transform: translateY(-1px); }
+.lang-switch:focus-visible {
+  outline: 2px solid rgba(13, 122, 88, 0.45);
+  outline-offset: 3px;
+}
+.lang-track {
+  position: relative;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  align-items: center;
+  width: 72px;
+  height: 34px;
+  padding: 3px;
+  border-radius: 999px;
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.92), rgba(236, 245, 240, 0.88));
+  box-shadow:
+    inset 0 0 0 1px rgba(12, 26, 20, 0.08),
+    0 1px 2px rgba(12, 26, 20, 0.04);
+}
+.lang-thumb {
+  position: absolute;
+  top: 3px;
+  left: 3px;
+  width: calc(50% - 3px);
+  height: calc(100% - 6px);
+  border-radius: 999px;
+  background: linear-gradient(180deg, #12966d, #0d7a58);
+  box-shadow: 0 4px 12px rgba(13, 122, 88, 0.28);
+  transition: transform 0.28s cubic-bezier(0.22, 1, 0.36, 1);
+  z-index: 0;
+}
+.lang-switch[data-lang="en"] .lang-thumb {
+  transform: translateX(100%);
+}
+.lang-opt {
+  position: relative;
+  z-index: 1;
+  display: grid;
+  place-items: center;
+  height: 100%;
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  color: rgba(12, 26, 20, 0.42);
+  transition: color 0.2s ease;
+  user-select: none;
+}
+.lang-switch[data-lang="zh"] .lang-opt[data-side="zh"],
+.lang-switch[data-lang="en"] .lang-opt[data-side="en"] {
+  color: #fff;
 }
 
 .hero {
@@ -1942,11 +1982,11 @@ body::before {
     border-radius: 20px;
   }
   .brand-text { display: none; }
-  .lang-switch {
-    padding: 8px 10px;
-    min-height: 36px;
-    font-size: 11px;
+  .lang-track {
+    width: 66px;
+    height: 32px;
   }
+  .lang-opt { font-size: 10px; }
   .site-header .pill {
     padding: 8px 12px;
     font-size: 13px;

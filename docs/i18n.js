@@ -360,7 +360,7 @@
     });
 
     document.querySelectorAll("[data-lang-toggle]").forEach((btn) => {
-      btn.textContent = lang === "en" ? "中文" : "EN";
+      btn.setAttribute("data-lang", lang);
     });
     try {
       localStorage.setItem("flare-lang", lang);
