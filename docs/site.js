@@ -28,11 +28,26 @@
 
   let catalog = { ...defaults };
   let current = "mac";
+  let releaseMeta = null;
 
   const t = (key, fallback) => {
     const dict = window.__flareI18n;
     if (dict && dict[key]) return dict[key];
     return fallback;
+  };
+
+  const escapeHtml = (text) => String(text).replace(/[<>&]/g, (c) => ({ "<": "&lt;", ">": "&gt;", "&": "&amp;" }[c]));
+
+  const renderChangelog = () => {
+    if (!releaseMeta) return;
+    const lang = document.documentElement.lang === "en" ? "en" : "zh";
+    const items = (lang === "en" && Array.isArray(releaseMeta.changelogEn) && releaseMeta.changelogEn.length)
+      ? releaseMeta.changelogEn
+      : (Array.isArray(releaseMeta.changelog) ? releaseMeta.changelog : []);
+    const list = document.querySelector("[data-changelog]");
+    if (list && items.length) {
+      list.innerHTML = items.map((text) => `<li>${escapeHtml(text)}</li>`).join("");
+    }
   };
 
   const titleFor = (os) => {
@@ -79,6 +94,13 @@
       document.querySelectorAll("[data-app-version]").forEach((el) => {
         el.textContent = `v${data.version}`;
       });
+      if (data.publishedAt) {
+        document.querySelectorAll("[data-published-at]").forEach((el) => {
+          el.textContent = data.publishedAt;
+        });
+      }
+      releaseMeta = data;
+      renderChangelog();
       const dmg = data.downloadURL
         || `./downloads/Flare-Pro-${data.version}-Universal.dmg`;
       const win = data.windowsURL
@@ -122,7 +144,10 @@
     });
   });
 
-  window.addEventListener("flare:lang", () => applyOs(current));
+  window.addEventListener("flare:lang", () => {
+    applyOs(current);
+    renderChangelog();
+  });
 
   const reduce = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
   const reveal = () => {
@@ -178,7 +203,7 @@
     if (e.key === "Escape") closeNav();
   });
 
-  const sections = ["highlights", "platforms", "shot", "rec", "evidence", "annotate", "docs", "start", "get"]
+  const sections = ["highlights", "platforms", "whats-new", "shot", "rec", "evidence", "annotate", "docs", "start", "get"]
     .map((id) => document.getElementById(id))
     .filter(Boolean);
   const linkOf = (id) => {
