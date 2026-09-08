@@ -183,47 +183,28 @@
   const closeNav = () => {
     header?.classList.remove("nav-open");
     toggle?.setAttribute("aria-expanded", "false");
-    document.querySelectorAll(".nav-drop[open]").forEach((el) => {
-      el.removeAttribute("open");
-    });
   };
   toggle?.addEventListener("click", () => {
     const open = header.classList.toggle("nav-open");
     toggle.setAttribute("aria-expanded", open ? "true" : "false");
   });
-  document.querySelectorAll(".nav-links a, .nav-drop-panel a").forEach((a) => {
+  document.querySelectorAll(".nav-links a").forEach((a) => {
     a.addEventListener("click", closeNav);
-  });
-  document.addEventListener("click", (e) => {
-    document.querySelectorAll(".nav-drop[open]").forEach((drop) => {
-      if (!drop.contains(e.target)) drop.removeAttribute("open");
-    });
   });
   window.addEventListener("keydown", (e) => {
     if (e.key === "Escape") closeNav();
   });
 
-  const sections = ["highlights", "platforms", "whats-new", "shot", "rec", "evidence", "annotate", "docs", "start", "get"]
+  const sections = ["shot", "rec", "evidence", "whats-new", "get"]
     .map((id) => document.getElementById(id))
     .filter(Boolean);
-  const linkOf = (id) => {
-    const direct = document.querySelector(`.nav-links > a[href="#${id}"]`);
-    if (direct) return direct;
-    if (["shot", "rec", "evidence", "annotate", "docs"].includes(id)) {
-      return document.querySelector(".nav-drop > summary");
-    }
-    return null;
-  };
   if (sections.length) {
     const spy = new IntersectionObserver((entries) => {
       entries.forEach((entry) => {
         if (!entry.isIntersecting) return;
         document.querySelectorAll(".nav-links > a").forEach((a) => a.classList.remove("is-on"));
-        document.querySelectorAll(".nav-drop").forEach((d) => d.classList.remove("is-on"));
-        const mark = linkOf(entry.target.id);
-        if (!mark) return;
-        if (mark.tagName === "SUMMARY") mark.parentElement?.classList.add("is-on");
-        else mark.classList.add("is-on");
+        const mark = document.querySelector(`.nav-links > a[href="#${entry.target.id}"]`);
+        mark?.classList.add("is-on");
       });
     }, { rootMargin: "-40% 0px -50% 0px", threshold: 0.01 });
     sections.forEach((el) => spy.observe(el));
