@@ -516,13 +516,162 @@ body.is-pointer .cursor-orb { opacity: 1; }
   50% { box-shadow: 0 8px 22px rgba(5, 150, 105, 0.22), 0 0 0 6px rgba(5, 150, 105, 0.06); }
 }
 .hero-actions,
-.hero-dls {
+.dl-dock {
   display: flex;
   flex-direction: column;
-  gap: 10px;
+  gap: 12px;
   margin-top: 36px;
   width: 100%;
-  max-width: 28rem;
+  max-width: 26rem;
+}
+.dl-tabs {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 4px;
+  padding: 4px;
+  border-radius: 16px;
+  background: rgba(255, 255, 255, 0.72);
+  border: 1px solid var(--line);
+  box-shadow: 0 8px 22px rgba(16, 24, 22, 0.04);
+}
+.dl-tabs button {
+  appearance: none;
+  border: 0;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  min-height: 40px;
+  padding: 8px 6px;
+  border-radius: 12px;
+  background: transparent;
+  color: var(--muted);
+  font: inherit;
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  transition: background 0.2s ease, color 0.2s ease, box-shadow 0.2s ease;
+}
+.dl-tabs button svg {
+  width: 14px;
+  height: 14px;
+  flex: 0 0 14px;
+  opacity: 0.75;
+}
+.dl-tabs button:hover {
+  color: var(--ink);
+  background: rgba(16, 24, 22, 0.04);
+}
+.dl-tabs button.is-on {
+  color: var(--ink);
+  background: #fff;
+  box-shadow: 0 6px 16px rgba(16, 24, 22, 0.08);
+}
+.dl-tabs button.is-on svg { opacity: 1; }
+.dl-main {
+  position: relative;
+  overflow: hidden;
+  display: grid;
+  grid-template-columns: 52px minmax(0, 1fr) auto;
+  align-items: center;
+  column-gap: 14px;
+  min-height: 76px;
+  padding: 12px 14px 12px 12px;
+  border-radius: 20px;
+  text-decoration: none;
+  color: #fff;
+  isolation: isolate;
+  background: linear-gradient(180deg, #148a66 0%, #0c6b4d 100%);
+  border: 1px solid transparent;
+  box-shadow: 0 16px 34px rgba(12, 107, 77, 0.28);
+  transition: transform 0.22s var(--ease), box-shadow 0.22s ease, background 0.22s ease;
+  animation: dlIn 0.7s var(--ease) both;
+}
+.dl-main::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(105deg, transparent 40%, rgba(255,255,255,0.16) 50%, transparent 60%);
+  transform: translateX(-120%);
+  pointer-events: none;
+}
+.dl-main:hover {
+  transform: translateY(-2px);
+  background: linear-gradient(180deg, #17956e 0%, #0d7454 100%);
+  box-shadow: 0 20px 40px rgba(12, 107, 77, 0.34);
+}
+.dl-main:hover::before {
+  transform: translateX(120%);
+  transition: transform 0.55s ease;
+}
+.dl-main[data-os="win"] {
+  background: linear-gradient(180deg, #3b82f6 0%, #1d4ed8 100%);
+  box-shadow: 0 16px 34px rgba(37, 99, 235, 0.28);
+}
+.dl-main[data-os="win"]:hover {
+  background: linear-gradient(180deg, #60a5fa 0%, #2563eb 100%);
+  box-shadow: 0 20px 40px rgba(37, 99, 235, 0.34);
+}
+.dl-main[data-os="android"] {
+  background: linear-gradient(180deg, #14b8a6 0%, #0f766e 100%);
+  box-shadow: 0 16px 34px rgba(13, 148, 136, 0.28);
+}
+.dl-main[data-os="android"]:hover {
+  background: linear-gradient(180deg, #2dd4bf 0%, #0d9488 100%);
+  box-shadow: 0 20px 40px rgba(13, 148, 136, 0.34);
+}
+.dl-main-mark {
+  width: 52px;
+  height: 52px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 16px;
+  background: rgba(255, 255, 255, 0.14);
+}
+.dl-main-mark svg {
+  width: 26px;
+  height: 26px;
+}
+.dl-main-copy {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  min-width: 0;
+}
+.dl-main-copy strong {
+  font-family: var(--display);
+  font-size: 16px;
+  font-weight: 750;
+  letter-spacing: -0.03em;
+  line-height: 1.15;
+}
+.dl-main-copy em {
+  font-style: normal;
+  font-size: 12px;
+  font-weight: 600;
+  opacity: 0.78;
+  letter-spacing: 0.01em;
+}
+.dl-main-go {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 64px;
+  padding: 10px 14px;
+  border-radius: 999px;
+  font-size: 13px;
+  font-weight: 750;
+  background: rgba(255, 255, 255, 0.16);
+  letter-spacing: 0.02em;
+}
+.dl-main:hover .dl-main-go { transform: translateX(1px); }
+.dl-hint {
+  margin: 0;
+  font-size: 12px;
+  color: var(--faint);
+  letter-spacing: 0.01em;
 }
 .highlights {
   width: min(100%, calc(var(--max) + var(--pad) * 2));
@@ -565,163 +714,10 @@ body.is-pointer .cursor-orb { opacity: 1; }
   font-size: 13px;
   line-height: 1.65;
 }
-.dl-btn {
-  --dl: var(--green);
-  position: relative;
-  overflow: hidden;
-  display: grid;
-  grid-template-columns: 44px minmax(0, 1fr) auto;
-  align-items: center;
-  column-gap: 12px;
-  min-width: 0;
-  width: 100%;
-  min-height: 64px;
-  padding: 8px 10px 8px 8px;
-  border-radius: 18px;
-  text-decoration: none;
-  color: var(--ink);
-  isolation: isolate;
-  background: rgba(255, 255, 255, 0.78);
-  border: 1px solid var(--line);
-  box-shadow: 0 8px 24px rgba(16, 24, 22, 0.04);
-  animation: dlIn 0.7s var(--ease) both;
-  transition: transform 0.22s var(--ease), box-shadow 0.22s ease, border-color 0.22s ease, background 0.22s ease;
-}
-.dl-btn:nth-child(1) { animation-delay: 0.14s; }
-.dl-btn:nth-child(2) { animation-delay: 0.22s; }
-.dl-btn:nth-child(3) { animation-delay: 0.3s; }
 @keyframes dlIn {
   from { opacity: 0; transform: translateY(10px); }
   to { opacity: 1; transform: none; }
 }
-.dl-btn::before {
-  content: "";
-  position: absolute;
-  inset: 0;
-  background: linear-gradient(105deg, transparent 40%, rgba(255,255,255,0.16) 50%, transparent 60%);
-  transform: translateX(-120%);
-  pointer-events: none;
-}
-.dl-btn:hover::before { transform: translateX(120%); transition: transform 0.55s ease; }
-.dl-btn:hover {
-  transform: translateY(-2px);
-  border-color: rgba(16, 24, 22, 0.14);
-  box-shadow: 0 16px 36px rgba(16, 24, 22, 0.08);
-}
-.dl-btn.mac {
-  --dl: var(--green);
-  min-height: 76px;
-  padding-block: 10px;
-  background: linear-gradient(180deg, #148a66 0%, #0c6b4d 100%);
-  color: #fff;
-  border-color: transparent;
-  box-shadow: 0 16px 34px rgba(12, 107, 77, 0.28);
-}
-.dl-btn.mac:hover { background: linear-gradient(180deg, #17956e 0%, #0d7454 100%); }
-.dl-btn.win,
-.dl-btn.android {
-  background: rgba(255, 255, 255, 0.82);
-  color: var(--ink);
-}
-.dl-btn.is-you {
-  box-shadow: 0 0 0 2px color-mix(in srgb, var(--dl) 35%, transparent), 0 14px 32px rgba(16, 24, 22, 0.08);
-}
-.dl-btn.mac.is-you { box-shadow: 0 0 0 2px rgba(52, 211, 153, 0.45), 0 16px 36px rgba(16, 24, 22, 0.2); }
-.dl-ico {
-  width: 44px;
-  height: 44px;
-  display: grid;
-  place-items: center;
-  border-radius: 14px;
-  background: rgba(255, 255, 255, 0.1);
-  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.08);
-  color: inherit;
-}
-.dl-btn.win .dl-ico {
-  background: var(--win-soft);
-  color: var(--win);
-  box-shadow: none;
-}
-.dl-btn.android .dl-ico {
-  background: var(--android-soft);
-  color: var(--android);
-  box-shadow: none;
-}
-.dl-ico svg {
-  width: 22px;
-  height: 22px;
-  display: block;
-}
-.dl-copy {
-  display: flex;
-  flex-direction: column;
-  justify-content: center;
-  gap: 3px;
-  min-width: 0;
-}
-.dl-copy strong {
-  font-family: var(--display);
-  font-size: 15px;
-  font-weight: 700;
-  letter-spacing: -0.03em;
-  line-height: 1.15;
-}
-.dl-copy em {
-  font-style: normal;
-  font-size: 12px;
-  font-weight: 600;
-  opacity: 0.72;
-  letter-spacing: 0.01em;
-}
-.dl-meta {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  flex-shrink: 0;
-}
-.dl-for {
-  display: none;
-  padding: 3px 8px;
-  border-radius: 999px;
-  font-size: 10px;
-  font-weight: 700;
-  letter-spacing: 0.04em;
-  background: rgba(52, 211, 153, 0.18);
-  color: #6ee7b7;
-}
-.dl-btn.win .dl-for,
-.dl-btn.android .dl-for {
-  background: var(--green-soft);
-  color: var(--green);
-}
-.dl-btn.is-you .dl-for { display: inline-flex; }
-.dl-btn .dl-ver {
-  margin: 0;
-  font-size: 11px;
-  font-weight: 700;
-  letter-spacing: 0.04em;
-  opacity: 0.62;
-  background: none;
-  padding: 0;
-  color: inherit;
-}
-.dl-go {
-  display: inline-flex;
-  align-items: center;
-  padding: 7px 12px;
-  border-radius: 999px;
-  font-size: 12px;
-  font-weight: 700;
-  letter-spacing: 0.02em;
-  background: rgba(255, 255, 255, 0.14);
-  color: inherit;
-}
-.dl-btn.win .dl-go,
-.dl-btn.android .dl-go {
-  background: var(--ink);
-  color: #fff;
-}
-.dl-btn:hover .dl-go { transform: translateX(1px); }
 .os-kicker {
   margin: 0;
   font-family: var(--display);
@@ -730,6 +726,13 @@ body.is-pointer .cursor-orb { opacity: 1; }
   letter-spacing: 0.1em;
   text-transform: uppercase;
   color: var(--green);
+}
+.platform-card .dl-ver {
+  margin-top: 2px;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  opacity: 0.7;
 }
 .dl-stack {
   display: flex;
@@ -1589,12 +1592,14 @@ body.is-pointer .cursor-orb { opacity: 1; }
 .links {
   display: flex;
   flex-wrap: wrap;
+  align-items: center;
   gap: 14px;
 }
 .links a {
   color: var(--muted);
   text-decoration: none;
   font-size: 13px;
+  font-weight: 600;
   background-image: linear-gradient(currentColor, currentColor);
   background-size: 0 1px;
   background-position: 0 100%;
@@ -1604,6 +1609,12 @@ body.is-pointer .cursor-orb { opacity: 1; }
 .links a:hover {
   color: var(--ink);
   background-size: 100% 1px;
+}
+.footer-ver {
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  color: var(--faint);
 }
 
 [data-reveal] {
@@ -1646,7 +1657,8 @@ body.is-pointer .cursor-orb { opacity: 1; }
     padding: 28px var(--pad) 48px;
     gap: 28px;
   }
-  .hero-dls { max-width: none; }
+  .hero-dls,
+  .dl-dock { max-width: none; }
   .os-lead { min-height: 0; }
   .showcase { order: -1; }
   .nav-toggle { display: inline-flex; }
@@ -1742,8 +1754,19 @@ body.is-pointer .cursor-orb { opacity: 1; }
   :root { --pad: 18px; }
   .hero h1 { font-size: clamp(34px, 10vw, 46px); }
   .subtitle { font-size: 15px; }
-  .hero-dls { max-width: none; }
-  .dl-btn { min-width: 0; width: 100%; }
+  .hero-dls,
+  .dl-dock { max-width: none; }
+  .dl-tabs button span { display: none; }
+  .dl-tabs button { gap: 0; }
+  .dl-main {
+    grid-template-columns: 48px minmax(0, 1fr);
+    row-gap: 10px;
+  }
+  .dl-main-go {
+    grid-column: 1 / -1;
+    width: 100%;
+    min-height: 42px;
+  }
   .switcher {
     grid-template-columns: repeat(3, minmax(0, 1fr));
     gap: 4px;
@@ -1779,7 +1802,7 @@ body.is-pointer .cursor-orb { opacity: 1; }
     -webkit-text-fill-color: unset;
     color: var(--ink);
   }
-  .dl-btn:hover,
+  .dl-main:hover,
   .os-strip article:hover,
   .steps li:hover,
   .platform-card:hover,
@@ -1806,7 +1829,7 @@ body.is-pointer .cursor-orb { opacity: 1; }
   .now-badge,
   .now-dot,
   .brand-xl,
-  .dl-btn,
+  .dl-main,
   [data-reveal] {
     animation: none !important;
     transition: none !important;

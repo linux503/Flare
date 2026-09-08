@@ -32,7 +32,13 @@
       "dl.pill": "下载",
       "dl.go": "下载",
       "dl.for": "适合你",
-      "dl.pillAria": "下载 Flare Pro for macOS",
+      "dl.pillAria": "下载 Flare Pro",
+      "dl.tabsAria": "选择平台",
+      "dl.hint": "已按你的系统预选，也可点上方切换",
+      "dl.macTitle": "下载 macOS 版",
+      "dl.winTitle": "下载 Windows 版",
+      "dl.androidTitle": "下载 Android 版",
+      "dl.andTitle": "下载 Android 版",
       "hero.badge": "现已支持 Windows 与 Android",
       "hero.h1": "一拍即得",
       "hero.sub": "macOS 完整截图、录屏，还能一键新建 TXT / Word / PPT / Excel。Windows 下载 EXE、Android 下载 APK，打开网页即可自动滚动拼接长图。",
@@ -166,9 +172,15 @@
       "apps.battybar": "Battery",
       "apps.remotex": "Remote desktop",
       "dl.pill": "Download",
-      "dl.go": "Get",
+      "dl.go": "Download",
       "dl.for": "For you",
-      "dl.pillAria": "Download Flare Pro for macOS",
+      "dl.pillAria": "Download Flare Pro",
+      "dl.tabsAria": "Choose platform",
+      "dl.hint": "Preselected for your system — tap above to switch",
+      "dl.macTitle": "Download for macOS",
+      "dl.winTitle": "Download for Windows",
+      "dl.androidTitle": "Download for Android",
+      "dl.andTitle": "Download for Android",
       "hero.badge": "Now on Windows and Android",
       "hero.h1": "Capture in one shot",
       "hero.sub": "Full screenshot and recording on macOS, plus one-tap TXT / Word / PPT / Excel. On Windows grab the EXE, on Android the APK — open a page and auto-scroll into a long image.",
@@ -295,6 +307,7 @@
 
   const apply = (lang) => {
     const dict = I18N[lang] || I18N.zh;
+    window.__flareI18n = dict;
     document.documentElement.lang = lang === "en" ? "en" : "zh-Hans";
     document.title = dict["meta.title"];
     const set = (sel, attr, key) => {
@@ -336,6 +349,7 @@
     try {
       localStorage.setItem("flare-lang", lang);
     } catch (_) {}
+    window.dispatchEvent(new Event("flare:lang"));
   };
 
   const lang = detect();
