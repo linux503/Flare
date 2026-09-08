@@ -218,8 +218,9 @@ body::before {
   gap: 2px;
   padding: 3px;
   border-radius: 999px;
-  background: rgba(16, 24, 22, 0.04);
-  border: 1px solid rgba(16, 24, 22, 0.05);
+  background: transparent;
+  border: 1px solid transparent;
+  box-shadow: none;
 }
 .nav-links > a,
 .nav-drop > summary {
@@ -237,7 +238,7 @@ body::before {
   border: 0;
   background: transparent;
   font-family: inherit;
-  transition: color 0.2s ease, background 0.2s ease;
+  transition: color 0.2s ease, background 0.2s ease, box-shadow 0.2s ease;
 }
 .nav-drop > summary::-webkit-details-marker { display: none; }
 .nav-drop > summary::after {
@@ -261,8 +262,8 @@ body::before {
 .nav-drop.is-on > summary,
 .nav-drop > summary:hover {
   color: var(--ink);
-  background: #fff;
-  box-shadow: 0 4px 12px rgba(16, 24, 22, 0.06);
+  background: rgba(255, 255, 255, 0.42);
+  box-shadow: none;
 }
 .nav-drop {
   position: relative;
