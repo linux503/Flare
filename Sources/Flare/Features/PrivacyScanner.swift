@@ -53,17 +53,21 @@ enum PrivacyScanner {
         let canvas = NSImage(size: size)
         canvas.lockFocus()
         image.draw(in: NSRect(origin: .zero, size: size))
+        let padX = max(1.5, min(4, size.width * 0.0025))
+        let padY = max(1.0, min(3, size.height * 0.0025))
         for finding in findings {
             var rect = CGRect(
                 x: finding.box.origin.x * size.width,
                 y: finding.box.origin.y * size.height,
                 width: finding.box.width * size.width,
                 height: finding.box.height * size.height
-            ).insetBy(dx: -6, dy: -4)
+            ).insetBy(dx: -padX, dy: -padY)
             rect = rect.intersection(CGRect(origin: .zero, size: size))
-            guard rect.width > 2, rect.height > 2 else { continue }
-            NSColor.black.withAlphaComponent(0.92).setFill()
-            NSBezierPath(roundedRect: rect, xRadius: 5, yRadius: 5).fill()
+            guard rect.width > 1.5, rect.height > 1.5 else { continue }
+            // 文字遮挡：略扁的圆角条，贴合字高，避免整行被大块盖住
+            let radius = min(4, max(2, rect.height * 0.28))
+            NSColor.black.withAlphaComponent(0.9).setFill()
+            NSBezierPath(roundedRect: rect, xRadius: radius, yRadius: radius).fill()
         }
         canvas.unlockFocus()
         return canvas
@@ -125,13 +129,18 @@ enum PrivacyScanner {
         let raw = text.string
         var hits: [PrivacyFinding] = []
         func add(_ kind: PrivacyKind, _ range: NSRange) {
+            guard range.location != NSNotFound, range.length > 0 else { return }
             let box: CGRect
             if let swiftRange = Range(range, in: raw),
                let observed = try? text.boundingBox(for: swiftRange) {
                 box = observed.boundingBox
+            } else if let approx = approximateBox(for: range, in: raw, lineBox: fallback) {
+                box = approx
             } else {
-                box = fallback
+                // 整行兜底时收窄到中间条带，减少误挡旁边无关字
+                box = fallback.insetBy(dx: fallback.width * 0.02, dy: fallback.height * 0.12)
             }
+            guard box.width > 0.002, box.height > 0.002 else { return }
             hits.append(PrivacyFinding(kind: kind, box: box))
         }
 
@@ -143,38 +152,115 @@ enum PrivacyScanner {
                 guard range.location != NSNotFound else { continue }
                 let snippet = ns.substring(with: range)
                 if pattern.kind == .bankCard, !isBankCard(snippet) { continue }
-                if pattern.kind == .idDocument, snippet.range(of: #"\d{17}[\dXx]"#, options: .regularExpression) != nil,
-                   !isChineseID(snippet) { continue }
-                if pattern.kind == .wallet, snippet.lowercased().hasPrefix("0x"), snippet.count < 42 { continue }
+                if pattern.kind == .idDocument {
+                    let idLike = snippet.range(of: #"\d{17}[\dXx]"#, options: .regularExpression) != nil
+                    if idLike, !isChineseID(snippet) { continue }
+                }
+                if pattern.kind == .wallet, snippet.lowercased().hasPrefix("0x"), snippet.count != 42 { continue }
+                if pattern.kind == .phone, !isMobilePhone(snippet) { continue }
+                if pattern.kind == .email, !isPlausibleEmail(snippet) { continue }
+                if pattern.kind == .customer, snippet.count < 2 { continue }
                 add(pattern.kind, range)
             }
         }
         return hits
     }
 
-    /// 助记词常被 OCR 拆成多行，只遮挡像词表的行
+    /// OCR 给不出子串框时，按字符占比估算敏感片段位置
+    private static func approximateBox(for range: NSRange, in raw: String, lineBox: CGRect) -> CGRect? {
+        let ns = raw as NSString
+        guard range.location != NSNotFound, range.length > 0, ns.length > 0 else { return nil }
+        let total = CGFloat(ns.length)
+        let start = CGFloat(range.location) / total
+        let end = CGFloat(range.location + range.length) / total
+        let width = max(0.01, (end - start) * lineBox.width)
+        return CGRect(
+            x: lineBox.minX + start * lineBox.width,
+            y: lineBox.minY + lineBox.height * 0.08,
+            width: width,
+            height: lineBox.height * 0.84
+        )
+    }
+
+    /// 助记词：跨行拼成词序列后，只遮挡真正落在 12/24 词窗口里的行
     private static func matchAcrossLines(_ observations: [VNRecognizedTextObservation]) -> [PrivacyFinding] {
-        var hits: [PrivacyFinding] = []
+        struct WordHit {
+            let word: String
+            let box: CGRect
+        }
+        var sequence: [WordHit] = []
+        var labeledBoxes: [CGRect] = []
         for observation in observations {
-            guard let line = observation.topCandidates(1).first?.string else { continue }
-            let words = line.lowercased().split { !$0.isLetter }.map(String.init).filter { (3...8).contains($0.count) }
-            let known = words.filter { mnemonicWords.contains($0) }.count
-            let labeled = line.range(
-                of: #"(助记词|seed phrase|mnemonic|recovery phrase)"#,
+            guard let candidate = observation.topCandidates(1).first else { continue }
+            let line = candidate.string
+            if line.range(
+                of: #"(助记词|seed\s*phrase|mnemonic|recovery\s*phrase)"#,
                 options: [.regularExpression, .caseInsensitive]
-            ) != nil
-            let mostlyWords = words.count >= 4 && known >= max(4, (words.count * 2) / 3)
-            if mostlyWords || (labeled && known >= 3) {
-                hits.append(PrivacyFinding(kind: .mnemonic, box: observation.boundingBox))
+            ) != nil {
+                labeledBoxes.append(observation.boundingBox)
+            }
+            let parts = line.lowercased().split { !$0.isLetter }.map(String.init)
+            for part in parts where (3...8).contains(part.count) {
+                // 尽量用整词框；失败则用该行框的横向切片
+                let box: CGRect
+                if let range = line.range(of: part, options: .caseInsensitive),
+                   let observed = try? candidate.boundingBox(for: range) {
+                    box = observed.boundingBox
+                } else {
+                    box = observation.boundingBox
+                }
+                sequence.append(WordHit(word: part, box: box))
+            }
+        }
+
+        var hits: [PrivacyFinding] = []
+        let windows = [12, 15, 18, 21, 24]
+        for size in windows where sequence.count >= size {
+            for i in 0...(sequence.count - size) {
+                let slice = Array(sequence[i..<(i + size)])
+                guard slice.allSatisfy({ mnemonicWords.contains($0.word) }) else { continue }
+                for item in slice {
+                    hits.append(PrivacyFinding(kind: .mnemonic, box: item.box))
+                }
+            }
+        }
+        // 有「助记词」标签但词数不足时：只遮挡标签附近、且已命中词表的词，不整页涂黑
+        if hits.isEmpty, !labeledBoxes.isEmpty {
+            let known = sequence.filter { mnemonicWords.contains($0.word) }
+            if known.count >= 6 {
+                for item in known.prefix(24) {
+                    hits.append(PrivacyFinding(kind: .mnemonic, box: item.box))
+                }
             }
         }
         return hits
     }
 
+    private static func isMobilePhone(_ raw: String) -> Bool {
+        let digits = raw.filter(\.isNumber)
+        guard digits.count == 11, digits.hasPrefix("1") else { return false }
+        guard let second = digits.dropFirst().first, ("3"..."9").contains(second) else { return false }
+        return true
+    }
+
+    private static func isPlausibleEmail(_ raw: String) -> Bool {
+        let lower = raw.lowercased()
+        guard lower.contains("@"), lower.contains(".") else { return false }
+        // 过滤明显占位/示例
+        if lower.contains("example.com") || lower.contains("email@") || lower.hasPrefix("your@") { return false }
+        return lower.count >= 6 && lower.count <= 80
+    }
+
     private static func isBankCard(_ raw: String) -> Bool {
         let digits = raw.filter(\.isNumber)
         guard (13...19).contains(digits.count) else { return false }
-        return luhn(digits)
+        guard luhn(digits) else { return false }
+        // 分组卡号更可靠；无分隔时限制为常见长度，降低订单号误伤
+        if raw.range(of: #"\d{4}([ -]\d{4}){2,4}"#, options: .regularExpression) != nil {
+            return true
+        }
+        guard (15...19).contains(digits.count) else { return false }
+        return Set(digits).count > 3
     }
 
     private static func luhn(_ digits: String) -> Bool {
@@ -224,23 +310,25 @@ enum PrivacyScanner {
     }
 
     private static let secretPatterns: [Pattern] = [
-        Pattern(kind: .apiKey, regex: #"(?i)\b(sk-[a-zA-Z0-9]{16,}|sk-proj-[a-zA-Z0-9_-]{16,}|AKIA[0-9A-Z]{16}|AIza[0-9A-Za-z\-_]{20,}|ghp_[a-zA-Z0-9]{20,}|github_pat_[a-zA-Z0-9_]{20,}|xox[baprs]-[a-zA-Z0-9-]{10,}|sk_live_[a-zA-Z0-9]{16,}|rk_live_[a-zA-Z0-9]{16,})"#),
-        Pattern(kind: .apiKey, regex: #"(?i)(?:api[_-]?key|secret[_-]?key|access[_-]?key)\s*[:=]\s*['"]?([A-Za-z0-9_\-]{16,})"#),
+        Pattern(kind: .apiKey, regex: #"(?i)\b(sk-[a-zA-Z0-9]{20,}|sk-proj-[a-zA-Z0-9_-]{20,}|AKIA[0-9A-Z]{16}|AIza[0-9A-Za-z\-_]{35}|ghp_[a-zA-Z0-9]{36}|github_pat_[a-zA-Z0-9_]{22,}|xox[baprs]-[a-zA-Z0-9-]{10,}|sk_live_[a-zA-Z0-9]{24,}|rk_live_[a-zA-Z0-9]{24,})"#),
+        Pattern(kind: .apiKey, regex: #"(?i)(?:api[_-]?key|secret[_-]?key|access[_-]?key)\s*[:=]\s*['"]?([A-Za-z0-9_\-]{20,})"#),
         Pattern(kind: .privateKey, regex: #"(?i)-----BEGIN [A-Z ]*PRIVATE KEY-----"#),
-        Pattern(kind: .privateKey, regex: #"\b0x[a-fA-F0-9]{64}\b"#),
-        Pattern(kind: .privateKey, regex: #"\b[5KL][1-9A-HJ-NP-Za-km-z]{50,51}\b"#),
-        Pattern(kind: .wallet, regex: #"\b0x[a-fA-F0-9]{40}\b"#),
-        Pattern(kind: .wallet, regex: #"\bbc1[a-z0-9]{25,62}\b"#),
-        Pattern(kind: .wallet, regex: #"\b[13][a-km-zA-HJ-NP-Z1-9]{25,34}\b"#),
-        Pattern(kind: .wallet, regex: #"\bT[1-9A-HJ-NP-Za-km-z]{33}\b"#),
-        Pattern(kind: .bankCard, regex: #"\b(?:\d[ -]?){13,19}\b"#),
+        Pattern(kind: .privateKey, regex: #"\b(0x[a-fA-F0-9]{64})\b"#),
+        Pattern(kind: .privateKey, regex: #"\b([5KL][1-9A-HJ-NP-Za-km-z]{50,51})\b"#),
+        Pattern(kind: .wallet, regex: #"\b(0x[a-fA-F0-9]{40})\b"#),
+        Pattern(kind: .wallet, regex: #"\b(bc1[a-z0-9]{25,62})\b"#),
+        Pattern(kind: .wallet, regex: #"\b([13][a-km-zA-HJ-NP-Z1-9]{25,34})\b"#),
+        Pattern(kind: .wallet, regex: #"\b(T[1-9A-HJ-NP-Za-km-z]{33})\b"#),
+        Pattern(kind: .bankCard, regex: #"\b((?:\d{4}[ -]){3}\d{4}(?:[ -]\d{1,4})?)\b"#),
+        Pattern(kind: .bankCard, regex: #"(?i)(?:卡号|银行卡|credit\s*card|card\s*(?:no|number))\s*[:：]?\s*((?:\d[ -]?){13,19})"#),
+        Pattern(kind: .bankCard, regex: #"\b(\d{16}|\d{19})\b"#),
         Pattern(kind: .idDocument, regex: #"(?<!\d)(\d{17}[\dXx])(?!\d)"#),
-        Pattern(kind: .idDocument, regex: #"(?i)(?:护照|passport)\s*[:：]?\s*([A-Z0-9]{7,12})"#),
-        Pattern(kind: .email, regex: #"(?i)\b[A-Z0-9._%+\-]+@[A-Z0-9.\-]+\.[A-Z]{2,}\b"#),
+        Pattern(kind: .idDocument, regex: #"(?i)(?:护照|passport)\s*[:：]?\s*([A-Z0-9]{8,9})"#),
+        Pattern(kind: .email, regex: #"(?i)\b([A-Z0-9._%+\-]+@[A-Z0-9.\-]+\.[A-Z]{2,24})\b"#),
         Pattern(kind: .phone, regex: #"(?<!\d)(?:\+?86[-\s]?)?(1[3-9]\d{9})(?!\d)"#),
-        Pattern(kind: .customer, regex: #"(?:客户|会员|开户)(?:姓名|名称|编号|资料|信息|号)?\s*[:：]?\s*\S{2,24}"#),
-        Pattern(kind: .cookieToken, regex: #"eyJ[A-Za-z0-9_-]{8,}\.[A-Za-z0-9_-]{8,}\.[A-Za-z0-9_-]{8,}"#),
-        Pattern(kind: .cookieToken, regex: #"(?i)(?:cookie|session[_-]?id|csrf[_-]?token|access[_-]?token|refresh[_-]?token|bearer)\s*[:=]\s*['"]?([A-Za-z0-9._~+/=%-]{12,})"#)
+        Pattern(kind: .customer, regex: #"(?:客户|会员|开户)(?:姓名|名称|编号|资料|信息)\s*[:：]\s*(\S{2,24})"#),
+        Pattern(kind: .cookieToken, regex: #"(eyJ[A-Za-z0-9_-]{10,}\.[A-Za-z0-9_-]{10,}\.[A-Za-z0-9_-]{10,})"#),
+        Pattern(kind: .cookieToken, regex: #"(?i)(?:cookie|session[_-]?id|csrf[_-]?token|access[_-]?token|refresh[_-]?token|bearer)\s*[:=]\s*['"]?([A-Za-z0-9._~+/=%-]{16,})"#)
     ]
 
     /// 常见 BIP39 词，用来确认 12/24 词序列，避免把普通英文句子当成助记词

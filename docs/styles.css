@@ -555,20 +555,22 @@ body::before {
 .dl-dock {
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  gap: 14px;
   margin-top: 36px;
   width: 100%;
-  max-width: 26rem;
+  max-width: 25.5rem;
 }
 .dl-tabs {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 4px;
-  padding: 4px;
-  border-radius: 16px;
-  background: rgba(255, 255, 255, 0.72);
-  border: 1px solid var(--line);
-  box-shadow: 0 8px 22px rgba(16, 24, 22, 0.04);
+  gap: 3px;
+  padding: 3px;
+  border-radius: 14px;
+  background: rgba(255, 255, 255, 0.55);
+  border: 1px solid rgba(16, 24, 22, 0.06);
+  box-shadow:
+    0 1px 0 rgba(255, 255, 255, 0.8) inset,
+    0 8px 20px rgba(16, 24, 22, 0.04);
 }
 .dl-tabs button {
   appearance: none;
@@ -577,137 +579,181 @@ body::before {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  gap: 6px;
-  min-height: 40px;
-  padding: 8px 6px;
-  border-radius: 12px;
+  gap: 7px;
+  min-height: 38px;
+  padding: 7px 8px;
+  border-radius: 11px;
   background: transparent;
   color: var(--muted);
   font: inherit;
-  font-size: 13px;
+  font-size: 12.5px;
   font-weight: 700;
-  letter-spacing: -0.02em;
-  transition: background 0.2s ease, color 0.2s ease, box-shadow 0.2s ease;
+  letter-spacing: -0.01em;
+  transition: background 0.2s ease, color 0.2s ease, box-shadow 0.2s ease, transform 0.2s ease;
 }
 .dl-tabs button svg {
-  width: 14px;
-  height: 14px;
-  flex: 0 0 14px;
-  opacity: 0.75;
+  width: 13px;
+  height: 13px;
+  flex: 0 0 13px;
+  opacity: 0.7;
 }
 .dl-tabs button:hover {
   color: var(--ink);
-  background: rgba(16, 24, 22, 0.04);
+  background: rgba(255, 255, 255, 0.55);
 }
 .dl-tabs button.is-on {
   color: var(--ink);
   background: #fff;
-  box-shadow: 0 6px 16px rgba(16, 24, 22, 0.08);
+  box-shadow:
+    0 1px 0 rgba(255, 255, 255, 0.95) inset,
+    0 6px 14px rgba(16, 24, 22, 0.08);
 }
 .dl-tabs button.is-on svg { opacity: 1; }
 .dl-main {
   position: relative;
   overflow: hidden;
   display: grid;
-  grid-template-columns: 52px minmax(0, 1fr) auto;
+  grid-template-columns: 48px minmax(0, 1fr) auto;
   align-items: center;
   column-gap: 14px;
-  min-height: 76px;
-  padding: 12px 14px 12px 12px;
-  border-radius: 20px;
+  min-height: 72px;
+  padding: 10px 10px 10px 10px;
+  border-radius: 18px;
   text-decoration: none;
   color: #fff;
   isolation: isolate;
-  background: linear-gradient(180deg, #148a66 0%, #0c6b4d 100%);
-  border: 1px solid transparent;
-  box-shadow: 0 16px 34px rgba(12, 107, 77, 0.28);
-  transition: transform 0.22s var(--ease), box-shadow 0.22s ease, background 0.22s ease;
+  background:
+    linear-gradient(180deg, rgba(255,255,255,0.14), transparent 42%),
+    linear-gradient(180deg, #16956d 0%, #0d6f50 100%);
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  box-shadow:
+    0 1px 0 rgba(255, 255, 255, 0.22) inset,
+    0 14px 30px rgba(12, 107, 77, 0.26);
+  transition: transform 0.22s var(--ease), box-shadow 0.22s ease, filter 0.22s ease;
   animation: dlIn 0.7s var(--ease) both;
 }
 .dl-main::before {
   content: "";
   position: absolute;
   inset: 0;
-  background: linear-gradient(105deg, transparent 40%, rgba(255,255,255,0.16) 50%, transparent 60%);
-  transform: translateX(-120%);
+  background: linear-gradient(110deg, transparent 42%, rgba(255,255,255,0.18) 50%, transparent 58%);
+  transform: translateX(-130%);
   pointer-events: none;
 }
 .dl-main:hover {
   transform: translateY(-2px);
-  background: linear-gradient(180deg, #17956e 0%, #0d7454 100%);
-  box-shadow: 0 20px 40px rgba(12, 107, 77, 0.34);
+  filter: brightness(1.03);
+  box-shadow:
+    0 1px 0 rgba(255, 255, 255, 0.28) inset,
+    0 18px 36px rgba(12, 107, 77, 0.32);
 }
 .dl-main:hover::before {
-  transform: translateX(120%);
+  transform: translateX(130%);
   transition: transform 0.55s ease;
 }
 .dl-main[data-os="win"] {
-  background: linear-gradient(180deg, #3b82f6 0%, #1d4ed8 100%);
-  box-shadow: 0 16px 34px rgba(37, 99, 235, 0.28);
+  background:
+    linear-gradient(180deg, rgba(255,255,255,0.14), transparent 42%),
+    linear-gradient(180deg, #4b8ef7 0%, #1d4ed8 100%);
+  box-shadow:
+    0 1px 0 rgba(255, 255, 255, 0.22) inset,
+    0 14px 30px rgba(37, 99, 235, 0.26);
 }
 .dl-main[data-os="win"]:hover {
-  background: linear-gradient(180deg, #60a5fa 0%, #2563eb 100%);
-  box-shadow: 0 20px 40px rgba(37, 99, 235, 0.34);
+  box-shadow:
+    0 1px 0 rgba(255, 255, 255, 0.28) inset,
+    0 18px 36px rgba(37, 99, 235, 0.32);
 }
 .dl-main[data-os="android"] {
-  background: linear-gradient(180deg, #14b8a6 0%, #0f766e 100%);
-  box-shadow: 0 16px 34px rgba(13, 148, 136, 0.28);
+  background:
+    linear-gradient(180deg, rgba(255,255,255,0.14), transparent 42%),
+    linear-gradient(180deg, #1cbcab 0%, #0f766e 100%);
+  box-shadow:
+    0 1px 0 rgba(255, 255, 255, 0.22) inset,
+    0 14px 30px rgba(13, 148, 136, 0.26);
 }
 .dl-main[data-os="android"]:hover {
-  background: linear-gradient(180deg, #2dd4bf 0%, #0d9488 100%);
-  box-shadow: 0 20px 40px rgba(13, 148, 136, 0.34);
+  box-shadow:
+    0 1px 0 rgba(255, 255, 255, 0.28) inset,
+    0 18px 36px rgba(13, 148, 136, 0.32);
 }
 .dl-main-mark {
-  width: 52px;
-  height: 52px;
+  width: 48px;
+  height: 48px;
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  border-radius: 16px;
+  border-radius: 14px;
   background: rgba(255, 255, 255, 0.14);
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  box-shadow: 0 1px 0 rgba(255, 255, 255, 0.12) inset;
 }
 .dl-main-mark svg {
-  width: 26px;
-  height: 26px;
+  width: 22px;
+  height: 22px;
 }
 .dl-main-copy {
   display: flex;
   flex-direction: column;
-  gap: 3px;
+  gap: 6px;
   min-width: 0;
 }
 .dl-main-copy strong {
   font-family: var(--display);
-  font-size: 16px;
+  font-size: 15.5px;
   font-weight: 750;
   letter-spacing: -0.03em;
-  line-height: 1.15;
+  line-height: 1.1;
 }
 .dl-main-copy em {
+  display: inline-flex;
+  flex-wrap: wrap;
+  gap: 6px;
   font-style: normal;
-  font-size: 12px;
-  font-weight: 600;
-  opacity: 0.78;
-  letter-spacing: 0.01em;
+}
+.dl-chip {
+  display: inline-flex;
+  align-items: center;
+  padding: 3px 8px;
+  border-radius: 999px;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  color: rgba(255, 255, 255, 0.92);
+  background: rgba(255, 255, 255, 0.14);
+  border: 1px solid rgba(255, 255, 255, 0.1);
 }
 .dl-main-go {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  min-width: 64px;
-  padding: 10px 14px;
+  gap: 6px;
+  min-height: 40px;
+  min-width: 78px;
+  padding: 0 14px;
   border-radius: 999px;
   font-size: 13px;
   font-weight: 750;
-  background: rgba(255, 255, 255, 0.16);
+  background: rgba(255, 255, 255, 0.18);
+  border: 1px solid rgba(255, 255, 255, 0.16);
   letter-spacing: 0.02em;
+  box-shadow: 0 1px 0 rgba(255, 255, 255, 0.12) inset;
 }
-.dl-main:hover .dl-main-go { transform: translateX(1px); }
+.dl-main-go svg {
+  width: 14px;
+  height: 14px;
+  flex: 0 0 14px;
+}
+.dl-main:hover .dl-main-go {
+  background: rgba(255, 255, 255, 0.24);
+  transform: translateX(1px);
+}
 .dl-hint {
   margin: 0;
   font-size: 12px;
   color: var(--faint);
   letter-spacing: 0.01em;
+  padding-left: 2px;
 }
 .highlights {
   width: min(100%, calc(var(--max) + var(--pad) * 2));
@@ -1494,14 +1540,15 @@ body::before {
   align-items: center;
   justify-content: center;
   gap: 8px;
-  min-height: 132px;
-  padding: 18px 14px;
+  min-height: 128px;
+  padding: 18px 14px 16px;
   border: 1px solid var(--line);
-  border-radius: 16px;
-  background: var(--bg);
+  border-radius: 18px;
+  background: linear-gradient(180deg, #fff 0%, var(--bg) 100%);
   text-decoration: none;
   color: var(--ink);
-  transition: transform 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease, filter 0.2s ease;
+  box-shadow: 0 8px 20px rgba(16, 24, 22, 0.04);
+  transition: transform 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease;
 }
 .platform-card::after { display: none; }
 .platform-card:hover {
