@@ -30,13 +30,14 @@
   <link href="https://fonts.googleapis.com/css2?family=Newsreader:opsz,wght@6..72,500;600;700&family=Figtree:wght@400;500;600;700&family=Noto+Sans+SC:wght@400;500;600;700&family=Noto+Serif+SC:wght@500;600;700&display=swap" rel="stylesheet" />
   <link rel="alternate" hreflang="zh-Hans" href="https://linux503.github.io/Flare/?lang=zh" />
   <link rel="alternate" hreflang="en" href="https://linux503.github.io/Flare/?lang=en" />
-  <link rel="stylesheet" href="styles.css?v=71" />
+  <link rel="stylesheet" href="styles.css?v=72" />
 </head>
 <body class="theme-atelier">
   <div class="atmosphere" aria-hidden="true">
     <span class="orb orb-a"></span>
     <span class="orb orb-b"></span>
     <span class="orb orb-c"></span>
+    <span class="orb orb-d"></span>
     <span class="grid-veil"></span>
   </div>
   <div class="scroll-progress" aria-hidden="true"></div>
@@ -148,7 +149,7 @@
         <h2 data-i18n="feat.h2">四件事，做到结果可交付</h2>
       </div>
       <div class="feature-grid">
-        <article class="feature-card" data-reveal style="--d:0">
+        <article class="feature-card tone-capture" data-reveal style="--d:0">
           <p class="feature-kicker">Capture</p>
           <h3 data-i18n="feat.capture">截图即用</h3>
           <p data-i18n="feat.captureP">区域 / 窗口 / 全屏。框选后复制，或进入标注。</p>
@@ -156,7 +157,7 @@
             <img src="ui-home.jpg?v=11" alt="" class="crop-capture" loading="lazy" width="1440" height="960" />
           </div>
         </article>
-        <article class="feature-card" data-reveal style="--d:1">
+        <article class="feature-card tone-record" data-reveal style="--d:1">
           <p class="feature-kicker">Record</p>
           <h3 data-i18n="feat.record">录屏成片</h3>
           <p data-i18n="feat.recordP">全屏或区域，系统声可选，导出 H.264 MOV。</p>
@@ -164,7 +165,7 @@
             <img src="ui-record.jpg?v=11" alt="" class="crop-record" loading="lazy" width="1440" height="960" />
           </div>
         </article>
-        <article class="feature-card" data-reveal style="--d:2">
+        <article class="feature-card tone-redact" data-reveal style="--d:2">
           <p class="feature-kicker">Redact</p>
           <h3 data-i18n="feat.redact">分享前脱敏</h3>
           <p data-i18n="feat.redactP">密钥、证件、二维码等敏感信息，本地遮盖后再发出。</p>
@@ -180,7 +181,7 @@
             </div>
           </div>
         </article>
-        <article class="feature-card" data-reveal style="--d:3">
+        <article class="feature-card tone-evidence" data-reveal style="--d:3">
           <p class="feature-kicker">Evidence</p>
           <h3 data-i18n="feat.evidence">网页留证</h3>
           <p data-i18n="feat.evidenceP">网址、时间、长图、哈希与证书，导出时间线 PDF。</p>
@@ -222,17 +223,17 @@
         <h2 data-i18n="sc.h2">三个真实工作流</h2>
       </div>
       <div class="scenario-grid">
-        <article data-reveal style="--d:0">
+        <article class="scenario-card tone-client" data-reveal style="--d:0">
           <p class="feature-kicker" data-i18n="sc.1k">客户沟通</p>
           <h3 data-i18n="sc.1h">报价与聊天先脱敏再发</h3>
           <p data-i18n="sc.1p">截下对话或订单页，遮住密钥与证件，再发给客户或同事。</p>
         </article>
-        <article data-reveal style="--d:1">
+        <article class="scenario-card tone-collab" data-reveal style="--d:1">
           <p class="feature-kicker" data-i18n="sc.2k">产品协作</p>
           <h3 data-i18n="sc.2h">录一段操作，比文字更快</h3>
           <p data-i18n="sc.2p">区域录屏说明 bug 或流程，导出 MOV 丢进群里即可。</p>
         </article>
-        <article data-reveal style="--d:2">
+        <article class="scenario-card tone-archive" data-reveal style="--d:2">
           <p class="feature-kicker" data-i18n="sc.3k">网页留证</p>
           <h3 data-i18n="sc.3h">页面变更有据可查</h3>
           <p data-i18n="sc.3p">电商、外贸、链上页面一键留档：长图 + 哈希 + 时间线 PDF。</p>
@@ -249,10 +250,10 @@
           <p data-i18n="priv.p">敏感检测与脱敏在本地完成。官网只托管安装包，不接收你的截图内容。</p>
         </div>
         <ul class="privacy-list">
-          <li data-i18n="priv.1">本地：截图、录屏、OCR、脱敏、证据包生成</li>
-          <li data-i18n="priv.2">不上传：画面与文件默认不发往 Flare 服务器</li>
-          <li data-i18n="priv.3">你可控：是否分享、导出到何处，由你决定</li>
-          <li data-i18n="priv.4">说明：网页证据用于业务留档，不具备司法效力</li>
+          <li class="tone-local" data-i18n="priv.1">本地：截图、录屏、OCR、脱敏、证据包生成</li>
+          <li class="tone-upload" data-i18n="priv.2">不上传：画面与文件默认不发往 Flare 服务器</li>
+          <li class="tone-control" data-i18n="priv.3">你可控：是否分享、导出到何处，由你决定</li>
+          <li class="tone-note" data-i18n="priv.4">说明：网页证据用于业务留档，不具备司法效力</li>
         </ul>
       </div>
     </section>
@@ -361,11 +362,13 @@
       </div>
 
       <div class="final-cta" data-reveal>
-        <h2 data-i18n="cta.h2">现在开始</h2>
-        <p data-i18n="cta.p">下载对应平台，打开就能截。</p>
-        <a class="pill large" data-dl-main href="./downloads/Flare-Pro-1.3.19-Universal.dmg" download>
-          <span data-i18n="cta.btn">下载 Flare Pro</span>
-        </a>
+        <div class="final-cta-inner">
+          <h2 data-i18n="cta.h2">现在开始</h2>
+          <p data-i18n="cta.p">下载对应平台，打开就能截。</p>
+          <a class="pill large cta-btn" data-dl-main href="./downloads/Flare-Pro-1.3.19-Universal.dmg" download>
+            <span data-i18n="cta.btn">下载 Flare Pro</span>
+          </a>
+        </div>
       </div>
     </section>
   </main>
