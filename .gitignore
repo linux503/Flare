@@ -15,3 +15,4 @@ android/FlareAndroid/.gradle/
 android/FlareAndroid/**/build/
 .mas
 __pycache__/
+.playwright-cli/

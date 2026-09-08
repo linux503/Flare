@@ -158,82 +158,50 @@
   const closeNav = () => {
     header?.classList.remove("nav-open");
     toggle?.setAttribute("aria-expanded", "false");
+    document.querySelectorAll(".nav-drop[open]").forEach((el) => {
+      el.removeAttribute("open");
+    });
   };
   toggle?.addEventListener("click", () => {
     const open = header.classList.toggle("nav-open");
     toggle.setAttribute("aria-expanded", open ? "true" : "false");
   });
-  document.querySelectorAll(".nav-links a").forEach((a) => {
+  document.querySelectorAll(".nav-links a, .nav-drop-panel a").forEach((a) => {
     a.addEventListener("click", closeNav);
+  });
+  document.addEventListener("click", (e) => {
+    document.querySelectorAll(".nav-drop[open]").forEach((drop) => {
+      if (!drop.contains(e.target)) drop.removeAttribute("open");
+    });
   });
   window.addEventListener("keydown", (e) => {
     if (e.key === "Escape") closeNav();
   });
 
-  const sections = ["shot", "rec", "docs", "start", "get"]
+  const sections = ["highlights", "platforms", "shot", "rec", "evidence", "annotate", "docs", "start", "get"]
     .map((id) => document.getElementById(id))
     .filter(Boolean);
-  const linkOf = (id) => document.querySelector(`.nav-links a[href="#${id}"]`);
+  const linkOf = (id) => {
+    const direct = document.querySelector(`.nav-links > a[href="#${id}"]`);
+    if (direct) return direct;
+    if (["shot", "rec", "evidence", "annotate", "docs"].includes(id)) {
+      return document.querySelector(".nav-drop > summary");
+    }
+    return null;
+  };
   if (sections.length) {
     const spy = new IntersectionObserver((entries) => {
       entries.forEach((entry) => {
         if (!entry.isIntersecting) return;
-        document.querySelectorAll(".nav-links a").forEach((a) => a.classList.remove("is-on"));
-        linkOf(entry.target.id)?.classList.add("is-on");
+        document.querySelectorAll(".nav-links > a").forEach((a) => a.classList.remove("is-on"));
+        document.querySelectorAll(".nav-drop").forEach((d) => d.classList.remove("is-on"));
+        const mark = linkOf(entry.target.id);
+        if (!mark) return;
+        if (mark.tagName === "SUMMARY") mark.parentElement?.classList.add("is-on");
+        else mark.classList.add("is-on");
       });
     }, { rootMargin: "-40% 0px -50% 0px", threshold: 0.01 });
     sections.forEach((el) => spy.observe(el));
-  }
-
-  const fine = window.matchMedia("(hover: hover) and (pointer: fine)").matches;
-  if (!reduce && fine) {
-    document.body.classList.add("is-pointer");
-    const orb = document.querySelector(".cursor-orb");
-    let ox = 0, oy = 0, tx = 0, ty = 0;
-    const tick = () => {
-      ox += (tx - ox) * 0.12;
-      oy += (ty - oy) * 0.12;
-      if (orb) orb.style.transform = `translate(${ox}px, ${oy}px)`;
-      window.requestAnimationFrame(tick);
-    };
-    window.addEventListener("pointermove", (e) => {
-      tx = e.clientX;
-      ty = e.clientY;
-    }, { passive: true });
-    tick();
-    document.querySelectorAll(".pill").forEach((el) => {
-      el.addEventListener("pointermove", (e) => {
-        const r = el.getBoundingClientRect();
-        const x = (e.clientX - r.left - r.width / 2) * 0.16;
-        const y = (e.clientY - r.top - r.height / 2) * 0.16;
-        el.style.transform = `translate(${x}px, ${y}px)`;
-      });
-      el.addEventListener("pointerleave", () => {
-        el.style.transform = "";
-      });
-    });
-    document.querySelectorAll("[data-spot]").forEach((el) => {
-      el.addEventListener("pointermove", (e) => {
-        const r = el.getBoundingClientRect();
-        el.style.setProperty("--sx", `${((e.clientX - r.left) / r.width) * 100}%`);
-        el.style.setProperty("--sy", `${((e.clientY - r.top) / r.height) * 100}%`);
-      });
-    });
-    const stage = document.querySelector(".stage");
-    const show = document.querySelector(".showcase");
-    show?.addEventListener("pointermove", (e) => {
-      if (!stage) return;
-      const r = show.getBoundingClientRect();
-      const x = (e.clientX - r.left) / r.width - 0.5;
-      const y = (e.clientY - r.top) / r.height - 0.5;
-      stage.style.setProperty("--tilt-y", `${x * 8}deg`);
-      stage.style.setProperty("--tilt-x", `${-y * 6}deg`);
-    });
-    show?.addEventListener("pointerleave", () => {
-      if (!stage) return;
-      stage.style.setProperty("--tilt-y", "0deg");
-      stage.style.setProperty("--tilt-x", "0deg");
-    });
   }
 
   const root = document.querySelector("[data-carousel]");
