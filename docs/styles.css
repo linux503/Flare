@@ -817,34 +817,44 @@ body::before {
 .highlight-grid {
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));
-  gap: 14px;
+  gap: 12px;
+  counter-reset: hi;
 }
 .highlight-grid article {
   position: relative;
-  min-height: 156px;
-  padding: 22px 20px 20px;
+  min-height: 0;
+  padding: 20px 18px 18px;
   border-radius: var(--radius-card);
-  background: var(--surface-soft);
+  background: rgba(255, 255, 255, 0.78);
   border: 1px solid var(--line);
   box-shadow: none;
   overflow: hidden;
-  transition: border-color 0.2s ease, transform 0.2s ease, background 0.2s ease;
+  transition: border-color 0.2s ease, transform 0.2s ease, background 0.2s ease, box-shadow 0.2s ease;
 }
 .highlight-grid article::before {
-  content: "";
-  position: absolute;
-  top: 0;
-  left: 20px;
-  right: 20px;
-  height: 2px;
-  border-radius: 99px;
-  background: linear-gradient(90deg, var(--green), transparent);
-  opacity: 0.55;
+  counter-increment: hi;
+  content: counter(hi, decimal-leading-zero);
+  position: static;
+  display: block;
+  margin: 0 0 12px;
+  top: auto;
+  left: auto;
+  right: auto;
+  height: auto;
+  border-radius: 0;
+  background: none;
+  opacity: 1;
+  font-family: var(--display);
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  color: var(--green);
 }
 .highlight-grid article:hover {
   background: #fff;
-  border-color: var(--line-strong);
-  transform: translateY(-2px);
+  border-color: rgba(13, 122, 88, 0.18);
+  transform: translateY(-3px);
+  box-shadow: 0 14px 28px rgba(15, 23, 20, 0.06);
 }
 .highlight-grid b {
   display: block;
@@ -1079,21 +1089,25 @@ body::before {
 .switcher {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
-  gap: 8px;
+  gap: 2px;
+  padding: 3px;
+  border-radius: 14px;
+  background: rgba(15, 23, 20, 0.045);
 }
 .switcher button {
-  text-align: left;
-  border: 1px solid transparent;
+  text-align: center;
+  border: 0;
   background: transparent;
-  border-radius: 14px;
-  padding: 12px 10px;
+  border-radius: 11px;
+  padding: 10px 8px;
   cursor: pointer;
-  color: var(--ink);
-  transition: background 0.2s ease, box-shadow 0.2s ease;
+  color: var(--muted);
+  transition: background 0.2s ease, color 0.2s ease, box-shadow 0.2s ease;
 }
 .switcher button:hover {
   transform: none;
   background: rgba(255, 255, 255, 0.55);
+  color: var(--ink);
   border-color: transparent;
 }
 .switcher b {
@@ -1101,18 +1115,16 @@ body::before {
   font-family: var(--display);
   font-size: 13px;
   font-weight: 700;
-  margin-bottom: 2px;
+  margin-bottom: 0;
+  letter-spacing: -0.02em;
 }
-.switcher span {
-  display: block;
-  font-size: 12px;
-  color: var(--faint);
-}
+.switcher span { display: none; }
 .switcher button.on {
-  border-color: var(--line);
-  box-shadow: none;
+  border-color: transparent;
+  box-shadow: 0 4px 12px rgba(15, 23, 20, 0.06);
   transform: none;
-  background: var(--surface);
+  background: #fff;
+  color: var(--ink);
 }
 
 .strip,
@@ -1301,7 +1313,7 @@ body::before {
 .os-lead {
   position: relative;
   z-index: 1;
-  min-height: 72px;
+  min-height: 0;
 }
 .os-points {
   position: relative;
@@ -1581,32 +1593,41 @@ body::before {
   flex: 1;
 }
 .shortcuts {
-  margin-top: 16px;
-  display: grid;
-  grid-template-columns: repeat(5, minmax(0, 1fr));
-  gap: 12px;
+  margin-top: 18px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  padding: 10px;
+  border-radius: 18px;
+  background: rgba(255, 255, 255, 0.7);
+  border: 1px solid var(--line);
 }
 .shortcuts > div {
-  background: rgba(255, 255, 255, 0.78);
-  border: 1px solid var(--line);
-  border-radius: 16px;
-  min-height: 92px;
-  padding: 16px;
-  display: flex;
-  flex-direction: column;
-  justify-content: center;
-  gap: 8px;
+  background: transparent;
+  border: 0;
+  border-radius: 12px;
+  min-height: 0;
+  padding: 10px 12px;
+  display: inline-flex;
+  flex-direction: row;
+  align-items: center;
+  justify-content: flex-start;
+  gap: 10px;
+  flex: 1 1 auto;
 }
 .shortcuts kbd {
   font-family: var(--display);
   font-weight: 700;
-  font-size: 13px;
-  color: var(--green);
+  font-size: 12px;
+  color: var(--green-deep);
   letter-spacing: -0.02em;
   white-space: nowrap;
+  padding: 4px 8px;
+  border-radius: 8px;
+  background: var(--green-soft);
 }
 .shortcuts span {
-  font-size: 13px;
+  font-size: 12.5px;
   color: var(--muted);
   line-height: 1.35;
 }
@@ -1679,83 +1700,94 @@ body::before {
   overflow: hidden;
   display: flex;
   flex-direction: column;
-  align-items: center;
+  align-items: flex-start;
   justify-content: center;
-  gap: 8px;
-  min-height: 128px;
-  padding: 18px 14px 16px;
-  border: 1px solid var(--line);
+  gap: 6px;
+  min-height: 112px;
+  padding: 18px 16px;
+  border: 1px solid transparent;
   border-radius: 18px;
-  background: linear-gradient(180deg, #fff 0%, var(--bg) 100%);
+  background: linear-gradient(180deg, #15966d 0%, #0c6a4c 100%);
   text-decoration: none;
-  color: var(--ink);
-  box-shadow: 0 8px 20px rgba(16, 24, 22, 0.04);
-  transition: transform 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease;
+  color: #fff;
+  box-shadow: 0 12px 28px rgba(12, 106, 76, 0.2);
+  transition: transform 0.2s ease, box-shadow 0.2s ease, filter 0.2s ease;
 }
 .platform-card::after { display: none; }
 .platform-card:hover {
   transform: translateY(-2px);
-  border-color: rgba(16, 24, 22, 0.14);
-  box-shadow: 0 12px 28px rgba(16, 24, 22, 0.07);
-  filter: none;
+  border-color: transparent;
+  box-shadow: 0 16px 34px rgba(12, 106, 76, 0.28);
+  filter: brightness(1.03);
 }
 .platform-card.is-primary {
-  background: var(--ink);
+  background: linear-gradient(180deg, #15966d 0%, #0c6a4c 100%);
   border-color: transparent;
   color: #fff;
-  box-shadow: 0 16px 32px rgba(16, 24, 22, 0.16);
+  box-shadow: 0 12px 28px rgba(12, 106, 76, 0.2);
 }
 .platform-card.is-primary:hover {
-  background: #1c2a24;
+  background: linear-gradient(180deg, #15966d 0%, #0c6a4c 100%);
   border-color: transparent;
 }
-.platform-card.is-win,
-.platform-card.is-android {
-  background: var(--surface);
-  border-color: var(--line);
-  color: var(--ink);
-  box-shadow: none;
+.platform-card.is-win {
+  background: linear-gradient(180deg, #4b8ef7 0%, #1d4ed8 100%);
+  border-color: transparent;
+  color: #fff;
+  box-shadow: 0 12px 28px rgba(37, 99, 235, 0.22);
 }
-.platform-card.is-win:hover,
-.platform-card.is-android:hover { background: #fff; }
+.platform-card.is-android {
+  background: linear-gradient(180deg, #1cbcab 0%, #0f766e 100%);
+  border-color: transparent;
+  color: #fff;
+  box-shadow: 0 12px 28px rgba(13, 148, 136, 0.22);
+}
+.platform-card.is-win:hover {
+  background: linear-gradient(180deg, #4b8ef7 0%, #1d4ed8 100%);
+  filter: brightness(1.03);
+}
+.platform-card.is-android:hover {
+  background: linear-gradient(180deg, #1cbcab 0%, #0f766e 100%);
+  filter: brightness(1.03);
+}
 .platform-icon-wrap {
-  width: 40px;
-  height: 40px;
+  width: 36px;
+  height: 36px;
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  border-radius: 12px;
-  background: rgba(16, 24, 40, 0.06);
+  border-radius: 11px;
+  background: rgba(255, 255, 255, 0.16);
+  margin-bottom: 4px;
 }
-.platform-card.is-primary .platform-icon-wrap {
-  background: rgba(255, 255, 255, 0.12);
-}
-.platform-card.is-win .platform-icon-wrap {
-  background: var(--win-soft);
-  color: var(--win);
-}
+.platform-card.is-primary .platform-icon-wrap,
+.platform-card.is-win .platform-icon-wrap,
 .platform-card.is-android .platform-icon-wrap {
-  background: var(--android-soft);
-  color: var(--android);
+  background: rgba(255, 255, 255, 0.16);
+  color: #fff;
 }
 .platform-icon {
-  width: 22px;
-  height: 22px;
+  width: 18px;
+  height: 18px;
 }
 .platform-name {
   font-family: var(--display);
   font-size: 15px;
-  font-weight: 700;
+  font-weight: 750;
   letter-spacing: -0.02em;
 }
 .platform-tag {
   font-size: 12px;
-  font-weight: 600;
-  letter-spacing: 0.04em;
-  color: var(--muted);
+  font-weight: 650;
+  letter-spacing: 0.03em;
+  color: rgba(255, 255, 255, 0.78);
 }
 .platform-card.is-primary .platform-tag {
-  color: rgba(255, 255, 255, 0.72);
+  color: rgba(255, 255, 255, 0.78);
+}
+.platform-card .dl-ver {
+  color: rgba(255, 255, 255, 0.62);
+  opacity: 1;
 }
 .all-releases {
   display: inline-block;

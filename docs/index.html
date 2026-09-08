@@ -32,7 +32,7 @@
   <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@500;600;700;800&family=Noto+Sans+SC:wght@400;500;600;700&family=Noto+Serif+SC:wght@600;700&display=swap" rel="stylesheet" />
   <link rel="alternate" hreflang="zh-Hans" href="https://linux503.github.io/Flare/?lang=zh" />
   <link rel="alternate" hreflang="en" href="https://linux503.github.io/Flare/?lang=en" />
-  <link rel="stylesheet" href="styles.css?v=42" />
+  <link rel="stylesheet" href="styles.css?v=43" />
   <link rel="stylesheet" href="more-apps.css?v=13" />
   <meta name="twitter:image:alt" content="Flare 官网首页：截图、录屏、一键新建文档" />
   <meta property="og:image:secure_url" content="https://linux503.github.io/Flare/og-home.jpg?v=15" />
@@ -157,7 +157,7 @@
         <p class="now-badge"><span class="now-dot" aria-hidden="true"></span><span data-i18n="hero.badge">现已支持 Windows 与 Android</span></p>
         <p class="brand-xl">Flare Pro</p>
         <h1 data-i18n="hero.h1">一拍即得</h1>
-        <p class="subtitle" data-i18n="hero.sub">macOS 完整截图、录屏，还能一键新建 TXT / Word / PPT / Excel。Windows 下载 EXE、Android 下载 APK，打开网页即可自动滚动拼接长图。</p>
+        <p class="subtitle" data-i18n="hero.sub">macOS 截图、录屏、新建文档；Windows / Android 打开网页即可自动拼成长图。</p>
         <div class="dl-dock" data-dl-dock>
           <div class="dl-tabs" role="tablist" data-i18n-aria="dl.tabsAria" aria-label="选择平台">
             <button type="button" class="is-on" role="tab" aria-selected="true" data-os="mac">
@@ -201,34 +201,34 @@
           <span class="stage-shine" aria-hidden="true"></span>
         </div>
         <div class="switcher" role="tablist" data-i18n-aria="switch.aria" aria-label="演示切换">
-          <button type="button" class="on" data-goto="0" role="tab" aria-selected="true"><b data-i18n="tab.shot">截图</b><span data-i18n="tab.shotSub">框选 · 窗口 · 全屏</span></button>
-          <button type="button" data-goto="1" role="tab" aria-selected="false"><b data-i18n="tab.rec">录屏</b><span data-i18n="tab.recSub">区域 · 系统声 · MOV</span></button>
-          <button type="button" data-goto="2" role="tab" aria-selected="false"><b data-i18n="tab.ev">证据快照</b><span data-i18n="tab.evSub">网址 · 哈希 · PDF</span></button>
+          <button type="button" class="on" data-goto="0" role="tab" aria-selected="true"><b data-i18n="tab.shot">截图</b></button>
+          <button type="button" data-goto="1" role="tab" aria-selected="false"><b data-i18n="tab.rec">录屏</b></button>
+          <button type="button" data-goto="2" role="tab" aria-selected="false"><b data-i18n="tab.ev">证据</b></button>
         </div>
       </div>
     </section>
 
     <section id="highlights" class="highlights" aria-label="功能亮点">
       <div class="highlights-head">
-        <p class="tag" data-i18n="hi.tag">功能亮点</p>
-        <h2 data-i18n="hi.h2">截完就能用，页面也能留档</h2>
+        <p class="tag" data-i18n="hi.tag">亮点</p>
+        <h2 data-i18n="hi.h2">截完就能用</h2>
       </div>
       <div class="highlight-grid">
         <article>
           <b data-i18n="hi.shot">区域 / 窗口 / 全屏</b>
-          <p data-i18n="hi.shotP">双击选区可按设置进入标注，或直接复制到剪贴板。</p>
+          <p data-i18n="hi.shotP">双击进标注，或直接复制到剪贴板。</p>
         </article>
         <article>
-          <b data-i18n="hi.rec">录屏单独成套</b>
-          <p data-i18n="hi.recP">全屏或区域，系统声可选，导出 H.264 MOV。</p>
+          <b data-i18n="hi.rec">录屏成套</b>
+          <p data-i18n="hi.recP">全屏或区域，系统声可选，导出 MOV。</p>
         </article>
         <article>
-          <b data-i18n="hi.priv">隐私安全模式</b>
-          <p data-i18n="hi.privP">分享前检查密钥、助记词、证件和二维码，可脱敏后再发出。</p>
+          <b data-i18n="hi.priv">隐私脱敏</b>
+          <p data-i18n="hi.privP">分享前检查密钥、证件、二维码，可脱敏后再发。</p>
         </article>
         <article>
-          <b data-i18n="hi.ev">网页证据快照</b>
-          <p data-i18n="hi.evP">记录网址、时间、长图、哈希与证书，生成带时间线的 PDF。仅业务留档，不具备司法效力。</p>
+          <b data-i18n="hi.ev">证据快照</b>
+          <p data-i18n="hi.evP">网址、长图、哈希与证书，导出时间线 PDF。</p>
         </article>
       </div>
     </section>
@@ -236,9 +236,9 @@
     <section id="whats-new" class="whats-new" aria-label="本次更新">
       <div class="whats-new-card" data-reveal>
         <div class="whats-new-copy">
-          <p class="tag" data-i18n="wn.tag">本次更新</p>
-          <h2 data-i18n="wn.h2">每次发布写清楚改了什么</h2>
-          <p data-i18n="wn.p">官网与应用共用同一份更新说明，下载前先看这一版新增与修复。</p>
+          <p class="tag" data-i18n="wn.tag">更新</p>
+          <h2 data-i18n="wn.h2">这一版改了什么</h2>
+          <p data-i18n="wn.p">下载前先看本版新增与修复。</p>
           <div class="whats-new-meta">
             <span data-app-version>v1.3.19</span>
             <span data-published-at>2026-09-08</span>
@@ -252,13 +252,6 @@
         </ul>
       </div>
     </section>
-
-      <div class="ticker" aria-hidden="true">
-      <div class="ticker-track">
-        <span>Screenshot</span><span>Recording</span><span>Evidence</span><span>OCR</span><span>Pin</span><span>TXT</span><span>Word</span><span>PPT</span><span>macOS</span><span>Windows</span><span>Android</span>
-        <span>Screenshot</span><span>Recording</span><span>Evidence</span><span>OCR</span><span>Pin</span><span>TXT</span><span>Word</span><span>PPT</span><span>macOS</span><span>Windows</span><span>Android</span>
-      </div>
-    </div>
 
     <section id="platforms" class="strip os-strip">
       <article class="os-mac" data-reveal data-spot style="--d:0">
@@ -400,24 +393,24 @@
     <section id="start" class="start">
       <div class="start-head" data-reveal>
         <p class="tag" data-i18n="start.tag">上手</p>
-        <h2 data-i18n="start.h2">三步开始用</h2>
-        <p data-i18n="start.p">macOS 走系统授权；Windows 下 EXE、Android 下 APK 即可用网页长截图。</p>
+        <h2 data-i18n="start.h2">三步开始</h2>
+        <p data-i18n="start.p">macOS 先授权屏幕录制；Windows / Android 下载即可用。</p>
       </div>
       <ol class="steps">
         <li data-reveal style="--d:0">
           <span class="step-n">1</span>
           <h3 data-i18n="step.1">授权</h3>
-          <p data-i18n="step.1p">macOS：系统设置 → 隐私与安全性 → 屏幕与系统音频录制，打开 Flare Pro，然后完全退出再打开。Windows / Android 无需此步骤，下载 EXE 或 APK 即可。</p>
+          <p data-i18n="step.1p">macOS：系统设置 → 屏幕录制，打开 Flare Pro 后完全退出再开。Windows / Android 可跳过。</p>
         </li>
         <li data-reveal style="--d:1">
           <span class="step-n">2</span>
           <h3 data-i18n="step.2">截图</h3>
-          <p data-i18n="step.2p">单击菜单栏图标进入区域截图；右键可打开完整功能菜单。</p>
+          <p data-i18n="step.2p">单击菜单栏图标区域截图；右键打开完整菜单。</p>
         </li>
         <li data-reveal style="--d:2">
           <span class="step-n">3</span>
           <h3 data-i18n="step.3">录屏</h3>
-          <p data-i18n-html="step.3p">用「录制」菜单或 <code>⌘⌥R</code>。需要时再进主面板调整录制选项。</p>
+          <p data-i18n-html="step.3p">「录制」菜单或 <code>⌘⌥R</code> 开停，选项在主面板。</p>
         </li>
       </ol>
       <div class="shortcuts">
@@ -434,12 +427,7 @@
         <div>
           <p class="tag">Download</p>
           <h2 data-i18n="get.h2">下载 Flare Pro</h2>
-          <p data-i18n="get.p">免费使用。macOS 完整截图、录屏与新建文档；Windows 下载 EXE、Android 下载 APK，均支持网页长截图。</p>
-          <div class="chips">
-            <span>macOS Universal</span>
-            <span>Windows EXE</span>
-            <span>Android APK</span>
-          </div>
+          <p data-i18n="get.p">免费。macOS 完整功能；Windows EXE、Android APK 支持网页长截图。</p>
           <div class="download-panel">
             <div class="platform-grid">
               <a class="platform-card is-primary" id="download-btn" data-download href="./downloads/Flare-Pro-1.3.19-Universal.dmg" download>
@@ -486,7 +474,7 @@
       <img src="logo.png?v=13" width="22" height="22" alt="" />
       <div>
         <strong>Flare Pro</strong>
-        <em>macOS · Windows EXE · Android APK</em>
+        <em>macOS · Windows · Android</em>
       </div>
     </div>
     <div class="links">
@@ -497,7 +485,7 @@
     </div>
   </footer>
 
-  <script src="i18n.js?v=10" defer></script>
+  <script src="i18n.js?v=11" defer></script>
   <script src="site.js?v=25" defer></script>
   <script src="more-apps.js?v=13" defer></script>
 </body>
