@@ -60,6 +60,13 @@
     return t(key, fallback);
   };
 
+  const detectOs = () => {
+    const ua = navigator.userAgent || "";
+    if (/Android/i.test(ua)) return "android";
+    if (/Win/i.test(ua)) return "win";
+    return "mac";
+  };
+
   const applyOs = (os) => {
     const item = catalog[os] || catalog.mac;
     current = os;
@@ -101,8 +108,7 @@
       }
       releaseMeta = data;
       renderChangelog();
-      const dmg = data.downloadURL
-        || `./downloads/Flare-Pro-${data.version}-Universal.dmg`;
+      const dmg = data.downloadURL || `./downloads/Flare-Pro-${data.version}-Universal.dmg`;
       const win = data.windowsURL
         || `https://github.com/linux503/Flare/releases/download/v${data.version}/Flare-Windows-x64.exe`;
       const apk = data.androidURL || "./downloads/Flare-Android.apk";
@@ -111,37 +117,17 @@
         win: { ...defaults.win, href: win, download: false },
         android: { ...defaults.android, href: apk, download: !/^https?:\/\/github\.com\//.test(apk) },
       };
-      document.querySelectorAll("[data-download]").forEach((el) => {
-        el.setAttribute("href", catalog.mac.href);
-      });
-      document.querySelectorAll("[data-download-windows]").forEach((el) => {
-        el.setAttribute("href", catalog.win.href);
-      });
-      document.querySelectorAll("[data-download-android]").forEach((el) => {
-        el.setAttribute("href", catalog.android.href);
-      });
+      document.querySelectorAll("[data-download]").forEach((el) => el.setAttribute("href", catalog.mac.href));
+      document.querySelectorAll("[data-download-windows]").forEach((el) => el.setAttribute("href", catalog.win.href));
+      document.querySelectorAll("[data-download-android]").forEach((el) => el.setAttribute("href", catalog.android.href));
       applyOs(current);
     })
     .catch(() => {});
 
-  const ua = navigator.userAgent || "";
-  const detected = /Android/i.test(ua)
-    ? "android"
-    : /Windows/i.test(ua)
-      ? "win"
-      : /Mac|iPhone|iPad/i.test(ua)
-        ? "mac"
-        : "mac";
-  current = detected;
-  applyOs(detected);
-
-  document.querySelectorAll("[data-dl-dock]").forEach((dock) => {
-    dock.querySelectorAll(".dl-tabs button").forEach((btn) => {
-      btn.addEventListener("click", () => {
-        const os = btn.getAttribute("data-os") || "mac";
-        applyOs(os);
-      });
-    });
+  current = detectOs();
+  applyOs(current);
+  document.querySelectorAll("[data-dl-dock] .dl-tabs button").forEach((btn) => {
+    btn.addEventListener("click", () => applyOs(btn.getAttribute("data-os") || "mac"));
   });
 
   window.addEventListener("flare:lang", () => {
@@ -163,7 +149,7 @@
         entry.target.classList.add("in");
         io.unobserve(entry.target);
       });
-    }, { threshold: 0.14, rootMargin: "0px 0px -6% 0px" });
+    }, { threshold: 0.12, rootMargin: "0px 0px -6% 0px" });
     items.forEach((el) => io.observe(el));
   };
   reveal();
@@ -188,14 +174,10 @@
     const open = header.classList.toggle("nav-open");
     toggle.setAttribute("aria-expanded", open ? "true" : "false");
   });
-  document.querySelectorAll(".nav-links a").forEach((a) => {
-    a.addEventListener("click", closeNav);
-  });
-  window.addEventListener("keydown", (e) => {
-    if (e.key === "Escape") closeNav();
-  });
+  document.querySelectorAll(".nav-links a").forEach((a) => a.addEventListener("click", closeNav));
+  window.addEventListener("keydown", (e) => { if (e.key === "Escape") closeNav(); });
 
-  const sections = ["shot", "rec", "evidence", "whats-new", "get"]
+  const sections = ["features", "scenarios", "privacy", "platforms", "get"]
     .map((id) => document.getElementById(id))
     .filter(Boolean);
   if (sections.length) {
@@ -203,8 +185,7 @@
       entries.forEach((entry) => {
         if (!entry.isIntersecting) return;
         document.querySelectorAll(".nav-links > a").forEach((a) => a.classList.remove("is-on"));
-        const mark = document.querySelector(`.nav-links > a[href="#${entry.target.id}"]`);
-        mark?.classList.add("is-on");
+        document.querySelector(`.nav-links > a[href="#${entry.target.id}"]`)?.classList.add("is-on");
       });
     }, { rootMargin: "-40% 0px -50% 0px", threshold: 0.01 });
     sections.forEach((el) => spy.observe(el));
@@ -213,12 +194,12 @@
   const root = document.querySelector("[data-carousel]");
   if (!root) return;
 
-  const frames = Array.from(root.querySelectorAll(".stage img"));
+  const frames = Array.from(root.querySelectorAll(".proof-frame"));
   const tabs = Array.from(root.querySelectorAll(".switcher button"));
   let index = 0;
   let timer = 0;
 
-  const showFrame = (i) => {
+  const show = (i) => {
     index = (i + frames.length) % frames.length;
     frames.forEach((el, n) => el.classList.toggle("on", n === index));
     tabs.forEach((el, n) => {
@@ -228,27 +209,18 @@
     });
   };
 
-  const stop = () => {
-    if (timer) window.clearInterval(timer);
-    timer = 0;
-  };
-
-  const start = () => {
+  const arm = () => {
     if (reduce || frames.length < 2) return;
-    stop();
-    timer = window.setInterval(() => showFrame(index + 1), 4800);
+    clearInterval(timer);
+    timer = setInterval(() => show(index + 1), 5200);
   };
 
-  tabs.forEach((tab) => {
-    tab.addEventListener("click", () => {
-      showFrame(Number(tab.getAttribute("data-goto") || "0"));
-      start();
+  tabs.forEach((btn) => {
+    btn.addEventListener("click", () => {
+      show(Number(btn.getAttribute("data-goto") || 0));
+      arm();
     });
   });
-
-  root.addEventListener("pointerenter", stop);
-  root.addEventListener("pointerleave", start);
-
-  showFrame(0);
-  start();
+  show(0);
+  arm();
 })();
