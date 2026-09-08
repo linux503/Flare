@@ -163,10 +163,8 @@ final class AnnotationCanvasView: NSView {
     }
 
     @objc private func copyImage() {
-        if let image = document?.renderedImage() {
-            ImageExporter.copyToClipboard(image)
-            ToastController.shared.show("已复制到剪贴板")
-        }
+        guard let image = document?.renderedImage() else { return }
+        Task { await PrivacyGuard.copyIfAllowed(image) }
     }
 
     override func keyDown(with event: NSEvent) {

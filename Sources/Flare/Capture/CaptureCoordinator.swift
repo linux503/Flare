@@ -377,6 +377,16 @@ final class CaptureCoordinator: ObservableObject {
         SoundPlayer.playShutter()
         let image = ImageExporter.nsImage(from: cgImage, scale: scale)
 
+        let resolved: AfterCaptureAction
+        switch action {
+        case .useSettings: resolved = AppSettings.shared.afterCaptureAction
+        case .editor: resolved = .editor
+        case .clipboard: resolved = .clipboard
+        case .save: resolved = .save
+        case .pin: resolved = .pin
+        case .ocr: resolved = .editor
+        }
+
         if action == .ocr {
             HistoryStore.shared.add(image: image)
             DispatchQueue.main.async { StatusBarController.shared?.reloadMenu() }
@@ -399,45 +409,81 @@ final class CaptureCoordinator: ObservableObject {
             return
         }
 
-        let resolved: AfterCaptureAction
-        switch action {
-        case .useSettings: resolved = AppSettings.shared.afterCaptureAction
-        case .editor: resolved = .editor
-        case .clipboard: resolved = .clipboard
-        case .save: resolved = .save
-        case .pin: resolved = .pin
-        case .ocr: resolved = .editor // unreachable
+        guard AppSettings.shared.privacyModeEnabled else {
+            deliver(local: image, plan: .original, resolved: resolved)
+            return
         }
 
-        // 先完成动作，历史缩略图后台写入，避免截完卡顿
+        ToastController.shared.show("正在检查敏感信息…")
+        Task {
+            let plan = await PrivacyGuard.plan(for: image)
+            await MainActor.run {
+                self.deliver(local: image, plan: plan, resolved: resolved)
+            }
+        }
+    }
+
+    /// 原图始终进本地历史；外发（复制 / 钉住 / 编辑器里继续分享）按隐私选择。
+    private func deliver(local: NSImage, plan: PrivacySharePlan, resolved: AfterCaptureAction) {
+        let outbound: NSImage?
+        switch plan {
+        case .original:
+            outbound = local
+        case .redacted(let redacted):
+            outbound = redacted
+        case .localOnly:
+            outbound = nil
+        }
+
         switch resolved {
         case .editor:
-            if AppSettings.shared.copyToClipboard {
-                ImageExporter.copyToClipboard(image)
+            if let outbound, AppSettings.shared.copyToClipboard {
+                ImageExporter.copyToClipboard(outbound)
             }
-            EditorWindowController.shared.present(image: image)
+            EditorWindowController.shared.present(image: outbound ?? local)
         case .clipboard:
-            ImageExporter.copyToClipboard(image)
-            ToastController.shared.show("已复制到剪贴板", fontSize: 11)
+            if let outbound {
+                ImageExporter.copyToClipboard(outbound)
+                if case .redacted = plan {
+                    ToastController.shared.show("已脱敏复制，原图仅保存在本地历史", fontSize: 11)
+                } else {
+                    ToastController.shared.show("已复制到剪贴板", fontSize: 11)
+                }
+            } else {
+                ToastController.shared.show("原图仅保存在本地历史")
+            }
         case .save:
             do {
-                let url = try ImageExporter.save(image)
-                if AppSettings.shared.copyToClipboard {
-                    ImageExporter.copyToClipboard(image)
+                let url = try ImageExporter.save(local)
+                if let outbound, AppSettings.shared.copyToClipboard {
+                    ImageExporter.copyToClipboard(outbound)
                 }
-                ToastController.shared.show("已保存：\(url.lastPathComponent)")
-                HistoryStore.shared.add(image: image, fileURL: url)
+                if case .redacted = plan {
+                    ToastController.shared.show("原图已保存，剪贴板为脱敏图")
+                } else if outbound == nil {
+                    ToastController.shared.show("原图已仅本地保存：\(url.lastPathComponent)")
+                } else {
+                    ToastController.shared.show("已保存：\(url.lastPathComponent)")
+                }
+                HistoryStore.shared.add(image: local, fileURL: url)
             } catch {
                 ToastController.shared.show("保存失败，已保留到历史")
-                HistoryStore.shared.add(image: image)
+                HistoryStore.shared.add(image: local)
             }
             StatusBarController.shared?.reloadMenu()
             return
         case .pin:
-            PinWindowController.shared.pin(image: image)
+            if let outbound {
+                PinWindowController.shared.pin(image: outbound)
+                if case .redacted = plan {
+                    ToastController.shared.show("已钉出脱敏图，原图仅在本地历史")
+                }
+            } else {
+                ToastController.shared.show("原图仅保存在本地历史")
+            }
         }
 
-        HistoryStore.shared.add(image: image)
+        HistoryStore.shared.add(image: local)
         DispatchQueue.main.async {
             StatusBarController.shared?.reloadMenu()
         }

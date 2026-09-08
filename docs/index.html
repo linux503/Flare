@@ -32,7 +32,7 @@
   <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@500;600;700;800&family=Noto+Sans+SC:wght@400;500;600;700&family=Noto+Serif+SC:wght@600;700&display=swap" rel="stylesheet" />
   <link rel="alternate" hreflang="zh-Hans" href="https://linux503.github.io/Flare/?lang=zh" />
   <link rel="alternate" hreflang="en" href="https://linux503.github.io/Flare/?lang=en" />
-  <link rel="stylesheet" href="styles.css?v=34" />
+  <link rel="stylesheet" href="styles.css?v=35" />
   <link rel="stylesheet" href="more-apps.css?v=13" />
   <meta name="twitter:image:alt" content="Flare 官网首页：截图、录屏、一键新建文档" />
   <meta property="og:image:secure_url" content="https://linux503.github.io/Flare/og-home.jpg" />
@@ -86,6 +86,7 @@
       <div class="nav-links">
         <a href="#shot" data-i18n="nav.shot">截图</a>
         <a href="#rec" data-i18n="nav.rec">录屏</a>
+        <a href="#evidence" data-i18n="nav.evidence">证据快照</a>
         <a href="#docs" data-i18n="nav.docs">文档</a>
         <a href="#start" data-i18n="nav.start">上手</a>
         <a href="#get" data-i18n="nav.get">下载</a>
@@ -200,23 +201,48 @@
 
       <div class="showcase" data-carousel data-hero role="region" data-i18n-aria="carousel.aria" aria-label="功能演示">
         <div class="stage">
-          <img class="on" src="poster-capture.jpg?v=8" alt="截图" data-i18n-alt="img.shot" data-i="0" width="1536" height="1024" fetchpriority="high" decoding="async" />
-          <img src="poster-record.jpg?v=8" alt="录屏" data-i18n-alt="img.rec" data-i="1" width="1536" height="1024" loading="lazy" decoding="async" />
-          <img src="poster-annotate.jpg?v=8" alt="标注" data-i18n-alt="img.ann" data-i="2" width="1536" height="1024" loading="lazy" decoding="async" />
+          <img class="on" src="ui-home.jpg?v=9" alt="截图" data-i18n-alt="img.shot" data-i="0" width="1440" height="960" fetchpriority="high" decoding="async" />
+          <img src="ui-record.jpg?v=9" alt="录屏" data-i18n-alt="img.rec" data-i="1" width="1440" height="960" loading="lazy" decoding="async" />
+          <img src="ui-evidence.jpg?v=9" alt="网页证据快照" data-i18n-alt="img.ev" data-i="2" width="1440" height="960" loading="lazy" decoding="async" />
           <span class="stage-shine" aria-hidden="true"></span>
         </div>
         <div class="switcher" role="tablist" data-i18n-aria="switch.aria" aria-label="演示切换">
           <button type="button" class="on" data-goto="0" role="tab" aria-selected="true"><b data-i18n="tab.shot">截图</b><span data-i18n="tab.shotSub">框选 · 窗口 · 全屏</span></button>
           <button type="button" data-goto="1" role="tab" aria-selected="false"><b data-i18n="tab.rec">录屏</b><span data-i18n="tab.recSub">区域 · 系统声 · MOV</span></button>
-          <button type="button" data-goto="2" role="tab" aria-selected="false"><b data-i18n="tab.ann">标注</b><span data-i18n="tab.annSub">箭头 · 高亮 · OCR</span></button>
+          <button type="button" data-goto="2" role="tab" aria-selected="false"><b data-i18n="tab.ev">证据快照</b><span data-i18n="tab.evSub">网址 · 哈希 · PDF</span></button>
         </div>
       </div>
     </section>
 
-    <div class="ticker" aria-hidden="true">
+    <section class="highlights" aria-label="功能亮点">
+      <div class="highlights-head">
+        <p class="tag" data-i18n="hi.tag">功能亮点</p>
+        <h2 data-i18n="hi.h2">截完就能用，页面也能留档</h2>
+      </div>
+      <div class="highlight-grid">
+        <article>
+          <b data-i18n="hi.shot">区域 / 窗口 / 全屏</b>
+          <p data-i18n="hi.shotP">双击选区可按设置进入标注，或直接复制到剪贴板。</p>
+        </article>
+        <article>
+          <b data-i18n="hi.rec">录屏单独成套</b>
+          <p data-i18n="hi.recP">全屏或区域，系统声可选，导出 H.264 MOV。</p>
+        </article>
+        <article>
+          <b data-i18n="hi.priv">隐私安全模式</b>
+          <p data-i18n="hi.privP">分享前检查密钥、助记词、证件和二维码，可脱敏后再发出。</p>
+        </article>
+        <article>
+          <b data-i18n="hi.ev">网页证据快照</b>
+          <p data-i18n="hi.evP">记录网址、时间、长图、哈希与证书，生成带时间线的 PDF。仅业务留档，不具备司法效力。</p>
+        </article>
+      </div>
+    </section>
+
+      <div class="ticker" aria-hidden="true">
       <div class="ticker-track">
-        <span>Screenshot</span><span>Recording</span><span>OCR</span><span>Pin</span><span>TXT</span><span>Word</span><span>PPT</span><span>Excel</span><span>macOS</span><span>Windows</span><span>Android</span>
-        <span>Screenshot</span><span>Recording</span><span>OCR</span><span>Pin</span><span>TXT</span><span>Word</span><span>PPT</span><span>Excel</span><span>macOS</span><span>Windows</span><span>Android</span>
+        <span>Screenshot</span><span>Recording</span><span>Evidence</span><span>OCR</span><span>Pin</span><span>TXT</span><span>Word</span><span>PPT</span><span>macOS</span><span>Windows</span><span>Android</span>
+        <span>Screenshot</span><span>Recording</span><span>Evidence</span><span>OCR</span><span>Pin</span><span>TXT</span><span>Word</span><span>PPT</span><span>macOS</span><span>Windows</span><span>Android</span>
       </div>
     </div>
 
@@ -291,7 +317,7 @@
           <li data-i18n="ch.shot.li3">Android：下载 APK，网页长截图</li>
         </ul>
       </div>
-      <figure><img src="poster-capture.jpg?v=8" alt="截图展示" data-i18n-alt="fig.shot" loading="lazy" width="1536" height="1024" /></figure>
+      <figure><img src="ui-home.jpg?v=9" alt="截图展示" data-i18n-alt="fig.shot" loading="lazy" width="1440" height="960" /></figure>
     </section>
 
     <section id="rec" class="chapter flip" data-reveal>
@@ -306,7 +332,22 @@
           <li data-i18n="ch.rec.li4">悬浮计时条不会进入成片</li>
         </ul>
       </div>
-      <figure><img src="poster-record.jpg?v=8" alt="录屏展示" data-i18n-alt="fig.rec" loading="lazy" width="1536" height="1024" /></figure>
+      <figure><img src="ui-record.jpg?v=9" alt="录屏展示" data-i18n-alt="fig.rec" loading="lazy" width="1440" height="960" /></figure>
+    </section>
+
+    <section id="evidence" class="chapter" data-reveal>
+      <div class="chapter-text">
+        <p class="tag green" data-i18n="ch.ev.tag">Evidence</p>
+        <h2 data-i18n="ch.ev.h2">网页证据快照</h2>
+        <p data-i18n="ch.ev.p">面向外贸、电商和加密货币页面。打开报价、聊天、订单或链上交易页，生成可核对的留档包。这不是司法鉴定，也不具备法定电子证据效力。</p>
+        <ul>
+          <li data-i18n="ch.ev.li1">自动记录网址、截图时间与时区</li>
+          <li data-i18n="ch.ev.li2">完整长截图，以及 HTML / 图片哈希</li>
+          <li data-i18n="ch.ev.li3">域名、证书，识别到交易时记录区块高度或状态</li>
+          <li data-i18n="ch.ev.li4">防篡改校验，并导出带时间线的 PDF</li>
+        </ul>
+      </div>
+      <figure><img src="ui-evidence.jpg?v=9" alt="网页证据快照" data-i18n-alt="fig.ev" loading="lazy" width="1440" height="960" /></figure>
     </section>
 
     <section class="chapter" data-reveal>
@@ -320,7 +361,7 @@
           <li data-i18n="ch.ann.li3">钉图 + 历史回看</li>
         </ul>
       </div>
-      <figure><img src="poster-annotate.jpg?v=8" alt="标注展示" data-i18n-alt="fig.ann" loading="lazy" width="1536" height="1024" /></figure>
+      <figure><img src="ui-home.jpg?v=9" alt="标注展示" data-i18n-alt="fig.ann" loading="lazy" width="1440" height="960" /></figure>
     </section>
 
     <section id="docs" class="chapter flip docs" data-reveal>

@@ -43,7 +43,7 @@ struct HomePane: View {
                 Text("截图")
                     .font(.system(size: 26, weight: .bold, design: .rounded))
                     .foregroundStyle(theme.textPrimary)
-                Text(capture.isCapturing ? "正在截图…" : "双击识别窗口；选区确认后可双击就地标注；Esc 退出")
+                Text(capture.isCapturing ? "正在截图…" : "双击识别窗口；双击选区按「设置 → 截图后」处理；Esc 退出")
                     .font(.system(size: 12, weight: .medium))
                     .foregroundStyle(theme.textMuted)
                     .animation(.easeOut(duration: 0.2), value: capture.isCapturing)
@@ -135,6 +135,34 @@ struct HomePane: View {
                 railItem("延时 3s", .delay, .delay) { CaptureCoordinator.shared.startDelayedCapture(seconds: 3) }
                 railItem("长截图", .longShot, .longShot) { CaptureCoordinator.shared.startLongAreaCapture() }
             }
+            Button {
+                EvidenceWindowController.shared.show()
+            } label: {
+                HStack(spacing: 9) {
+                    SnapIcon(.link, size: .body, opacity: 0.9, tint: theme.textPrimary)
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text("网页证据快照")
+                            .font(.system(size: 12, weight: .semibold))
+                            .foregroundStyle(theme.textPrimary)
+                        Text("报价 · 订单 · 链上页面留档")
+                            .font(.system(size: 10, weight: .medium))
+                            .foregroundStyle(theme.textMuted)
+                    }
+                    Spacer(minLength: 0)
+                }
+                .padding(.horizontal, 10)
+                .padding(.vertical, 9)
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .background(
+                    RoundedRectangle(cornerRadius: 12, style: .continuous)
+                        .fill(theme.fill)
+                        .overlay(
+                            RoundedRectangle(cornerRadius: 12, style: .continuous)
+                                .strokeBorder(theme.stroke, lineWidth: 1)
+                        )
+                )
+            }
+            .buttonStyle(.plain)
         }
     }
 

@@ -39,6 +39,9 @@ build_arch_main() {
     -framework SwiftUI \
     -framework ScreenCaptureKit \
     -framework Vision \
+    -framework WebKit \
+    -framework PDFKit \
+    -framework Security \
     -framework AVFoundation \
     -framework Carbon \
     -framework CoreGraphics \

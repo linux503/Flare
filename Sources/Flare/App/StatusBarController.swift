@@ -100,6 +100,7 @@ final class StatusBarController: NSObject {
         menu.addItem(hot("全屏截图", .screen, #selector(captureScreen)))
         menu.addItem(hot("延时 3 秒", .delay, #selector(captureDelay)))
         menu.addItem(hot("长截图", .longShot, #selector(captureLong)))
+        menu.addItem(item("网页证据快照…", .link, "", [], #selector(showEvidence)))
         menu.addItem(FlareMenu.separator())
 
         menu.addItem(FlareMenu.section("录制"))
@@ -203,6 +204,7 @@ final class StatusBarController: NSObject {
     @objc private func captureScreen() { onCaptureScreen() }
     @objc private func captureDelay() { onCaptureDelay() }
     @objc private func captureLong() { CaptureCoordinator.shared.startLongAreaCapture() }
+    @objc private func showEvidence() { EvidenceWindowController.shared.show() }
     @objc private func startRecordFull() { ScreenRecorder.shared.startFullScreen() }
     @objc private func startRecordArea() { ScreenRecorder.shared.startArea() }
     @objc private func startRecordNow() { ScreenRecorder.shared.startFullScreen(countdown: false) }

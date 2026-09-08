@@ -24,6 +24,8 @@ struct SettingsPane: View {
     @State private var savePath = AppSettings.shared.saveDirectory.path
     @State private var documentPath = AppSettings.shared.documentDirectory.path
     @State private var showInDock = AppSettings.shared.showInDock
+    @State private var privacyMode = AppSettings.shared.privacyModeEnabled
+    @State private var privacyAutoRedact = AppSettings.shared.privacyAutoRedact
 
     @State private var area = AppSettings.shared.shortcut(for: .area)
     @State private var window = AppSettings.shared.shortcut(for: .window)
@@ -60,7 +62,7 @@ struct SettingsPane: View {
                     }
                 }
 
-                settingsBlock(title: "截图后", subtitle: "确认选区后的默认动作与历史保留") {
+                settingsBlock(title: "截图后", subtitle: "双击选区、回车确认后的默认动作与历史保留") {
                     VStack(alignment: .leading, spacing: 16) {
                         VStack(alignment: .leading, spacing: 8) {
                             Text("默认动作")
@@ -145,6 +147,23 @@ struct SettingsPane: View {
                                 NSApp.setActivationPolicy(newValue ? .regular : .accessory)
                             }
                         }
+                    }
+                }
+
+                settingsBlock(title: "隐私安全", subtitle: "截图完成或复制分享前，在本机检查敏感内容") {
+                    VStack(alignment: .leading, spacing: 10) {
+                        labeledToggle("隐私安全模式", isOn: $privacyMode) {
+                            AppSettings.shared.privacyModeEnabled = $0
+                        }
+                        labeledToggle("发现后自动遮挡", isOn: $privacyAutoRedact) {
+                            AppSettings.shared.privacyAutoRedact = $0
+                        }
+                        .disabled(!privacyMode)
+                        .opacity(privacyMode ? 1 : 0.45)
+                        Text("检测 API Key、助记词、私钥、钱包地址、银行卡、证件、邮箱、电话、客户资料、二维码、Cookie / Token。关闭自动遮挡时，可选择「脱敏后分享」或「原图仅本地保存」。")
+                            .font(.system(size: 10))
+                            .foregroundStyle(theme.textMuted)
+                            .fixedSize(horizontal: false, vertical: true)
                     }
                 }
 
@@ -300,6 +319,8 @@ struct SettingsPane: View {
             savePath = AppSettings.shared.saveDirectory.path
             documentPath = AppSettings.shared.documentDirectory.path
             showInDock = AppSettings.shared.showInDock
+            privacyMode = AppSettings.shared.privacyModeEnabled
+            privacyAutoRedact = AppSettings.shared.privacyAutoRedact
         }
     }
 

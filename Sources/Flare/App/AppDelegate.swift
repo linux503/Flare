@@ -65,9 +65,18 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
             let defaults = UserDefaults.standard
             let first = defaults.bool(forKey: "snapHasLaunched") == false
-            if first {
+            if first || CommandLine.arguments.contains("--show-home") {
                 defaults.set(true, forKey: "snapHasLaunched")
+            if CommandLine.arguments.contains("--show-home") {
+                    NSApp.setActivationPolicy(.regular)
+                }
                 HomeWindowController.shared.show()
+                if CommandLine.arguments.contains("--show-evidence") {
+                    EvidenceWindowController.shared.show()
+                }
+                if CommandLine.arguments.contains("--show-record") {
+                    HomeWindowController.shared.showRecord()
+                }
             }
 
             // 静默探测权限，不弹窗；用户从系统设置返回时会再次探测

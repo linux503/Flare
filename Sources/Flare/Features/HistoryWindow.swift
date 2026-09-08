@@ -103,10 +103,8 @@ struct HistoryCard: View {
                         Spacer(minLength: 4)
                         iconButton(.edit, theme.textSecondary, openEditor)
                         iconButton(.copy, theme.textSecondary) {
-                            if let image = store.image(for: item) {
-                                ImageExporter.copyToClipboard(image)
-                                ToastController.shared.show("已复制")
-                            }
+                            guard let image = store.image(for: item) else { return }
+                            Task { await PrivacyGuard.copyIfAllowed(image) }
                         }
                         iconButton(.trash, Color.red.opacity(0.75)) {
                             store.delete(item)

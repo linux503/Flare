@@ -82,6 +82,18 @@ final class AppSettings {
         set { defaults.set(newValue.rawValue, forKey: "historyRetention"); notify() }
     }
 
+    /// 截图完成或复制/分享前，在本机检测密钥、证件、联系方式等
+    var privacyModeEnabled: Bool {
+        get { defaults.object(forKey: "privacyModeEnabled") as? Bool ?? true }
+        set { defaults.set(newValue, forKey: "privacyModeEnabled"); notify() }
+    }
+
+    /// 打开后不再弹窗，分享自动用遮挡图，原图只进本地历史
+    var privacyAutoRedact: Bool {
+        get { defaults.object(forKey: "privacyAutoRedact") as? Bool ?? false }
+        set { defaults.set(newValue, forKey: "privacyAutoRedact"); notify() }
+    }
+
     var appTheme: AppThemeKind {
         get { AppThemeKind.migrated(from: defaults.string(forKey: "appTheme")) }
         set { defaults.set(newValue.rawValue, forKey: "appTheme"); notify() }
@@ -365,10 +377,10 @@ enum AfterCaptureAction: String, CaseIterable, Identifiable {
     }
     var hint: String {
         switch self {
-        case .editor: return "选区确认后默认进入标注"
-        case .clipboard: return "完成后直接复制"
-        case .save: return "完成后写入保存目录"
-        case .pin: return "完成后钉在桌面"
+        case .editor: return "双击选区后进入标注"
+        case .clipboard: return "双击选区后直接复制"
+        case .save: return "双击选区后写入保存目录"
+        case .pin: return "双击选区后钉在桌面"
         }
     }
 }

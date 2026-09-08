@@ -92,8 +92,7 @@ final class EditorWindowController {
 
     private func copy() {
         guard let image = document?.renderedImage() else { return }
-        ImageExporter.copyToClipboard(image)
-        ToastController.shared.show("已复制到剪贴板")
+        Task { await PrivacyGuard.copyIfAllowed(image) }
     }
 
     private func save() {
@@ -124,8 +123,18 @@ final class EditorWindowController {
 
     private func pin() {
         guard let image = document?.renderedImage() else { return }
-        PinWindowController.shared.pin(image: image)
-        ToastController.shared.show("已钉在屏幕上")
+        Task { @MainActor in
+            switch await PrivacyGuard.plan(for: image) {
+            case .original:
+                PinWindowController.shared.pin(image: image)
+                ToastController.shared.show("已钉在屏幕上")
+            case .redacted(let redacted):
+                PinWindowController.shared.pin(image: redacted)
+                ToastController.shared.show("已钉出脱敏图")
+            case .localOnly:
+                ToastController.shared.show("已取消钉出，原图请只留在本机")
+            }
+        }
     }
 
     private func runOCR() {

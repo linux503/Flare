@@ -132,10 +132,8 @@ final class PinnedImageWindow: NSObject {
     }
 
     @objc private func copyPin() {
-        if let image = imageView.image {
-            ImageExporter.copyToClipboard(image)
-            ToastController.shared.show("已复制")
-        }
+        guard let image = imageView.image else { return }
+        Task { await PrivacyGuard.copyIfAllowed(image) }
     }
 
     @objc private func savePin() {
