@@ -815,7 +815,8 @@ main { position: relative; z-index: 1; }
   background: linear-gradient(180deg, rgba(255,255,255,0.05), transparent);
   pointer-events: none;
 }
-.stage img {
+/* Legacy direct-child carousel only — do not hide .proof-frame imgs */
+.stage > img {
   position: absolute;
   inset: 40px 0 0;
   width: 100%;
@@ -824,7 +825,7 @@ main { position: relative; z-index: 1; }
   opacity: 0;
   transition: opacity 0.7s var(--ease);
 }
-.stage img.on {
+.stage > img.on {
   opacity: 1;
   animation: ken 16s ease-out forwards;
 }
@@ -1952,10 +1953,11 @@ main { position: relative; z-index: 1; }
   .atmosphere .orb,
   .stage-shine,
   .now-dot,
-  .stage img.on,
+  .stage > img.on,
   .hero-copy,
   .showcase,
-  .dl-main { animation: none !important; }
+  .dl-main,
+  .longshot-img { animation: none !important; }
   [data-reveal] {
     opacity: 1;
     transform: none;
@@ -2093,16 +2095,22 @@ main { position: relative; z-index: 1; }
 .proof-stage.compact {
   margin-top: 0.5rem;
   aspect-ratio: 16 / 10;
+  min-height: 160px;
 }
 .proof-stage.mini {
   aspect-ratio: 16 / 11;
-  min-height: 0;
+  min-height: 120px;
 }
-.proof-stage img {
+.proof-stage > img,
+.proof-stage.compact img,
+.proof-stage.mini img {
+  position: absolute;
+  inset: 0;
   width: 100%;
   height: 100%;
   object-fit: cover;
   display: block;
+  opacity: 1;
 }
 .crop-capture { object-position: 50% 28%; transform: scale(1.12); transform-origin: 50% 30%; }
 .crop-record { object-position: 50% 40%; transform: scale(1.08); transform-origin: center; }
@@ -2120,9 +2128,11 @@ main { position: relative; z-index: 1; }
   opacity: 0;
   transition: opacity 0.55s var(--ease);
   pointer-events: none;
+  z-index: 1;
 }
-.proof-frame.on { opacity: 1; }
-.proof-frame img {
+.proof-frame.on { opacity: 1; z-index: 2; }
+.proof-frame img,
+.showcase .stage .proof-frame img {
   position: absolute;
   inset: 36px 12px 48px;
   width: auto;
@@ -2136,6 +2146,8 @@ main { position: relative; z-index: 1; }
   bottom: 48px;
   border-radius: 6px;
   object-fit: cover;
+  opacity: 1;
+  display: block;
 }
 .proof-caption {
   position: absolute;
