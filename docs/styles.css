@@ -2695,10 +2695,10 @@ main { position: relative; z-index: 1; }
   transform: translateY(-3px);
   box-shadow: 0 18px 40px rgba(14, 20, 28, 0.1);
 }
-.feature-card.tone-capture { --tone: var(--accent-bright); background: linear-gradient(165deg, #eaf7f3, rgba(255,255,255,0.75)); }
-.feature-card.tone-record { --tone: var(--win); background: linear-gradient(165deg, #e8eff8, rgba(255,255,255,0.75)); }
-.feature-card.tone-redact { --tone: var(--rose); background: linear-gradient(165deg, #f8ecef, rgba(255,255,255,0.75)); }
-.feature-card.tone-evidence { --tone: var(--brass); background: linear-gradient(165deg, #f5edd9, rgba(255,255,255,0.75)); }
+.feature-card.tone-capture { --tone: var(--accent-bright); background: linear-gradient(165deg, #d8f0e8 0%, #eef8f4 48%, rgba(255,255,255,0.85) 100%); }
+.feature-card.tone-record { --tone: var(--win); background: linear-gradient(165deg, #d7e5f5 0%, #eef3fa 48%, rgba(255,255,255,0.85) 100%); }
+.feature-card.tone-redact { --tone: var(--rose); background: linear-gradient(165deg, #f3dce2 0%, #faf0f2 48%, rgba(255,255,255,0.85) 100%); }
+.feature-card.tone-evidence { --tone: var(--brass); background: linear-gradient(165deg, #f0e2c0 0%, #f7f1e4 48%, rgba(255,255,255,0.85) 100%); }
 .feature-card.tone-capture .feature-kicker { color: var(--accent); }
 .feature-card.tone-record .feature-kicker { color: var(--win); }
 .feature-card.tone-redact .feature-kicker { color: var(--rose); }
