@@ -114,62 +114,67 @@ def sd_round_box(px: float, py: float, hx: float, hy: float, rad: float) -> floa
     return math.hypot(max(ax, 0.0), max(ay, 0.0)) + min(max(ax, ay), 0.0) - rad
 
 
-def frame_mask(nx: float, ny: float, thick: float = 0.044) -> float:
-    outer = sd_round_box(nx, ny, 0.44, 0.44, 0.11)
+def frame_mask(nx: float, ny: float, thick: float = 0.09) -> float:
+    # 外框贴边：几乎占满 squircle
+    outer = sd_round_box(nx, ny, 0.88, 0.88, 0.22)
     ring = abs(outer) - thick
-    return smoothstep(0.018, -0.012, ring)
+    return smoothstep(0.014, -0.010, ring)
 
 
 def spark_mask(nx: float, ny: float) -> float:
+    """八芒闪光：粗壮、贴满外框内侧。"""
     def arms(x: float, y: float, reach: float, thick: float) -> float:
         ax, ay = abs(x), abs(y)
-        th_h = thick * max(0.12, 1.0 - ax * (1.1 / reach))
+        th_h = thick * max(0.22, 1.0 - ax * (0.95 / reach))
         dh = ay - th_h if ax < reach else 1e9
-        th_v = thick * max(0.12, 1.0 - ay * (1.1 / reach))
+        th_v = thick * max(0.22, 1.0 - ay * (0.95 / reach))
         dv = ax - th_v if ay < reach else 1e9
         return min(dh, dv)
 
-    plus = arms(nx, ny, 0.46, 0.088)
+    # 主臂几乎碰到外框内缘（框约在 0.79 内沿）
+    plus = arms(nx, ny, 0.78, 0.155)
     s = 0.70710678
     rx = nx * s - ny * s
     ry = nx * s + ny * s
-    cross = arms(rx, ry, 0.30, 0.042)
-    core = sd_circle(nx, ny, 0.095)
-    m = smoothstep(0.018, -0.012, plus)
-    m = max(m, smoothstep(0.016, -0.01, cross) * 0.9)
-    m = max(m, smoothstep(0.022, -0.012, core))
-    return min(1.0, m + smoothstep(0.10, -0.02, plus) * 0.22)
+    cross = arms(rx, ry, 0.68, 0.11)
+    core = sd_circle(nx, ny, 0.18)
+    diamond = abs(nx) + abs(ny) - 0.28
+    m = smoothstep(0.014, -0.012, plus)
+    m = max(m, smoothstep(0.012, -0.010, cross))
+    m = max(m, smoothstep(0.018, -0.012, core))
+    m = max(m, smoothstep(0.016, -0.012, diamond) * 0.9)
+    return min(1.0, m)
 
 
 def iris_mark(nx: float, ny: float) -> float:
-    ring = abs(math.hypot(nx, ny) - 0.34) - 0.060
-    inner = abs(math.hypot(nx, ny) - 0.20) - 0.018
-    pupil = sd_circle(nx, ny, 0.048)
+    ring = abs(math.hypot(nx, ny) - 0.58) - 0.085
+    inner = abs(math.hypot(nx, ny) - 0.34) - 0.028
+    pupil = sd_circle(nx, ny, 0.10)
     m = smoothstep(0.02, -0.012, min(ring, inner))
     m = max(m, smoothstep(0.018, -0.012, pupil))
     for i in range(6):
         ang = i * math.pi / 3 + math.pi / 12
         d = sd_segment(
             nx, ny,
-            math.cos(ang) * 0.18, math.sin(ang) * 0.18,
-            math.cos(ang) * 0.30, math.sin(ang) * 0.30,
-            0.018,
+            math.cos(ang) * 0.28, math.sin(ang) * 0.28,
+            math.cos(ang) * 0.52, math.sin(ang) * 0.52,
+            0.028,
         )
-        m = max(m, smoothstep(0.016, -0.01, d) * 0.75)
+        m = max(m, smoothstep(0.016, -0.01, d) * 0.8)
     return m
 
 
 def bolt_mask(nx: float, ny: float) -> float:
     d = min(
-        sd_segment(nx, ny, -0.04, 0.44, 0.24, 0.06, 0.082),
-        sd_segment(nx, ny, 0.24, 0.06, -0.02, 0.06, 0.082),
-        sd_segment(nx, ny, -0.02, 0.06, 0.12, -0.46, 0.082),
+        sd_segment(nx, ny, -0.06, 0.70, 0.34, 0.08, 0.12),
+        sd_segment(nx, ny, 0.34, 0.08, -0.04, 0.08, 0.12),
+        sd_segment(nx, ny, -0.04, 0.08, 0.18, -0.72, 0.12),
     )
     return smoothstep(0.020, -0.014, d)
 
 
 def record_mark(nx: float, ny: float) -> float:
-    arm, thick, inset = 0.20, 0.042, 0.48
+    arm, thick, inset = 0.28, 0.058, 0.62
     d = 1e9
     for cx, cy, sx, sy in (
         (-inset, inset, 1, -1),
@@ -180,28 +185,25 @@ def record_mark(nx: float, ny: float) -> float:
         d = min(d, sd_box(nx - (cx + sx * arm * 0.5), ny - cy, arm * 0.5, thick))
         d = min(d, sd_box(nx - cx, ny - (cy + sy * arm * 0.5), thick, arm * 0.5))
     corners = smoothstep(0.018, -0.012, d)
-    dot = smoothstep(0.022, -0.012, sd_circle(nx, ny, 0.13))
-    inner = smoothstep(0.018, -0.012, sd_circle(nx, ny, 0.055))
+    dot = smoothstep(0.022, -0.012, sd_circle(nx, ny, 0.22))
+    inner = smoothstep(0.018, -0.012, sd_circle(nx, ny, 0.09))
     return max(corners, dot - inner * 0.35)
 
 
 def scroll_mark(nx: float, ny: float) -> float:
-    # 黑白：竖向文档页 + 双侧滚动刻度，区别于旧青绿条带
-    page = abs(sd_round_box(nx, ny + 0.02, 0.28, 0.42, 0.055)) - 0.042
+    # 黑白：竖向文档页 + 双侧滚动刻度，铺满画布
+    page = abs(sd_round_box(nx, ny + 0.02, 0.46, 0.68, 0.08)) - 0.055
     m = smoothstep(0.018, -0.012, page)
-    # 页内横线
-    for yy in (-0.18, -0.02, 0.14):
-        line = abs(sd_round_box(nx, ny - yy, 0.16, 0.018, 0.008)) - 0.01
+    for yy in (-0.28, -0.04, 0.20):
+        line = abs(sd_round_box(nx, ny - yy, 0.28, 0.028, 0.01)) - 0.012
         m = max(m, smoothstep(0.016, -0.01, line) * 0.85)
-    # 右侧滚动条
-    rail = abs(sd_round_box(nx - 0.18, ny + 0.02, 0.035, 0.34, 0.012)) - 0.012
-    thumb = abs(sd_round_box(nx - 0.18, ny + 0.12, 0.028, 0.12, 0.01)) - 0.01
+    rail = abs(sd_round_box(nx - 0.30, ny + 0.02, 0.048, 0.52, 0.014)) - 0.014
+    thumb = abs(sd_round_box(nx - 0.30, ny + 0.16, 0.038, 0.18, 0.012)) - 0.012
     m = max(m, smoothstep(0.016, -0.01, rail) * 0.7)
     m = max(m, smoothstep(0.016, -0.01, thumb))
-    # 底部向下箭头提示长截
     chev = min(
-        sd_segment(nx, ny - 0.48, 0.0, 0.0, -0.09, -0.07, 0.034),
-        sd_segment(nx, ny - 0.48, 0.0, 0.0, 0.09, -0.07, 0.034),
+        sd_segment(nx, ny - 0.72, 0.0, 0.0, -0.12, -0.09, 0.042),
+        sd_segment(nx, ny - 0.72, 0.0, 0.0, 0.12, -0.09, 0.042),
     )
     m = max(m, smoothstep(0.018, -0.012, chev))
     return m
