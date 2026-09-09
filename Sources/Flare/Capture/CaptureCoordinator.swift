@@ -20,7 +20,7 @@ final class CaptureCoordinator: ObservableObject {
 
     func startAreaCapture() {
         beginCapture {
-            let frames = try await ScreenCapturer.captureAllDisplays()
+            let frames = try await ScreenCapturer.captureActiveDisplay()
             await MainActor.run { self.presentAreaOverlays(frames: frames) }
         }
     }
@@ -28,14 +28,14 @@ final class CaptureCoordinator: ObservableObject {
     /// 长截图：自动滚动 + 多段拼接
     func startLongAreaCapture() {
         beginCapture {
-            let frames = try await ScreenCapturer.captureAllDisplays()
+            let frames = try await ScreenCapturer.captureActiveDisplay()
             await MainActor.run { self.presentLongOverlays(frames: frames) }
         }
     }
 
     func startWindowCapture() {
         beginCapture {
-            let frames = try await ScreenCapturer.captureAllDisplays()
+            let frames = try await ScreenCapturer.captureActiveDisplay()
             await MainActor.run { self.presentWindowOverlays(frames: frames) }
         }
     }
@@ -122,7 +122,7 @@ final class CaptureCoordinator: ObservableObject {
 
         isCapturing = true
         hideFlareWindows()
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.06) {
             Task {
                 do {
                     try await work()

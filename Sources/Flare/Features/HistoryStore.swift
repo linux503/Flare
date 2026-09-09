@@ -17,9 +17,9 @@ final class HistoryStore: ObservableObject {
 
     @Published private(set) var items: [HistoryItem] = []
 
-    private let ioQueue = DispatchQueue(label: "app.flare.history.io", qos: .userInitiated)
+    private let ioQueue = DispatchQueue(label: "app.flare.history.io", qos: .utility)
     private let thumbCache = NSCache<NSString, NSImage>()
-    /// 原图内存缓存：后台落盘完成前也能打开清晰图
+    /// 原图内存缓存：后台落盘完成前也能打开清晰图（刻意收紧，小而快）
     private let imageCache = NSCache<NSString, NSImage>()
 
     nonisolated static var rootDirectory: URL {
@@ -41,21 +41,34 @@ final class HistoryStore: ObservableObject {
     }
 
     private init() {
-        thumbCache.countLimit = 80
-        imageCache.countLimit = 24
-        imageCache.totalCostLimit = 120 * 1024 * 1024
+        thumbCache.countLimit = 48
+        imageCache.countLimit = 8
+        imageCache.totalCostLimit = 40 * 1024 * 1024
     }
 
-    func load() {
-        try? FileManager.default.createDirectory(at: Self.thumbnailsDirectory, withIntermediateDirectories: true)
-        try? FileManager.default.createDirectory(at: Self.capturesDirectory, withIntermediateDirectories: true)
-        guard let data = try? Data(contentsOf: Self.indexURL),
-              let decoded = try? JSONDecoder().decode([HistoryItem].self, from: data) else {
-            items = []
-            return
+    /// 启动时异步加载，不堵主线程
+    func loadAsync() {
+        ioQueue.async { [weak self] in
+            try? FileManager.default.createDirectory(at: Self.thumbnailsDirectory, withIntermediateDirectories: true)
+            try? FileManager.default.createDirectory(at: Self.capturesDirectory, withIntermediateDirectories: true)
+            let decoded: [HistoryItem]
+            if let data = try? Data(contentsOf: Self.indexURL),
+               let list = try? JSONDecoder().decode([HistoryItem].self, from: data) {
+                decoded = list.sorted { $0.createdAt > $1.createdAt }
+            } else {
+                decoded = []
+            }
+            DispatchQueue.main.async {
+                guard let self else { return }
+                self.items = decoded
+                self.pruneExpired(persistAfter: true)
+            }
         }
-        items = decoded.sorted { $0.createdAt > $1.createdAt }
-        pruneExpired(persistAfter: true)
+    }
+
+    /// 兼容旧调用：转到异步路径
+    func load() {
+        loadAsync()
     }
 
     /// 按设置的保留时长清理过期记录
@@ -193,10 +206,14 @@ final class HistoryStore: ObservableObject {
         }
     }
 
+    /// 主线程只拍快照；编码与落盘在 ioQueue，避免截图后卡顿
     private func persist() {
-        try? FileManager.default.createDirectory(at: Self.rootDirectory, withIntermediateDirectories: true)
-        if let data = try? JSONEncoder().encode(items) {
-            try? data.write(to: Self.indexURL, options: .atomic)
+        let snapshot = items
+        ioQueue.async {
+            try? FileManager.default.createDirectory(at: Self.rootDirectory, withIntermediateDirectories: true)
+            if let data = try? JSONEncoder().encode(snapshot) {
+                try? data.write(to: Self.indexURL, options: .atomic)
+            }
         }
     }
 

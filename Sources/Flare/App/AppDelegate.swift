@@ -7,7 +7,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
     func applicationDidFinishLaunching(_ notification: Notification) {
         AppSettings.shared.load()
-        HistoryStore.shared.load()
+        HistoryStore.shared.loadAsync()
         migrateToMenuBarOnlyIfNeeded()
         NSApp.setActivationPolicy(AppSettings.shared.showInDock ? .regular : .accessory)
 
@@ -79,8 +79,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
                 }
             }
 
-            // 静默探测权限，不弹窗；用户从系统设置返回时会再次探测
-            DispatchQueue.main.asyncAfter(deadline: .now() + 0.4) {
+            // 冷启动不立刻唤醒 ScreenCaptureKit；菜单栏就绪后再静默探测
+            DispatchQueue.main.asyncAfter(deadline: .now() + 2.2) {
                 Task {
                     let ok = await Permissions.verifyAccessSilently()
                     await MainActor.run {

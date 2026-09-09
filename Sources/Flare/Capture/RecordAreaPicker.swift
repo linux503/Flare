@@ -18,7 +18,7 @@ enum RecordAreaPicker {
         }
         Task {
             do {
-                let frames = try await ScreenCapturer.captureAllDisplays()
+                let frames = try await ScreenCapturer.captureActiveDisplay()
                 await MainActor.run {
                     present(frames: frames, onPicked: onPicked, onCancel: onCancel)
                 }

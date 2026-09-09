@@ -1,22 +1,24 @@
 {
-  "version": "1.3.19",
-  "build": 33,
-  "notes": "网页证据快照；隐私安全模式；官网下载改为平台切换；截图会话稳定性修复。",
+  "version": "1.3.20",
+  "build": 34,
+  "notes": "性能优化：单屏截图、历史异步、隐私扫描加速、录屏计时降频、启动更轻。",
   "changelog": [
-    "网页证据快照：网址、长图、哈希、证书与时间线 PDF",
-    "隐私安全模式：分享前精准脱敏敏感文字",
-    "官网下载支持平台切换与系统识别",
-    "截图会话稳定性修复"
+    "截图只抓当前屏幕，多屏更快更省内存",
+    "历史加载与落盘离开主线程，启动更轻",
+    "隐私脱敏改用快速 OCR + 缩小图扫描",
+    "录屏状态栏计时降为每秒刷新",
+    "冷启动延后 ScreenCaptureKit 权限探测"
   ],
   "changelogEn": [
-    "Webpage evidence: URL, long shot, hashes, certificate, timeline PDF",
-    "Privacy mode: precise on-device redaction before sharing",
-    "Website download dock with platform switch and OS detection",
-    "More stable capture sessions"
+    "Capture only the active display for faster multi-monitor shots",
+    "History load/persist moved off the main thread for snappier launch",
+    "Privacy scan uses fast OCR on a downscaled image",
+    "Recording status bar updates once per second",
+    "Deferred ScreenCaptureKit permission probe after cold start"
   ],
-  "downloadURL": "https://linux503.github.io/Flare/downloads/Flare-Pro-1.3.19-Universal.dmg",
+  "downloadURL": "https://linux503.github.io/Flare/downloads/Flare-Pro-1.3.20-Universal.dmg",
   "windowsURL": "https://github.com/linux503/Flare/releases/download/v1.3.19/Flare-Windows-x64.exe",
   "androidURL": "https://linux503.github.io/Flare/downloads/Flare-Android.apk",
   "minOS": "14.0",
-  "publishedAt": "2026-09-08"
+  "publishedAt": "2026-09-09"
 }

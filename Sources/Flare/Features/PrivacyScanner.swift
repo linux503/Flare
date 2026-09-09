@@ -42,8 +42,10 @@ enum PrivacyScanner {
         guard let cgImage = image.cgImage(forProposedRect: nil, context: nil, hints: nil) else {
             return []
         }
-        async let textHits = recognizeText(cgImage)
-        async let codeHits = detectCodes(cgImage)
+        // 隐私门控用缩小图 + 快速 OCR，编辑器「OCR→TXT」仍走 accurate
+        let scanImage = downscaleForScan(cgImage, maxEdge: 1600) ?? cgImage
+        async let textHits = recognizeText(scanImage)
+        async let codeHits = detectCodes(scanImage)
         let merged = await textHits + codeHits
         return dedupe(merged)
     }
@@ -94,9 +96,9 @@ enum PrivacyScanner {
                 hits.append(contentsOf: matchAcrossLines(observations))
                 continuation.resume(returning: hits)
             }
-            request.recognitionLevel = .accurate
+            request.recognitionLevel = .fast
             request.usesLanguageCorrection = false
-            request.recognitionLanguages = ["zh-Hans", "zh-Hant", "en-US"]
+            request.recognitionLanguages = ["zh-Hans", "en-US"]
             let handler = VNImageRequestHandler(cgImage: cgImage, options: [:])
             do {
                 try handler.perform([request])
@@ -104,6 +106,28 @@ enum PrivacyScanner {
                 continuation.resume(returning: [])
             }
         }
+    }
+
+    /// 长边超过 maxEdge 时缩小，显著降低 Vision 耗时；归一化框比例不变。
+    private static func downscaleForScan(_ image: CGImage, maxEdge: Int) -> CGImage? {
+        let longest = max(image.width, image.height)
+        guard longest > maxEdge else { return nil }
+        let scale = CGFloat(maxEdge) / CGFloat(longest)
+        let width = max(1, Int((CGFloat(image.width) * scale).rounded()))
+        let height = max(1, Int((CGFloat(image.height) * scale).rounded()))
+        let colorSpace = image.colorSpace ?? CGColorSpaceCreateDeviceRGB()
+        guard let ctx = CGContext(
+            data: nil,
+            width: width,
+            height: height,
+            bitsPerComponent: 8,
+            bytesPerRow: 0,
+            space: colorSpace,
+            bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue
+        ) else { return nil }
+        ctx.interpolationQuality = .medium
+        ctx.draw(image, in: CGRect(x: 0, y: 0, width: width, height: height))
+        return ctx.makeImage()
     }
 
     private static func detectCodes(_ cgImage: CGImage) async -> [PrivacyFinding] {

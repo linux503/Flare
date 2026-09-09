@@ -23,6 +23,7 @@ final class ScreenRecorder: NSObject, ObservableObject {
     private var sessionStarted = false
     private var sessionSourceTime = CMTime.invalid
     private var timer: Timer?
+    private var lastTimerSecond = -1
     private var startedAt: Date?
     private var pausedAccumulated: TimeInterval = 0
     private var pauseWallClock: Date?
@@ -546,13 +547,16 @@ final class ScreenRecorder: NSObject, ObservableObject {
 
     private func startTimer() {
         timer?.invalidate()
-        timer = Timer.scheduledTimer(withTimeInterval: 0.2, repeats: true) { [weak self] _ in
+        lastTimerSecond = -1
+        timer = Timer.scheduledTimer(withTimeInterval: 1.0, repeats: true) { [weak self] _ in
             guard let self, let startedAt = self.startedAt else { return }
             var pauseExtra = self.pausedAccumulated
             if self.isPaused, let pauseWallClock = self.pauseWallClock {
                 pauseExtra += Date().timeIntervalSince(pauseWallClock)
             }
             let sec = max(0, Int(Date().timeIntervalSince(startedAt) - pauseExtra))
+            guard sec != self.lastTimerSecond else { return }
+            self.lastTimerSecond = sec
             DispatchQueue.main.async {
                 self.elapsedSeconds = sec
                 RecordingHUDController.shared.update(seconds: sec)

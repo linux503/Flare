@@ -35,6 +35,15 @@ enum ScreenCapturer {
         }
     }
 
+    /// 框选 / 窗口 / 长截图：只抓鼠标所在屏，多屏时显著减少延迟与内存。
+    static func captureActiveDisplay() async throws -> [CapturedFrame] {
+        let mouse = NSEvent.mouseLocation
+        let screen = NSScreen.screens.first { NSMouseInRect(mouse, $0.frame, false) } ?? NSScreen.main
+        let id = (screen?.deviceDescription[NSDeviceDescriptionKey("NSScreenNumber")] as? NSNumber)?.uint32Value
+            ?? CGMainDisplayID()
+        return [try await captureDisplay(id)]
+    }
+
     static func captureAllDisplays() async throws -> [CapturedFrame] {
         let content = try await shareableContent()
         var frames: [CapturedFrame] = []

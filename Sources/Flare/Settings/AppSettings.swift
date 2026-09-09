@@ -331,9 +331,15 @@ final class AppSettings {
                 defaults.set(Int(def.modifiers), forKey: modKey)
             }
         }
-        try? FileManager.default.createDirectory(at: saveDirectory, withIntermediateDirectories: true)
-        try? FileManager.default.createDirectory(at: documentDirectory, withIntermediateDirectories: true)
-        try? FileManager.default.createDirectory(at: recordDirectory, withIntermediateDirectories: true)
+        // 目录创建挪到后台，不堵启动主线程
+        let save = saveDirectory
+        let docs = documentDirectory
+        let records = recordDirectory
+        DispatchQueue.global(qos: .utility).async {
+            try? FileManager.default.createDirectory(at: save, withIntermediateDirectories: true)
+            try? FileManager.default.createDirectory(at: docs, withIntermediateDirectories: true)
+            try? FileManager.default.createDirectory(at: records, withIntermediateDirectories: true)
+        }
     }
 
     private func migrateDefaultLogoIfNeeded() {
