@@ -211,7 +211,7 @@ def scroll_mark(nx: float, ny: float) -> float:
 
 def style_mask(style: str, nx: float, ny: float) -> float:
     if style == "spark":
-        return max(frame_mask(nx, ny), spark_mask(nx, ny))
+        return spark_mask(nx, ny)
     if style == "iris":
         return iris_mark(nx, ny)
     if style == "bolt":
@@ -220,7 +220,7 @@ def style_mask(style: str, nx: float, ny: float) -> float:
         return record_mark(nx, ny)
     if style == "coral":
         return scroll_mark(nx, ny)
-    return max(frame_mask(nx, ny), spark_mask(nx, ny))
+    return spark_mask(nx, ny)
 
 
 def mix_bg(style: str, gloss: float, vignette: float) -> tuple[float, float, float]:
@@ -265,12 +265,7 @@ def render(size: int = 1024, style: str = "spark") -> bytes:
 
             mark = style_mask(style, px, py)
             if style == "spark":
-                frame = frame_mask(px, py)
                 spark = spark_mask(px, py)
-                mr, mg, mb = paint_mark_rgb(style, frame * 0.95)
-                r = r + (mr - r) * frame * 0.95
-                g = g + (mg - g) * frame * 0.95
-                b = b + (mb - b) * frame * 0.95
                 sr, sg, sb = paint_mark_rgb(style, spark)
                 r = r + (sr - r) * spark + spark * 12
                 g = g + (sg - g) * spark + spark * 12
