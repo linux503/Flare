@@ -119,6 +119,48 @@ final class HomeWindowController {
 final class MainShellModel: ObservableObject {
     @Published var tab: MainTab = .home
     @Published var permissionSheet: PermissionSheetState?
+    /// 官网有新版时展示提醒条；用户点「稍后」会记住版本号，下次同版本不再弹
+    @Published var availableUpdate: UpdateChecker.RemoteVersion?
+
+    private static let skippedKey = "flareSkippedUpdateVersion"
+
+    @MainActor
+    func applyUpdateCheck(_ result: UpdateChecker.CheckResult) {
+        switch result {
+        case .updateAvailable(let remote):
+            let skipped = UserDefaults.standard.string(forKey: Self.skippedKey)
+            if skipped != remote.version {
+                availableUpdate = remote
+            }
+        case .upToDate, .failed:
+            break
+        }
+    }
+
+    @MainActor
+    func dismissUpdate(skipVersion: Bool) {
+        if skipVersion, let version = availableUpdate?.version {
+            UserDefaults.standard.set(version, forKey: Self.skippedKey)
+        }
+        availableUpdate = nil
+    }
+
+    @MainActor
+    func openUpdateDownload() {
+        guard let remote = availableUpdate else { return }
+        let link = remote.downloadURL.flatMap(URL.init(string:))
+            ?? URL(string: FlareBrand.downloadURL)
+            ?? URL(string: FlareBrand.websiteURL)
+        if let link {
+            NSWorkspace.shared.open(link)
+        }
+    }
+
+    func refreshUpdateQuietly() async {
+        guard !UpdateChecker.isMacAppStoreBuild else { return }
+        let result = await UpdateChecker.check()
+        await MainActor.run { applyUpdateCheck(result) }
+    }
 }
 
 struct PermissionSheetState: Identifiable {
@@ -144,45 +186,94 @@ struct MainShellView: View {
                     .fill(theme.stroke.opacity(0.85))
                     .frame(width: 1)
 
-                ZStack {
-                    switch model.tab {
-                    case .home:
-                        HomePane(
-                            onOpenSettings: { select(.settings) },
-                            onOpenHistory: { select(.history) }
-                        )
-                        .flareTabTransition()
-                        .id(MainTab.home)
-                    case .record:
-                        RecordPane()
-                            .flareTabTransition()
-                            .id(MainTab.record)
-                    case .documents:
-                        DocumentsPane()
-                            .flareTabTransition()
-                            .id(MainTab.documents)
-                    case .history:
-                        HistoryPane()
-                            .flareTabTransition()
-                            .id(MainTab.history)
-                    case .settings:
-                        SettingsPane(onBack: { select(.home) })
-                            .flareTabTransition()
-                            .id(MainTab.settings)
+                VStack(spacing: 0) {
+                    if let remote = model.availableUpdate {
+                        updateBanner(remote, theme: theme)
                     }
+
+                    ZStack {
+                        switch model.tab {
+                        case .home:
+                            HomePane(
+                                onOpenSettings: { select(.settings) },
+                                onOpenHistory: { select(.history) }
+                            )
+                            .flareTabTransition()
+                            .id(MainTab.home)
+                        case .record:
+                            RecordPane()
+                                .flareTabTransition()
+                                .id(MainTab.record)
+                        case .documents:
+                            DocumentsPane()
+                                .flareTabTransition()
+                                .id(MainTab.documents)
+                        case .history:
+                            HistoryPane()
+                                .flareTabTransition()
+                                .id(MainTab.history)
+                        case .settings:
+                            SettingsPane(onBack: { select(.home) })
+                                .flareTabTransition()
+                                .id(MainTab.settings)
+                        }
+                    }
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
+                    .animation(.easeInOut(duration: 0.2), value: model.tab)
                 }
-                .frame(maxWidth: .infinity, maxHeight: .infinity)
-                .animation(.easeInOut(duration: 0.2), value: model.tab)
             }
         }
         .environment(\.flareTheme, theme)
         .preferredColorScheme(theme.preferredColorScheme)
         .frame(minWidth: 880, minHeight: 580)
+        .task {
+            await model.refreshUpdateQuietly()
+        }
         .sheet(item: $model.permissionSheet) { state in
             PermissionView(preflightGranted: state.preflight, captureWorks: state.works)
                 .environment(\.flareTheme, theme)
                 .preferredColorScheme(theme.preferredColorScheme)
                 .frame(width: 520, height: 420)
+        }
+    }
+
+    private func updateBanner(_ remote: UpdateChecker.RemoteVersion, theme: FlarePalette) -> some View {
+        HStack(spacing: 12) {
+            SnapIcon(.update, size: .body, opacity: 1, tint: theme.accent)
+            VStack(alignment: .leading, spacing: 2) {
+                Text("发现新版本 \(remote.version)")
+                    .font(.system(size: 13, weight: .semibold))
+                    .foregroundStyle(theme.textPrimary)
+                Text((remote.notes?.isEmpty == false) ? (remote.notes ?? "") : "当前 \(UpdateChecker.currentVersion)，建议更新以获得更快体验。")
+                    .font(.system(size: 11))
+                    .foregroundStyle(theme.textMuted)
+                    .lineLimit(2)
+            }
+            Spacer(minLength: 8)
+            Button("立即更新") {
+                model.openUpdateDownload()
+            }
+            .font(.system(size: 12, weight: .semibold))
+            .foregroundStyle(.white)
+            .padding(.horizontal, 12)
+            .padding(.vertical, 6)
+            .background(theme.accent, in: Capsule())
+            .buttonStyle(.plain)
+
+            Button("稍后") {
+                model.dismissUpdate(skipVersion: true)
+            }
+            .font(.system(size: 12, weight: .medium))
+            .foregroundStyle(theme.textSecondary)
+            .buttonStyle(.plain)
+        }
+        .padding(.horizontal, 18)
+        .padding(.vertical, 12)
+        .background(theme.fillStrong.opacity(0.95))
+        .overlay(alignment: .bottom) {
+            Rectangle()
+                .fill(theme.stroke)
+                .frame(height: 1)
         }
     }
 
@@ -246,10 +337,32 @@ struct MainShellView: View {
 
             Spacer()
 
-            VStack(alignment: .leading, spacing: 6) {
-                Text(themeController.kind.title)
-                    .font(.system(size: 12, weight: .semibold))
-                    .foregroundStyle(theme.textMuted)
+            VStack(alignment: .leading, spacing: 8) {
+                if model.availableUpdate != nil {
+                    Button {
+                        model.openUpdateDownload()
+                    } label: {
+                        HStack(spacing: 6) {
+                            Circle()
+                                .fill(theme.accent)
+                                .frame(width: 6, height: 6)
+                            Text("有新版本可更新")
+                                .font(.system(size: 11, weight: .semibold))
+                        }
+                        .foregroundStyle(theme.accent)
+                    }
+                    .buttonStyle(.plain)
+                }
+
+                Button {
+                    Task { await UpdateChecker.checkAndPrompt() }
+                } label: {
+                    Text("检查更新")
+                        .font(.system(size: 11, weight: .medium))
+                        .foregroundStyle(theme.textMuted)
+                }
+                .buttonStyle(.plain)
+
                 Text("v\(FlareBrand.version)")
                     .font(.system(size: 12, weight: .medium, design: .monospaced))
                     .foregroundStyle(theme.textMuted.opacity(0.85))

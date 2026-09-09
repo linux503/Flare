@@ -7,13 +7,13 @@
 
   const defaults = {
     mac: {
-      href: "./downloads/Flare-Pro-1.3.20-Universal.dmg",
+      href: "./downloads/Flare-Pro-1.3.21-Universal.dmg",
       file: "DMG · Universal",
       titleKey: "dl.macTitle",
       download: true,
     },
     win: {
-      href: "https://github.com/linux503/Flare/releases/download/v1.3.20/Flare-Windows-x64.exe",
+      href: "https://github.com/linux503/Flare/releases/download/v1.3.19/Flare-Windows-x64.exe",
       file: "EXE · x64",
       titleKey: "dl.winTitle",
       download: false,

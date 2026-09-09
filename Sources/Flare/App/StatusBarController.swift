@@ -86,53 +86,21 @@ final class StatusBarController: NSObject {
         menu.popUp(positioning: nil, at: loc, in: button)
     }
 
+    /// 精简菜单：常用截图 / 录屏 + 主面板 / 设置 / 退出
     private func buildMenu() -> NSMenu {
         let menu = NSMenu()
         menu.autoenablesItems = false
-        menu.minimumWidth = 248
+        menu.minimumWidth = 220
 
         menu.addItem(FlareMenu.brandHeader(subtitle: FlareMenu.recordingSubtitle()))
         menu.addItem(FlareMenu.separator())
 
-        menu.addItem(FlareMenu.section("截图"))
-        menu.addItem(hot("区域截图", .area, #selector(captureArea)))
-        menu.addItem(hot("窗口截图", .window, #selector(captureWindow)))
-        menu.addItem(hot("全屏截图", .screen, #selector(captureScreen)))
-        menu.addItem(hot("延时 3 秒", .delay, #selector(captureDelay)))
-        menu.addItem(hot("长截图", .longShot, #selector(captureLong)))
-        menu.addItem(item("网页证据快照…", .link, "", [], #selector(showEvidence)))
-        menu.addItem(FlareMenu.separator())
-
-        menu.addItem(FlareMenu.section("录制"))
-        appendRecordingItems(to: menu)
-        menu.addItem(FlareMenu.separator())
-
-        menu.addItem(FlareMenu.section("面板"))
-        menu.addItem(item("打开主面板", .home, "o", [.command], #selector(showHome)))
-        menu.addItem(hot("历史记录", .history, #selector(showHistory)))
-        menu.addItem(item("录制面板", .record, "r", [.command, .shift], #selector(showRecordPane)))
-        appendRecent(to: menu)
-        menu.addItem(FlareMenu.separator())
-
-        let docs = NSMenuItem(title: "新建文档", action: nil, keyEquivalent: "")
-        docs.image = FlareBrand.menuSymbol(.documents)
-        docs.submenu = documentsSubmenu()
-        menu.addItem(docs)
-        menu.addItem(FlareMenu.separator())
-
-        menu.addItem(item("偏好设置…", .settings, ",", [.command], #selector(showSettings)))
-        menu.addItem(item("退出 \(FlareBrand.name)", .quit, "q", [.command], #selector(quit)))
-
-        return menu
-    }
-
-    private func appendRecordingItems(to menu: NSMenu) {
         let rec = ScreenRecorder.shared
         if rec.isRecording {
             menu.addItem(item(
                 rec.isPaused ? "继续录屏" : "暂停录屏",
                 rec.isPaused ? .play : .pause,
-                "p", [.command],
+                "", [],
                 #selector(togglePauseRecord)
             ))
             menu.addItem(hot("停止并保存", .record, #selector(stopRecord), glyph: .stop))
@@ -140,44 +108,19 @@ final class StatusBarController: NSObject {
         } else if rec.isCountingDown {
             menu.addItem(item("取消倒计时", .close, "", [], #selector(stopRecord)))
         } else {
-            // 录屏启动项共用「屏幕录制」快捷键（与设置中心一致），不再误标区域/全屏截图键
-            menu.addItem(hot("全屏录屏", .record, #selector(startRecordFull), glyph: .record))
-            menu.addItem(item("区域录屏", .area, "", [], #selector(startRecordArea)))
-            menu.addItem(item("立即开始（全屏）", .play, "", [], #selector(startRecordNow)))
+            menu.addItem(hot("区域截图", .area, #selector(captureArea)))
+            menu.addItem(hot("窗口截图", .window, #selector(captureWindow)))
+            menu.addItem(hot("全屏截图", .screen, #selector(captureScreen)))
+            menu.addItem(FlareMenu.separator())
+            menu.addItem(hot("开始录屏", .record, #selector(startRecordFull), glyph: .record))
         }
-        menu.addItem(item("打开录屏文件夹", .folder, "", [], #selector(openRecordFolder)))
-    }
 
-    private func appendRecent(to menu: NSMenu) {
-        let recent = Array(HistoryStore.shared.items.prefix(4))
-        guard !recent.isEmpty else { return }
         menu.addItem(FlareMenu.separator())
-        menu.addItem(FlareMenu.section("最近"))
-        for (idx, entry) in recent.enumerated() {
-            let title = entry.fileName
-            let mi = NSMenuItem(title: title, action: #selector(openRecent(_:)), keyEquivalent: "")
-            mi.tag = idx
-            mi.target = self
-            mi.isEnabled = true
-            if let thumb = HistoryStore.shared.thumbnail(for: entry) {
-                mi.image = FlareMenu.recentThumbnail(thumb)
-            } else {
-                mi.image = FlareBrand.menuSymbol(.history)
-            }
-            menu.addItem(mi)
-        }
-    }
+        menu.addItem(item("打开主面板", .home, "", [], #selector(showHome)))
+        menu.addItem(item("偏好设置…", .settings, ",", [.command], #selector(showSettings)))
+        menu.addItem(item("退出 \(FlareBrand.name)", .quit, "q", [.command], #selector(quit)))
 
-    private func documentsSubmenu() -> NSMenu {
-        let m = NSMenu(title: "新建文档")
-        m.autoenablesItems = false
-        m.addItem(item("文本 TXT…", .txt, "n", [.command, .shift], #selector(createTXT)))
-        m.addItem(item("Word 文档…", .word, "", [], #selector(createWord)))
-        m.addItem(item("PPT 演示文稿…", .powerpoint, "", [], #selector(createPPT)))
-        m.addItem(item("表格 Excel…", .spreadsheet, "", [], #selector(createSpreadsheet)))
-        m.addItem(FlareMenu.separator())
-        m.addItem(item("打开新建面板", .documents, "d", [.command, .shift], #selector(showDocuments)))
-        return m
+        return menu
     }
 
     private func hot(
@@ -202,32 +145,11 @@ final class StatusBarController: NSObject {
     @objc private func captureArea() { onCaptureArea() }
     @objc private func captureWindow() { onCaptureWindow() }
     @objc private func captureScreen() { onCaptureScreen() }
-    @objc private func captureDelay() { onCaptureDelay() }
-    @objc private func captureLong() { CaptureCoordinator.shared.startLongAreaCapture() }
-    @objc private func showEvidence() { EvidenceWindowController.shared.show() }
     @objc private func startRecordFull() { ScreenRecorder.shared.startFullScreen() }
-    @objc private func startRecordArea() { ScreenRecorder.shared.startArea() }
-    @objc private func startRecordNow() { ScreenRecorder.shared.startFullScreen(countdown: false) }
     @objc private func stopRecord() { ScreenRecorder.shared.stop() }
     @objc private func discardRecord() { ScreenRecorder.shared.cancelAndDiscard() }
     @objc private func togglePauseRecord() { ScreenRecorder.shared.togglePause() }
-    @objc private func showRecordPane() { HomeWindowController.shared.showRecord() }
-    @objc private func openRecordFolder() { ScreenRecorder.shared.openRecordingsFolder() }
-    @objc private func showHistory() { onHistory() }
     @objc private func showSettings() { onSettings() }
     @objc private func showHome() { onHome() }
-    @objc private func showDocuments() { onDocuments() }
     @objc private func quit() { onQuit() }
-
-    @objc private func createTXT() { DocumentService.createAndReveal(.txt, askWhere: true) }
-    @objc private func createWord() { DocumentService.createAndReveal(.word, askWhere: true) }
-    @objc private func createPPT() { DocumentService.createAndReveal(.powerpoint, askWhere: true) }
-    @objc private func createSpreadsheet() { DocumentService.createAndReveal(.spreadsheet, askWhere: true) }
-
-    @objc private func openRecent(_ sender: NSMenuItem) {
-        let items = Array(HistoryStore.shared.items.prefix(4))
-        guard items.indices.contains(sender.tag),
-              let image = HistoryStore.shared.image(for: items[sender.tag]) else { return }
-        EditorWindowController.shared.present(image: image)
-    }
 }

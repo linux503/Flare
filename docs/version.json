@@ -1,22 +1,20 @@
 {
-  "version": "1.3.20",
-  "build": 34,
-  "notes": "性能优化：单屏截图、历史异步、隐私扫描加速、录屏计时降频、启动更轻。",
+  "version": "1.3.21",
+  "build": 35,
+  "notes": "新版 Logo；菜单栏精简；主界面自动检查更新；性能优化延续。",
   "changelog": [
-    "截图只抓当前屏幕，多屏更快更省内存",
-    "历史加载与落盘离开主线程，启动更轻",
-    "隐私脱敏改用快速 OCR + 缩小图扫描",
-    "录屏状态栏计时降为每秒刷新",
-    "冷启动延后 ScreenCaptureKit 权限探测"
+    "全新铺满式 Logo（无外框）",
+    "菜单栏菜单精简为常用截图与录屏",
+    "主界面发现新版时顶部提醒更新",
+    "截图只抓当前屏幕，启动与历史更轻更快"
   ],
   "changelogEn": [
-    "Capture only the active display for faster multi-monitor shots",
-    "History load/persist moved off the main thread for snappier launch",
-    "Privacy scan uses fast OCR on a downscaled image",
-    "Recording status bar updates once per second",
-    "Deferred ScreenCaptureKit permission probe after cold start"
+    "Refreshed filled Flare logo without the outer frame",
+    "Simplified menu-bar actions for capture and recording",
+    "Home window banners when a newer version is available",
+    "Active-display capture and lighter launch/history I/O"
   ],
-  "downloadURL": "https://linux503.github.io/Flare/downloads/Flare-Pro-1.3.20-Universal.dmg",
+  "downloadURL": "https://linux503.github.io/Flare/downloads/Flare-Pro-1.3.21-Universal.dmg",
   "windowsURL": "https://github.com/linux503/Flare/releases/download/v1.3.19/Flare-Windows-x64.exe",
   "androidURL": "https://linux503.github.io/Flare/downloads/Flare-Android.apk",
   "minOS": "14.0",
