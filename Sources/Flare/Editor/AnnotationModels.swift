@@ -22,7 +22,7 @@ enum AnnotationTool: String, CaseIterable, Identifiable {
         case .pen: return "画笔"
         case .highlight: return "高亮"
         case .arrow: return "箭头"
-        case .line: return "直线"
+        case .line: return "划线"
         case .rect: return "矩形"
         case .ellipse: return "椭圆"
         case .text: return "文字"
@@ -172,7 +172,7 @@ enum AnnotationItem: Identifiable {
 final class AnnotationDocument: ObservableObject {
     let baseImage: NSImage
     @Published var items: [AnnotationItem] = []
-    @Published var tool: AnnotationTool = .arrow
+    @Published var tool: AnnotationTool = .line
     @Published var style = AnnotationStyle()
     @Published var selectedID: UUID?
     @Published private(set) var counterValue = 1

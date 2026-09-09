@@ -7,7 +7,7 @@
 
   const defaults = {
     mac: {
-      href: "./downloads/Flare-Pro-1.3.21-Universal.dmg",
+      href: "./downloads/Flare-Pro-1.3.22-Universal.dmg",
       file: "DMG · Universal",
       titleKey: "dl.macTitle",
       download: true,

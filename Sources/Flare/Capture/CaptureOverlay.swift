@@ -494,7 +494,7 @@ final class CaptureOverlayView: NSView {
             }
             if frozen.contains(point) {
                 hoverHandle = nil
-                NSCursor.openHand.set()
+                NSCursor.arrow.set()
                 return
             }
         }
@@ -581,7 +581,7 @@ final class CaptureOverlayView: NSView {
                 dragSession = .move(startRect: pending.startRect, anchor: pending.anchor)
                 clipCropAsWindow = false
                 pendingSelectionTap = nil
-                NSCursor.closedHand.set()
+                NSCursor.arrow.set()
             } else {
                 return
             }
@@ -1048,7 +1048,7 @@ final class CaptureOverlayView: NSView {
 
         let base = ImageExporter.nsImage(from: cropped, scale: captured.scale)
         let doc = AnnotationDocument(image: base)
-        doc.tool = .arrow
+        doc.tool = .line
         annotateDocument = doc
 
         let canvas = AnnotationCanvasView(frame: rect)
@@ -1102,20 +1102,16 @@ final class CaptureOverlayView: NSView {
         }
 
         let tools: [(AnnotationTool, String)] = [
-            (.select, "选择并调节箭头/形状"),
+            (.select, "选择并调节"),
+            (.line, "划线"),
             (.arrow, "箭头"),
             (.pen, "画笔"),
-            (.highlight, "高亮"),
             (.rect, "矩形"),
-            (.ellipse, "椭圆"),
-            (.line, "直线"),
-            (.blur, "马赛克"),
-            (.number, "序号"),
-            (.step, "步骤编号"),
-            (.text, "文字")
+            (.text, "文字"),
+            (.blur, "马赛克")
         ]
         for (tool, tip) in tools {
-            let primary = tool == (annotateDocument?.tool ?? .arrow)
+            let primary = tool == (annotateDocument?.tool ?? .line)
             let button = makeAnnotateToolButton(tool: tool, selected: primary) { [weak self] in
                 self?.annotateDocument?.tool = tool
                 if let r = self?.frozenSelection {

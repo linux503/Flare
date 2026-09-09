@@ -183,6 +183,11 @@ struct EditorRootView: View {
 
     private let colors: [NSColor] = AnnotationStyle.palette
 
+    /// 常用工具：划线默认，少而精
+    private static let primaryTools: [AnnotationTool] = [
+        .select, .line, .arrow, .pen, .rect, .text, .blur
+    ]
+
     var body: some View {
         VStack(spacing: 0) {
             toolbar
@@ -223,7 +228,7 @@ struct EditorRootView: View {
             }
 
             HStack(spacing: 4) {
-                ForEach(AnnotationTool.allCases.filter { $0 != .step }) { tool in
+                ForEach(Self.primaryTools) { tool in
                     toolButton(tool)
                 }
 
