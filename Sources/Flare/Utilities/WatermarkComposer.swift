@@ -4,7 +4,7 @@ import CoreImage
 /// 截图右下角高级玻璃水印：磨砂底、香槟金描边、品牌标 + 字标。
 enum ScreenshotWatermark {
     static let gold = NSColor(calibratedRed: 0.86, green: 0.72, blue: 0.46, alpha: 1)
-    static let goldSoft = NSColor(calibratedRed: 0.86, green: 0.72, blue: 0.46, alpha: 0.72)
+    static let goldSoft = NSColor(calibratedRed: 0.86, green: 0.72, blue: 0.46, alpha: 0.55)
 
     private static let ciContext = CIContext(options: [.useSoftwareRenderer: false])
 
@@ -77,9 +77,9 @@ enum ScreenshotWatermark {
     private static func badgeRect(in rect: CGRect) -> CGRect? {
         let minSide = min(rect.width, rect.height)
         guard minSide >= 72 else { return nil }
-        let pad = max(10, minSide * 0.028)
-        let height = min(56, max(34, minSide * 0.086))
-        let width = min(rect.width - pad * 2, max(height * 3.2, 152))
+        let pad = max(8, minSide * 0.02)
+        let height = min(40, max(26, minSide * 0.055))
+        let width = min(rect.width - pad * 2, max(height * 3.05, 128))
         return CGRect(
             x: rect.maxX - pad - width,
             y: rect.minY + pad,
@@ -90,32 +90,18 @@ enum ScreenshotWatermark {
 
     private static func drawChrome(in rect: CGRect, source: NSImage?, sourceFrame: CGRect? = nil) {
         guard let badge = badgeRect(in: rect) else { return }
-
-        drawBottomFade(in: rect)
         drawBadge(badge, source: source, sourceFrame: sourceFrame)
     }
 
-    private static func drawBottomFade(in rect: CGRect) {
-        let height = min(rect.height * 0.2, 110)
-        guard height > 8 else { return }
-        let fade = CGRect(x: rect.minX, y: rect.minY, width: rect.width, height: height)
-        let gradient = NSGradient(colorsAndLocations:
-            (NSColor.black.withAlphaComponent(0.28), 0),
-            (NSColor.black.withAlphaComponent(0.08), 0.45),
-            (NSColor.black.withAlphaComponent(0), 1)
-        )
-        gradient?.draw(in: fade, angle: 90)
-    }
-
     private static func drawBadge(_ badge: CGRect, source: NSImage?, sourceFrame: CGRect?) {
-        let radius = badge.height * 0.32
+        let radius = badge.height * 0.38
         let path = NSBezierPath(roundedRect: badge, xRadius: radius, yRadius: radius)
 
         NSGraphicsContext.saveGraphicsState()
         let shadow = NSShadow()
-        shadow.shadowColor = NSColor.black.withAlphaComponent(0.38)
-        shadow.shadowBlurRadius = max(8, badge.height * 0.22)
-        shadow.shadowOffset = NSSize(width: 0, height: -1)
+        shadow.shadowColor = NSColor.black.withAlphaComponent(0.10)
+        shadow.shadowBlurRadius = max(5, badge.height * 0.16)
+        shadow.shadowOffset = NSSize(width: 0, height: -0.4)
         shadow.set()
         NSColor.black.withAlphaComponent(0.01).setFill()
         path.fill()
@@ -124,75 +110,70 @@ enum ScreenshotWatermark {
         NSGraphicsContext.saveGraphicsState()
         path.addClip()
         drawFrost(in: badge, source: source, sourceFrame: sourceFrame)
-        NSColor.black.withAlphaComponent(0.42).setFill()
+        NSColor.white.withAlphaComponent(0.10).setFill()
+        path.fill()
+        NSColor.black.withAlphaComponent(0.06).setFill()
         path.fill()
         let shine = NSGradient(colorsAndLocations:
             (NSColor.white.withAlphaComponent(0.22), 0),
-            (NSColor.white.withAlphaComponent(0.04), 0.42),
+            (NSColor.white.withAlphaComponent(0.04), 0.46),
             (NSColor.clear, 1)
         )
-        let shineRect = CGRect(x: badge.minX, y: badge.midY, width: badge.width, height: badge.height * 0.58)
+        let shineRect = CGRect(x: badge.minX, y: badge.midY, width: badge.width, height: badge.height * 0.55)
         shine?.draw(in: shineRect, angle: 270)
+        gold.withAlphaComponent(0.10).setFill()
+        path.fill()
         NSGraphicsContext.restoreGraphicsState()
 
-        gold.withAlphaComponent(0.82).setStroke()
-        path.lineWidth = max(0.8, badge.height * 0.018)
+        gold.withAlphaComponent(0.28).setStroke()
+        path.lineWidth = max(0.55, badge.height * 0.014)
         path.stroke()
 
-        let accent = CGRect(
-            x: badge.minX + 1.2,
-            y: badge.minY + badge.height * 0.18,
-            width: max(2.2, badge.height * 0.055),
-            height: badge.height * 0.64
-        )
-        gold.setFill()
-        NSBezierPath(roundedRect: accent, xRadius: accent.width / 2, yRadius: accent.width / 2).fill()
-
-        let inset = badge.height * 0.12
+        let inset = badge.height * 0.16
         let logoSide = badge.height - inset * 2
         let logoRect = CGRect(
-            x: accent.maxX + inset * 0.7,
+            x: badge.minX + inset * 1.05,
             y: badge.minY + inset,
             width: logoSide,
             height: logoSide
         )
         drawLogo(in: logoRect)
 
-        let dividerX = logoRect.maxX + inset * 0.55
-        gold.withAlphaComponent(0.35).setStroke()
+        let dividerX = logoRect.maxX + inset * 0.5
+        gold.withAlphaComponent(0.22).setStroke()
         let divider = NSBezierPath()
-        divider.move(to: CGPoint(x: dividerX, y: badge.minY + badge.height * 0.22))
-        divider.line(to: CGPoint(x: dividerX, y: badge.maxY - badge.height * 0.22))
-        divider.lineWidth = 0.7
+        divider.move(to: CGPoint(x: dividerX, y: badge.minY + badge.height * 0.26))
+        divider.line(to: CGPoint(x: dividerX, y: badge.maxY - badge.height * 0.26))
+        divider.lineWidth = 0.5
         divider.stroke()
 
-        let textX = dividerX + inset * 0.7
+        let textX = dividerX + inset * 0.6
         let textWidth = max(8, badge.maxX - inset - textX)
-        let wordSize = max(9, badge.height * 0.28)
+        let wordSize = max(8, badge.height * 0.27)
         let wordFont = roundedFont(size: wordSize, weight: .semibold)
         let word = NSAttributedString(
             string: "FLARE PRO",
             attributes: [
                 .font: wordFont,
-                .foregroundColor: NSColor.white.withAlphaComponent(0.96),
-                .kern: max(0.8, wordSize * 0.12)
+                .foregroundColor: NSColor.white.withAlphaComponent(0.72),
+                .kern: max(0.6, wordSize * 0.10)
             ]
         )
         let wordHeight = word.size().height
-        let subSize = max(7.5, badge.height * 0.175)
+        let subSize = max(6.5, badge.height * 0.17)
         let subFont = roundedFont(size: subSize, weight: .medium)
         let sub = NSAttributedString(
             string: stampDate(),
             attributes: [
                 .font: subFont,
-                .foregroundColor: goldSoft,
-                .kern: 0.6
+                .foregroundColor: gold.withAlphaComponent(0.55),
+                .kern: 0.45
             ]
         )
         let subHeight = sub.size().height
-        let stack = wordHeight + 2 + subHeight
+        let stack = wordHeight + 1.5 + subHeight
         let textY = badge.midY - stack / 2
-        word.draw(in: CGRect(x: textX, y: textY + subHeight + 2, width: textWidth, height: wordHeight))
+        word.draw(in: CGRect(x: textX, y: textY + subHeight + 1.5, width: textWidth, height: wordHeight))
         sub.draw(in: CGRect(x: textX, y: textY, width: textWidth, height: subHeight))
     }
 
@@ -211,20 +192,20 @@ enum ScreenshotWatermark {
                 in: aligned,
                 from: CGRect(origin: .zero, size: logo.size),
                 operation: .sourceOver,
-                fraction: 1,
+                fraction: 0.82,
                 respectFlipped: true,
                 hints: [.interpolation: NSImageInterpolation.high]
             )
         } else {
-            NSColor(calibratedWhite: 0.1, alpha: 1).setFill()
+            NSColor(calibratedWhite: 0.1, alpha: 0.55).setFill()
             clip.fill()
-            gold.setFill()
+            gold.withAlphaComponent(0.7).setFill()
             let inner = aligned.insetBy(dx: aligned.width * 0.22, dy: aligned.height * 0.22)
             NSBezierPath(ovalIn: inner).fill()
         }
         NSGraphicsContext.restoreGraphicsState()
-        gold.withAlphaComponent(0.4).setStroke()
-        clip.lineWidth = 0.6
+        gold.withAlphaComponent(0.22).setStroke()
+        clip.lineWidth = 0.45
         clip.stroke()
     }
 
@@ -271,7 +252,7 @@ enum ScreenshotWatermark {
         guard crop.width > 2, crop.height > 2, let piece = cg.cropping(to: crop) else { return nil }
 
         let input = CIImage(cgImage: piece)
-        let radius = max(8, min(crop.width, crop.height) * 0.12)
+        let radius = max(12, min(crop.width, crop.height) * 0.22)
         let blurred = input.clampedToExtent()
             .applyingGaussianBlur(sigma: radius)
             .cropped(to: input.extent)

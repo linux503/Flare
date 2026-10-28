@@ -2,7 +2,7 @@ import AppKit
 import SwiftUI
 
 /// 全应用统一图标目录：同一套 SF Symbol、字重与渲染方式
-enum SnapGlyph: String, CaseIterable {
+enum SnapGlyph: String, CaseIterable, Hashable {
     case brand
     case area
     case window
@@ -126,13 +126,15 @@ enum SnapGlyph: String, CaseIterable {
         }
     }
 
+    private static var resolvedCache: [SnapGlyph: String] = [:]
+
     func resolvedSystemName() -> String {
-        for name in symbolCandidates {
-            if NSImage(systemSymbolName: name, accessibilityDescription: nil) != nil {
-                return name
-            }
-        }
-        return "circle"
+        if let cached = Self.resolvedCache[self] { return cached }
+        let name = symbolCandidates.first {
+            NSImage(systemSymbolName: $0, accessibilityDescription: nil) != nil
+        } ?? "circle"
+        Self.resolvedCache[self] = name
+        return name
     }
 
     /// iOS 设置 App 那种彩色图标底

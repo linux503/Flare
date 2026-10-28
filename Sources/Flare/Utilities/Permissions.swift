@@ -118,7 +118,7 @@ enum Permissions {
             if await verifyAccessSilently() {
                 permissionUIShown = false
                 PermissionWindowController.shared.close()
-                ToastController.shared.show("屏幕录制已就绪")
+                ToastController.shared.show(L("屏幕录制已就绪"))
                 postPermissionChanged()
                 return
             }
@@ -131,17 +131,17 @@ enum Permissions {
     static func handleCaptureFailure(error: Error? = nil) {
         Task { @MainActor in
             if sessionVerified {
-                ToastController.shared.show("操作失败，请重试")
+                ToastController.shared.show(L("操作失败，请重试"))
                 return
             }
 
             if let error, !isPermissionError(error) {
-                ToastController.shared.show("操作失败，请重试")
+                ToastController.shared.show(L("操作失败，请重试"))
                 return
             }
 
             if hasScreenRecordingPermission {
-                ToastController.shared.show("权限已打开，请完全退出后重新打开")
+                ToastController.shared.show(L("权限已打开，请完全退出后重新打开"))
                 return
             }
 
@@ -161,26 +161,26 @@ enum Permissions {
         guard needsReauthorizationAfterUpdate() else { return }
         guard !UserDefaults.standard.bool(forKey: reauthToastShownKey) else { return }
         UserDefaults.standard.set(true, forKey: reauthToastShownKey)
-        ToastController.shared.show("请在系统设置删除旧的 Flare Pro，再重新勾选并重启")
+        ToastController.shared.show(L("请在系统设置删除旧的 Flare Pro，再重新勾选并重启"))
     }
 
     static func permissionIssueSummary() -> String {
         if savedIdentityMismatch() {
-            return "系统里的授权还绑着旧签名。请删除所有 Flare Pro 条目后，重新勾选当前应用。"
+            return L("系统里的授权还绑着旧签名。请删除所有 Flare Pro 条目后，重新勾选当前应用。")
         }
         if UserDefaults.standard.bool(forKey: everSucceededKey), !hasScreenRecordingPermission {
-            return "之前曾授权成功，但当前进程未生效。请删除系统设置里的旧条目后重新勾选。"
+            return L("之前曾授权成功，但当前进程未生效。请删除系统设置里的旧条目后重新勾选。")
         }
-        return "请在系统设置 → 屏幕与系统音频录制 中打开 Flare Pro。"
+        return L("请在系统设置 → 屏幕与系统音频录制 中打开 Flare Pro。")
     }
 
     static func diagnosticDetails() -> String {
         var lines: [String] = []
-        lines.append("路径：\(Bundle.main.bundlePath)")
+        lines.append(L("路径：%@", Bundle.main.bundlePath))
         if let token = signingIdentityToken() {
-            lines.append("签名：\(token)")
+            lines.append(L("签名：%@", token))
         }
-        lines.append("preflight：\(hasScreenRecordingPermission ? "是" : "否")")
+        lines.append("preflight：\(hasScreenRecordingPermission ? L("是") : L("否"))")
         return lines.joined(separator: "\n")
     }
 
@@ -192,7 +192,7 @@ enum Permissions {
         Task { @MainActor in
             if await verifyAccessSilently() {
                 PermissionWindowController.shared.close()
-                ToastController.shared.show("屏幕录制已就绪")
+                ToastController.shared.show(L("屏幕录制已就绪"))
                 return
             }
             permissionUIShown = true
@@ -283,7 +283,7 @@ enum Permissions {
         guard FileManager.default.fileExists(atPath: apps.path) else { return false }
         guard !runningFromApplications() else { return false }
 
-        ToastController.shared.show("正在切换到「应用程序」中的 \(FlareBrand.name)…")
+        ToastController.shared.show(L("正在切换到「应用程序」中的 %@…", FlareBrand.name))
         relaunchApp(at: apps)
         return true
     }
@@ -401,7 +401,7 @@ enum Permissions {
         if await verifyAccessSilently() {
             stopPolling()
             PermissionWindowController.shared.close()
-            ToastController.shared.show("屏幕录制已就绪")
+            ToastController.shared.show(L("屏幕录制已就绪"))
             postPermissionChanged()
         } else {
             postPermissionChanged()
@@ -412,7 +412,7 @@ enum Permissions {
         guard !didAutoRelaunchForGrant else { return }
         didAutoRelaunchForGrant = true
         stopPolling()
-        ToastController.shared.show("权限已打开，正在重启以生效…")
+        ToastController.shared.show(L("权限已打开，正在重启以生效…"))
         relaunchApp()
     }
 
@@ -438,9 +438,9 @@ enum Permissions {
 
     private static func notifyPermissionIssue() {
         if savedIdentityMismatch() || UserDefaults.standard.bool(forKey: everSucceededKey) {
-            ToastController.shared.show("权限需对当前应用重新授权：系统设置里 − 删除所有 Flare Pro，再勾选并 ⌘Q 重启")
+            ToastController.shared.show(L("权限需对当前应用重新授权：系统设置里 − 删除所有 Flare Pro，再勾选并 ⌘Q 重启"))
         } else {
-            ToastController.shared.show("需要屏幕录制权限（点主界面「需授权」查看步骤）")
+            ToastController.shared.show(L("需要屏幕录制权限（点主界面「需授权」查看步骤）"))
         }
     }
 
@@ -501,7 +501,7 @@ enum Permissions {
             }
         } catch {
             appendLog("relaunch spawn failed: \(error.localizedDescription)")
-            ToastController.shared.show("请手动完全退出后，从「应用程序」重新打开")
+            ToastController.shared.show(L("请手动完全退出后，从「应用程序」重新打开"))
         }
     }
 

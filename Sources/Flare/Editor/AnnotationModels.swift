@@ -1,5 +1,6 @@
 import AppKit
 import Combine
+import CoreImage
 
 enum AnnotationTool: String, CaseIterable, Identifiable {
     case select
@@ -18,17 +19,17 @@ enum AnnotationTool: String, CaseIterable, Identifiable {
 
     var title: String {
         switch self {
-        case .select: return "选择"
-        case .pen: return "画笔"
-        case .highlight: return "高亮"
-        case .arrow: return "箭头"
-        case .line: return "划线"
-        case .rect: return "矩形"
-        case .ellipse: return "椭圆"
-        case .text: return "文字"
-        case .blur: return "打码"
-        case .number: return "序号"
-        case .step: return "步骤"
+        case .select: return L("选择")
+        case .pen: return L("画笔")
+        case .highlight: return L("高亮")
+        case .arrow: return L("箭头")
+        case .line: return L("划线")
+        case .rect: return L("矩形")
+        case .ellipse: return L("椭圆")
+        case .text: return L("文字")
+        case .blur: return L("打码")
+        case .number: return L("序号")
+        case .step: return L("步骤")
         }
     }
 
@@ -72,11 +73,29 @@ enum AnnotationHit {
     case end
 }
 
+enum RedactKind: String, CaseIterable, Identifiable {
+    case mosaic
+    case frost
+    case black
+    case bar
+
+    var id: String { rawValue }
+
+    var title: String {
+        switch self {
+        case .mosaic: return L("马赛克")
+        case .frost: return L("模糊")
+        case .black: return L("涂黑")
+        case .bar: return L("黑条")
+        }
+    }
+}
+
 enum AnnotationItem: Identifiable {
     case freehand(id: UUID, points: [CGPoint], style: AnnotationStyle, highlight: Bool)
     case shape(id: UUID, kind: ShapeKind, start: CGPoint, end: CGPoint, style: AnnotationStyle)
     case text(id: UUID, text: String, origin: CGPoint, style: AnnotationStyle)
-    case blur(id: UUID, rect: CGRect)
+    case blur(id: UUID, rect: CGRect, kind: RedactKind)
     case counter(id: UUID, center: CGPoint, value: Int, style: AnnotationStyle)
 
     enum ShapeKind { case arrow, line, rect, ellipse }
@@ -86,7 +105,7 @@ enum AnnotationItem: Identifiable {
         case .freehand(let id, _, _, _),
              .shape(let id, _, _, _, _),
              .text(let id, _, _, _),
-             .blur(let id, _),
+             .blur(let id, _, _),
              .counter(let id, _, _, _):
             return id
         }
@@ -116,8 +135,8 @@ enum AnnotationItem: Identifiable {
             return .shape(id: id, kind: kind, start: moved(start), end: moved(end), style: style)
         case .text(let id, let text, let origin, let style):
             return .text(id: id, text: text, origin: moved(origin), style: style)
-        case .blur(let id, let rect):
-            return .blur(id: id, rect: rect.offsetBy(dx: delta.x, dy: delta.y))
+        case .blur(let id, let rect, let kind):
+            return .blur(id: id, rect: rect.offsetBy(dx: delta.x, dy: delta.y), kind: kind)
         case .counter(let id, let center, let value, let style):
             return .counter(id: id, center: moved(center), value: value, style: style)
         }
@@ -152,7 +171,7 @@ enum AnnotationItem: Identifiable {
             ]
             let size = (text as NSString).size(withAttributes: attrs)
             return CGRect(origin: origin, size: size).insetBy(dx: -6, dy: -6).contains(point) ? .body : nil
-        case .blur(_, let rect):
+        case .blur(_, let rect, _):
             return rect.insetBy(dx: -4, dy: -4).contains(point) ? .body : nil
         case .counter(_, let center, _, _):
             return hypot(point.x - center.x, point.y - center.y) <= 18 ? .body : nil
@@ -174,6 +193,7 @@ final class AnnotationDocument: ObservableObject {
     @Published var items: [AnnotationItem] = []
     @Published var tool: AnnotationTool = .line
     @Published var style = AnnotationStyle()
+    @Published var redactKind: RedactKind
     @Published var selectedID: UUID?
     @Published private(set) var counterValue = 1
 
@@ -182,6 +202,7 @@ final class AnnotationDocument: ObservableObject {
 
     init(image: NSImage) {
         self.baseImage = image
+        self.redactKind = AppSettings.shared.redactKind
     }
 
     func pushUndo() {
@@ -229,6 +250,15 @@ final class AnnotationDocument: ObservableObject {
     func setFontSize(_ size: CGFloat) {
         style.fontSize = max(10, min(48, size))
         applyStyleToSelected()
+    }
+
+    func setRedactKind(_ kind: RedactKind) {
+        redactKind = kind
+        AppSettings.shared.redactKind = kind
+        guard let id = selectedID, let idx = items.firstIndex(where: { $0.id == id }) else { return }
+        if case .blur(let bid, let rect, _) = items[idx] {
+            items[idx] = .blur(id: bid, rect: rect, kind: kind)
+        }
     }
 
     func applyStyleToSelected() {
@@ -363,8 +393,8 @@ enum AnnotationRenderer {
                 ]
                 (text as NSString).draw(at: origin, withAttributes: attrs)
 
-            case .blur(_, let rect):
-                drawPixelate(baseImage: baseImage, rect: rect)
+            case .blur(_, let rect, let kind):
+                drawRedact(baseImage: baseImage, rect: rect, kind: kind)
 
             case .counter(_, let center, let value, let style):
                 let r: CGFloat = 14
@@ -438,7 +468,7 @@ enum AnnotationRenderer {
             outline.lineWidth = 1
             NSColor.systemBlue.withAlphaComponent(0.9).setStroke()
             outline.stroke()
-        case .blur(_, let rect):
+        case .blur(_, let rect, _):
             let outline = NSBezierPath(rect: rect)
             outline.lineWidth = 1
             outline.setLineDash([4, 3], count: 2, phase: 0)
@@ -459,13 +489,32 @@ enum AnnotationRenderer {
         ring.stroke()
     }
 
-    private static func drawPixelate(baseImage: NSImage, rect: CGRect) {
+    private static let ciContext = CIContext(options: [.useSoftwareRenderer: false])
+
+    private static func drawRedact(baseImage: NSImage, rect: CGRect, kind: RedactKind) {
         guard rect.width > 1, rect.height > 1 else { return }
+        let path = NSBezierPath(roundedRect: rect, xRadius: 3, yRadius: 3)
+        NSGraphicsContext.saveGraphicsState()
+        path.addClip()
+        switch kind {
+        case .mosaic:
+            drawPixelate(baseImage: baseImage, rect: rect)
+        case .frost:
+            drawFrost(baseImage: baseImage, rect: rect)
+        case .black:
+            NSColor.black.withAlphaComponent(0.92).setFill()
+            path.fill()
+        case .bar:
+            NSColor.black.setFill()
+            let bar = rect.insetBy(dx: 0, dy: max(0, (rect.height - max(14, rect.height * 0.38)) / 2))
+            NSBezierPath(roundedRect: bar, xRadius: min(6, bar.height / 2), yRadius: min(6, bar.height / 2)).fill()
+        }
+        NSGraphicsContext.restoreGraphicsState()
+    }
+
+    private static func drawPixelate(baseImage: NSImage, rect: CGRect) {
         let shortest = min(rect.width, rect.height)
         let block = max(16, min(28, (shortest / 5).rounded(.down)))
-        NSGraphicsContext.saveGraphicsState()
-        NSBezierPath(roundedRect: rect, xRadius: 3, yRadius: 3).addClip()
-
         var y = rect.minY
         while y < rect.maxY {
             var x = rect.minX
@@ -478,9 +527,36 @@ enum AnnotationRenderer {
             }
             y += block
         }
-        NSColor.black.withAlphaComponent(0.18).setFill()
+        NSColor.black.withAlphaComponent(0.12).setFill()
         NSBezierPath(rect: rect).fill()
-        NSGraphicsContext.restoreGraphicsState()
+    }
+
+    private static func drawFrost(baseImage: NSImage, rect: CGRect) {
+        guard let cg = baseImage.cgImage(forProposedRect: nil, context: nil, hints: nil) else {
+            NSColor.white.withAlphaComponent(0.35).setFill()
+            NSBezierPath(rect: rect).fill()
+            return
+        }
+        let scaleX = CGFloat(cg.width) / max(baseImage.size.width, 1)
+        let scaleY = CGFloat(cg.height) / max(baseImage.size.height, 1)
+        var crop = CGRect(
+            x: rect.minX * scaleX,
+            y: (baseImage.size.height - rect.maxY) * scaleY,
+            width: rect.width * scaleX,
+            height: rect.height * scaleY
+        ).integral
+        crop = crop.intersection(CGRect(x: 0, y: 0, width: cg.width, height: cg.height))
+        guard crop.width > 2, crop.height > 2, let piece = cg.cropping(to: crop) else { return }
+        let input = CIImage(cgImage: piece)
+        let radius = max(10, min(crop.width, crop.height) * 0.16)
+        let blurred = input.clampedToExtent()
+            .applyingGaussianBlur(sigma: radius)
+            .cropped(to: input.extent)
+        guard let out = ciContext.createCGImage(blurred, from: blurred.extent) else { return }
+        let image = NSImage(cgImage: out, size: rect.size)
+        image.draw(in: rect, from: CGRect(origin: .zero, size: image.size), operation: .copy, fraction: 1)
+        NSColor.white.withAlphaComponent(0.08).setFill()
+        NSBezierPath(rect: rect).fill()
     }
 
     private static func averageColor(of image: NSImage, in rect: CGRect) -> NSColor? {

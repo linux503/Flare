@@ -61,21 +61,21 @@ final class RecordingHUDController {
         root.addSubview(time)
         timeLabel = time
 
-        let status = NSTextField(labelWithString: "录制中")
+        let status = NSTextField(labelWithString: L("录制中"))
         status.font = .systemFont(ofSize: 10, weight: .medium)
         status.textColor = NSColor.white.withAlphaComponent(0.55)
         status.frame = NSRect(x: 100, y: 18, width: 44, height: 20)
         root.addSubview(status)
         statusLabel = status
 
-        let pause = makeChip(title: "暂停", x: 148) { [weak self] in
+        let pause = makeChip(title: L("暂停"), x: 148) { [weak self] in
             ScreenRecorder.shared.togglePause()
             self?.syncPauseTitle()
         }
         root.addSubview(pause)
         pauseButton = pause
 
-        let stop = makeChip(title: "停止", x: 210, emphasis: true) {
+        let stop = makeChip(title: L("停止"), x: 210, emphasis: true) {
             ScreenRecorder.shared.stop()
         }
         root.addSubview(stop)
@@ -113,7 +113,7 @@ final class RecordingHUDController {
     }
 
     func updatePaused(_ paused: Bool) {
-        statusLabel?.stringValue = paused ? "已暂停" : "录制中"
+        statusLabel?.stringValue = paused ? L("已暂停") : L("录制中")
         statusLabel?.textColor = paused
             ? NSColor.systemYellow.withAlphaComponent(0.9)
             : NSColor.white.withAlphaComponent(0.55)
@@ -149,7 +149,7 @@ final class RecordingHUDController {
     }
 
     private func syncPauseTitle() {
-        pauseButton?.title = ScreenRecorder.shared.isPaused ? "继续" : "暂停"
+        pauseButton?.title = ScreenRecorder.shared.isPaused ? L("继续") : L("暂停")
     }
 
     private func makeChip(title: String, x: CGFloat, emphasis: Bool = false, action: @escaping () -> Void) -> NSButton {

@@ -68,6 +68,12 @@ final class AppSettings {
         set { defaults.set(newValue, forKey: "watermarkEnabled"); notify() }
     }
 
+    /// 打码样式：马赛克 / 模糊 / 涂黑 / 黑条
+    var redactKind: RedactKind {
+        get { RedactKind(rawValue: defaults.string(forKey: "redactKind") ?? "") ?? .mosaic }
+        set { defaults.set(newValue.rawValue, forKey: "redactKind"); notify() }
+    }
+
     var showInDock: Bool {
         get { defaults.object(forKey: "showInDock") as? Bool ?? false }
         set { defaults.set(newValue, forKey: "showInDock"); notify() }
@@ -75,7 +81,11 @@ final class AppSettings {
 
     var logoKind: AppLogoKind {
         get { AppLogoKind(rawValue: defaults.string(forKey: "logoKind") ?? "spark") ?? .spark }
-        set { defaults.set(newValue.rawValue, forKey: "logoKind"); notify() }
+        set {
+            defaults.set(newValue.rawValue, forKey: "logoKind")
+            LogoCatalog.invalidate()
+            notify()
+        }
     }
 
     var afterCaptureAction: AfterCaptureAction {
@@ -387,7 +397,6 @@ final class AppSettings {
     }
 
     private func notify() {
-        LogoCatalog.invalidate()
         NotificationCenter.default.post(name: .flareSettingsChanged, object: nil)
     }
 }
@@ -425,30 +434,46 @@ enum TranslateTargetLanguage: String, CaseIterable, Identifiable {
 
     var displayName: String {
         switch self {
-        case .zhHans: return "简体中文"
-        case .zhHant: return "繁体中文"
-        case .en: return "英语"
-        case .ja: return "日语"
-        case .ko: return "韩语"
-        case .fr: return "法语"
-        case .de: return "德语"
-        case .es: return "西班牙语"
-        case .ru: return "俄语"
-        case .pt: return "葡萄牙语"
-        case .it: return "意大利语"
-        case .vi: return "越南语"
-        case .th: return "泰语"
-        case .ar: return "阿拉伯语"
+        case .zhHans: return L("简体中文")
+        case .zhHant: return L("繁体中文")
+        case .en: return L("英语")
+        case .ja: return L("日语")
+        case .ko: return L("韩语")
+        case .fr: return L("法语")
+        case .de: return L("德语")
+        case .es: return L("西班牙语")
+        case .ru: return L("俄语")
+        case .pt: return L("葡萄牙语")
+        case .it: return L("意大利语")
+        case .vi: return L("越南语")
+        case .th: return L("泰语")
+        case .ar: return L("阿拉伯语")
         }
     }
 
     func matches(_ language: NLLanguage?) -> Bool {
         guard let language, language != .undetermined else { return false }
-        return language.rawValue.caseInsensitiveCompare(rawValue) == .orderedSame
+        let raw = language.rawValue.lowercased()
+        let mine = rawValue.lowercased()
+        if raw == mine { return true }
+        switch self {
+        case .zhHans:
+            return raw == "zh" || raw.hasPrefix("zh-hans") || raw == "zh-cn"
+        case .zhHant:
+            return raw.hasPrefix("zh-hant") || raw == "zh-tw" || raw == "zh-hk"
+        case .en:
+            return raw == "en" || raw.hasPrefix("en-")
+        case .ja:
+            return raw == "ja" || raw.hasPrefix("ja-")
+        case .ko:
+            return raw == "ko" || raw.hasPrefix("ko-")
+        default:
+            return raw == mine || raw.hasPrefix(mine + "-")
+        }
     }
 
     static func displayName(for language: NLLanguage?) -> String {
-        guard let language, language != .undetermined else { return "自动识别" }
+        guard let language, language != .undetermined else { return L("自动识别") }
         if let match = TranslateTargetLanguage.allCases.first(where: { $0.matches(language) }) {
             return match.displayName
         }
@@ -461,18 +486,18 @@ enum AfterCaptureAction: String, CaseIterable, Identifiable {
     var id: String { rawValue }
     var displayName: String {
         switch self {
-        case .editor: return "打开编辑器"
-        case .clipboard: return "复制到剪贴板"
-        case .save: return "保存到文件"
-        case .pin: return "钉在屏幕上"
+        case .editor: return L("打开编辑器")
+        case .clipboard: return L("复制到剪贴板")
+        case .save: return L("保存到文件")
+        case .pin: return L("钉在屏幕上")
         }
     }
     var hint: String {
         switch self {
-        case .editor: return "双击选区后进入标注"
-        case .clipboard: return "双击选区后直接复制"
-        case .save: return "双击选区后写入保存目录"
-        case .pin: return "双击选区后钉在桌面"
+        case .editor: return L("双击选区后进入标注")
+        case .clipboard: return L("双击选区后直接复制")
+        case .save: return L("双击选区后写入保存目录")
+        case .pin: return L("双击选区后钉在桌面")
         }
     }
 }
@@ -487,10 +512,10 @@ enum HistoryRetention: String, CaseIterable, Identifiable {
 
     var displayName: String {
         switch self {
-        case .hour: return "1 小时"
-        case .day: return "1 天"
-        case .week: return "1 周"
-        case .month: return "1 月"
+        case .hour: return L("1 小时")
+        case .day: return L("1 天")
+        case .week: return L("1 周")
+        case .month: return L("1 月")
         }
     }
 
@@ -514,10 +539,10 @@ enum RecordAudioSource: String, CaseIterable, Identifiable {
 
     var displayName: String {
         switch self {
-        case .off: return "关闭"
-        case .system: return "系统声音"
-        case .microphone: return "麦克风"
-        case .both: return "系统 + 麦克风"
+        case .off: return L("关闭")
+        case .system: return L("系统声音")
+        case .microphone: return L("麦克风")
+        case .both: return L("系统 + 麦克风")
         }
     }
 
@@ -527,9 +552,9 @@ enum RecordAudioSource: String, CaseIterable, Identifiable {
     var toastHint: String {
         switch self {
         case .off: return ""
-        case .system: return " · 系统声音"
-        case .microphone: return " · 麦克风"
-        case .both: return " · 系统+麦克风"
+        case .system: return L(" · 系统声音")
+        case .microphone: return L(" · 麦克风")
+        case .both: return L(" · 系统+麦克风")
         }
     }
 }
@@ -543,17 +568,17 @@ enum RecordCaptureMode: String, CaseIterable, Identifiable {
 
     var displayName: String {
         switch self {
-        case .fullScreen: return "全屏"
-        case .area: return "区域"
-        case .window: return "窗口"
+        case .fullScreen: return L("全屏")
+        case .area: return L("区域")
+        case .window: return L("窗口")
         }
     }
 
     var hint: String {
         switch self {
-        case .fullScreen: return "录当前显示器"
-        case .area: return "拖选一块画面"
-        case .window: return "单击要录的窗口"
+        case .fullScreen: return L("录当前显示器")
+        case .area: return L("拖选一块画面")
+        case .window: return L("单击要录的窗口")
         }
     }
 
@@ -576,10 +601,10 @@ enum RecordQualityPreset: Int, CaseIterable, Identifiable {
 
     var displayName: String {
         switch self {
-        case .performance: return "流畅 720p"
-        case .standard: return "标准 1080p"
-        case .high: return "高清 原分辨率"
-        case .ultra: return "超清 高码率"
+        case .performance: return L("流畅 720p")
+        case .standard: return L("标准 1080p")
+        case .high: return L("高清 原分辨率")
+        case .ultra: return L("超清 高码率")
         }
     }
 

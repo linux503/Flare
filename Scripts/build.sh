@@ -113,6 +113,11 @@ for logo in LogoSpark LogoIris LogoBolt LogoDusk LogoCoral; do
   fi
 done
 
+cp "$ROOT/Resources/en.json" "$RESOURCES/en.json"
+for lproj in en.lproj zh-Hans.lproj; do
+  [[ -d "$ROOT/Resources/$lproj" ]] && cp -R "$ROOT/Resources/$lproj" "$RESOURCES/"
+done
+
 "$ROOT/Scripts/embed_translate_vault.sh" "$RESOURCES/FlareVault.dat"
 
 xattr -cr "$APP_DIR" 2>/dev/null || true

@@ -35,10 +35,11 @@ struct SettingsPane: View {
     @State private var delay = AppSettings.shared.shortcut(for: .delay)
     @State private var longShot = AppSettings.shared.shortcut(for: .longShot)
     @State private var translate = AppSettings.shared.shortcut(for: .translate)
+    @State private var appLanguage = L10n.language
     @State private var record = AppSettings.shared.shortcut(for: .record)
     @State private var history = AppSettings.shared.shortcut(for: .history)
     @State private var hotkeyError: String?
-    @State private var permissionLabel = "检查中…"
+    @State private var permissionLabel = L("检查中…")
     @State private var permissionOK = false
     @State private var checkingUpdate = false
     @State private var updateStatus = ""
@@ -47,16 +48,38 @@ struct SettingsPane: View {
         ScrollView {
             VStack(alignment: .leading, spacing: 28) {
                 FlarePageHeader(
-                    title: "设置",
-                    subtitle: "外观、截图行为与全局快捷键"
+                    title: L("设置"),
+                    subtitle: L("外观、截图行为与全局快捷键")
                 ) {
                     if let onBack {
-                        FlareSecondaryButton(title: "返回截图", glyph: .area, action: onBack)
+                        FlareSecondaryButton(title: L("返回截图"), glyph: .area, action: onBack)
                     }
                 }
 
-                settingsBlock(title: "外观", subtitle: "Logo、主题与窗口透明度") {
+                settingsBlock(title: L("外观"), subtitle: L("Logo、主题与窗口透明度")) {
                     VStack(alignment: .leading, spacing: 16) {
+                        HStack {
+                            Text(L("语言 / Language"))
+                                .font(.system(size: 12, weight: .semibold))
+                                .foregroundStyle(theme.textPrimary)
+                            Spacer()
+                            Picker("", selection: $appLanguage) {
+                                ForEach(AppLanguage.allCases) { language in
+                                    Text(language.displayName).tag(language)
+                                }
+                            }
+                            .labelsHidden()
+                            .frame(width: 140)
+                            .onChange(of: appLanguage) { _, newValue in
+                                guard newValue != L10n.language else { return }
+                                UserDefaults.standard.set(newValue.rawValue, forKey: L10n.defaultsKey)
+                                ToastController.shared.show(L("切换语言，正在重启…"))
+                                DispatchQueue.main.asyncAfter(deadline: .now() + 0.6) {
+                                    Permissions.relaunchApp()
+                                }
+                            }
+                        }
+                        Divider().overlay(theme.stroke)
                         LogoPickerRow()
                         Divider().overlay(theme.stroke)
                         ThemePickerGrid()
@@ -65,10 +88,10 @@ struct SettingsPane: View {
                     }
                 }
 
-                settingsBlock(title: "截图后", subtitle: "双击选区、回车确认后的默认动作与历史保留") {
+                settingsBlock(title: L("截图后"), subtitle: L("双击选区、回车确认后的默认动作与历史保留")) {
                     VStack(alignment: .leading, spacing: 16) {
                         VStack(alignment: .leading, spacing: 8) {
-                            Text("默认动作")
+                            Text(L("默认动作"))
                                 .font(.system(size: 12, weight: .semibold))
                                 .foregroundStyle(theme.textPrimary)
                             LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: 8) {
@@ -103,7 +126,7 @@ struct SettingsPane: View {
 
                         VStack(alignment: .leading, spacing: 8) {
                             HStack {
-                                Text("历史保留")
+                                Text(L("历史保留"))
                                     .font(.system(size: 12, weight: .semibold))
                                     .foregroundStyle(theme.textPrimary)
                                 Spacer()
@@ -121,9 +144,9 @@ struct SettingsPane: View {
                             .onChange(of: historyRetention) { _, newValue in
                                 AppSettings.shared.historyRetention = newValue
                                 HistoryStore.shared.pruneExpired()
-                                ToastController.shared.show("历史保留：\(newValue.displayName)")
+                                ToastController.shared.show(L("历史保留：%@", newValue.displayName))
                             }
-                            Text("超过所选时长的记录会自动删除（仅清理应用管理的截图文件）。")
+                            Text(L("超过所选时长的记录会自动删除（仅清理应用管理的截图文件）。"))
                                 .font(.system(size: 10))
                                 .foregroundStyle(theme.textMuted)
                                 .fixedSize(horizontal: false, vertical: true)
@@ -132,20 +155,20 @@ struct SettingsPane: View {
                         Divider().overlay(theme.stroke)
 
                         VStack(alignment: .leading, spacing: 10) {
-                            labeledToggle("同时复制到剪贴板", isOn: $copyClipboard) {
+                            labeledToggle(L("同时复制到剪贴板"), isOn: $copyClipboard) {
                                 AppSettings.shared.copyToClipboard = $0
                             }
-                            labeledToggle("截图提示音", isOn: $playSound) {
+                            labeledToggle(L("截图提示音"), isOn: $playSound) {
                                 AppSettings.shared.playSound = $0
                             }
-                            labeledToggle("显示放大镜与取色", isOn: $showMagnifier) {
+                            labeledToggle(L("显示放大镜与取色"), isOn: $showMagnifier) {
                                 AppSettings.shared.showMagnifier = $0
                             }
-                            labeledToggle("截图加水印", isOn: $watermarkEnabled) {
+                            labeledToggle(L("截图加水印"), isOn: $watermarkEnabled) {
                                 AppSettings.shared.watermarkEnabled = $0
-                                ToastController.shared.show($0 ? "已加水印" : "已取消水印")
+                                ToastController.shared.show($0 ? L("已加水印") : L("已取消水印"))
                             }
-                            labeledToggle("在程序坞显示图标", isOn: $showInDock) { newValue in
+                            labeledToggle(L("在程序坞显示图标"), isOn: $showInDock) { newValue in
                                 AppSettings.shared.showInDock = newValue
                                 NSApp.setActivationPolicy(newValue ? .regular : .accessory)
                             }
@@ -153,10 +176,10 @@ struct SettingsPane: View {
                     }
                 }
 
-                settingsBlock(title: "截图翻译", subtitle: "自动识别截图文字的语言，再译到你选择的目标语言") {
+                settingsBlock(title: L("截图翻译"), subtitle: L("自动识别截图文字的语言，再译到你选择的目标语言")) {
                     VStack(alignment: .leading, spacing: 10) {
                         HStack {
-                            Text("目标语言")
+                            Text(L("目标语言"))
                                 .font(.system(size: 12, weight: .semibold))
                                 .foregroundStyle(theme.textPrimary)
                             Spacer()
@@ -169,37 +192,37 @@ struct SettingsPane: View {
                             .frame(width: 140)
                             .onChange(of: translateTarget) { _, newValue in
                                 AppSettings.shared.translateTargetLanguage = newValue
-                                ToastController.shared.show("翻译目标：\(newValue.displayName)")
+                                ToastController.shared.show(L("翻译目标：%@", newValue.displayName))
                             }
                         }
-                        Text("任务栏、菜单「翻译」、编辑器和历史里的翻译都会先识字、判断原文语言，再译到这里设置的语言。")
+                        Text(L("任务栏、菜单「翻译」、编辑器和历史里的翻译都会先识字、判断原文语言，再译到这里设置的语言。"))
                             .font(.system(size: 10))
                             .foregroundStyle(theme.textMuted)
                             .fixedSize(horizontal: false, vertical: true)
                     }
                 }
 
-                settingsBlock(title: "隐私安全", subtitle: "截图完成或复制分享前，在本机检查敏感内容") {
+                settingsBlock(title: L("隐私安全"), subtitle: L("截图完成或复制分享前，在本机检查敏感内容")) {
                     VStack(alignment: .leading, spacing: 10) {
-                        labeledToggle("隐私安全模式", isOn: $privacyMode) {
+                        labeledToggle(L("隐私安全模式"), isOn: $privacyMode) {
                             AppSettings.shared.privacyModeEnabled = $0
                         }
-                        labeledToggle("发现后自动遮挡", isOn: $privacyAutoRedact) {
+                        labeledToggle(L("发现后自动遮挡"), isOn: $privacyAutoRedact) {
                             AppSettings.shared.privacyAutoRedact = $0
                         }
                         .disabled(!privacyMode)
                         .opacity(privacyMode ? 1 : 0.45)
-                        Text("检测 API Key、助记词、私钥、钱包地址、银行卡、证件、邮箱、电话、客户资料、二维码、Cookie / Token。关闭自动遮挡时，可选择「脱敏后分享」或「原图仅本地保存」。")
+                        Text(L("检测 API Key、助记词、私钥、钱包地址、银行卡、证件、邮箱、电话、客户资料、二维码、Cookie / Token。关闭自动遮挡时，可选择「脱敏后分享」或「原图仅本地保存」。"))
                             .font(.system(size: 10))
                             .foregroundStyle(theme.textMuted)
                             .fixedSize(horizontal: false, vertical: true)
                     }
                 }
 
-                settingsBlock(title: "保存", subtitle: "图片格式与目录") {
+                settingsBlock(title: L("保存"), subtitle: L("图片格式与目录")) {
                     VStack(alignment: .leading, spacing: 14) {
                         HStack {
-                            Text("图片格式")
+                            Text(L("图片格式"))
                                 .font(.system(size: 12, weight: .medium))
                                 .foregroundStyle(theme.textPrimary)
                             Spacer()
@@ -215,21 +238,21 @@ struct SettingsPane: View {
                             }
                         }
 
-                        pathRow(title: "截图保存位置", path: savePath) { chooseFolder() }
-                        pathRow(title: "新建文档位置", path: documentPath) { chooseDocumentFolder() }
+                        pathRow(title: L("截图保存位置"), path: savePath) { chooseFolder() }
+                        pathRow(title: L("新建文档位置"), path: documentPath) { chooseDocumentFolder() }
                     }
                 }
 
-                settingsBlock(title: "快捷键", subtitle: "默认 ⌘⌥，避开系统截图 ⌘⇧3/4/5") {
+                settingsBlock(title: L("快捷键"), subtitle: L("默认 ⌘⌥，避开系统截图 ⌘⇧3/4/5")) {
                     VStack(alignment: .leading, spacing: 10) {
-                        KeyRecorderButton(title: "区域截图", shortcut: $area) { save(.area, $0) }
-                        KeyRecorderButton(title: "窗口截图", shortcut: $window) { save(.window, $0) }
-                        KeyRecorderButton(title: "全屏截图", shortcut: $screen) { save(.screen, $0) }
-                        KeyRecorderButton(title: "延时截图", shortcut: $delay) { save(.delay, $0) }
-                        KeyRecorderButton(title: "长截图", shortcut: $longShot) { save(.longShot, $0) }
-                        KeyRecorderButton(title: "翻译", shortcut: $translate) { save(.translate, $0) }
-                        KeyRecorderButton(title: "屏幕录制", shortcut: $record) { save(.record, $0) }
-                        KeyRecorderButton(title: "历史记录", shortcut: $history) { save(.history, $0) }
+                        KeyRecorderButton(title: L("区域截图"), shortcut: $area) { save(.area, $0) }
+                        KeyRecorderButton(title: L("窗口截图"), shortcut: $window) { save(.window, $0) }
+                        KeyRecorderButton(title: L("全屏截图"), shortcut: $screen) { save(.screen, $0) }
+                        KeyRecorderButton(title: L("延时截图"), shortcut: $delay) { save(.delay, $0) }
+                        KeyRecorderButton(title: L("长截图"), shortcut: $longShot) { save(.longShot, $0) }
+                        KeyRecorderButton(title: L("翻译"), shortcut: $translate) { save(.translate, $0) }
+                        KeyRecorderButton(title: L("屏幕录制"), shortcut: $record) { save(.record, $0) }
+                        KeyRecorderButton(title: L("历史记录"), shortcut: $history) { save(.history, $0) }
 
                         if let hotkeyError {
                             Text(hotkeyError)
@@ -237,14 +260,14 @@ struct SettingsPane: View {
                                 .foregroundStyle(theme.warning)
                         }
 
-                        Button("恢复默认快捷键") {
+                        Button(L("恢复默认快捷键")) {
                             AppSettings.shared.resetHotkeys()
                             reloadShortcuts()
                             HotKeyManager.shared.registerDefaults()
                             StatusBarController.shared?.reloadMenu()
                             MainMenuController.shared?.reload()
                             hotkeyError = nil
-                            ToastController.shared.show("已恢复默认快捷键")
+                            ToastController.shared.show(L("已恢复默认快捷键"))
                         }
                         .font(.system(size: 12, weight: .medium))
                         .foregroundStyle(theme.textSecondary)
@@ -252,10 +275,10 @@ struct SettingsPane: View {
                     }
                 }
 
-                settingsBlock(title: "权限", subtitle: "授权一次即可；打开开关后若仍不能截图，点重启") {
+                settingsBlock(title: L("权限"), subtitle: L("授权一次即可；打开开关后若仍不能截图，点重启")) {
                     VStack(alignment: .leading, spacing: 10) {
                         HStack {
-                            Text("屏幕录制")
+                            Text(L("屏幕录制"))
                                 .font(.system(size: 12, weight: .medium))
                                 .foregroundStyle(theme.textPrimary)
                             Spacer()
@@ -263,26 +286,26 @@ struct SettingsPane: View {
                                 .font(.system(size: 12, weight: .semibold))
                                 .foregroundStyle(permissionOK ? theme.success : theme.warning)
                         }
-                        FlareSecondaryButton(title: "检查并修复权限", glyph: .permission) {
+                        FlareSecondaryButton(title: L("检查并修复权限"), glyph: .permission) {
                             Permissions.promptScreenCaptureFromUser()
                             refreshPermissionLabel()
                         }
-                        FlareSecondaryButton(title: "打开系统设置", glyph: .settings) {
+                        FlareSecondaryButton(title: L("打开系统设置"), glyph: .settings) {
                             Permissions.openScreenRecordingSettings()
                         }
-                        FlarePrimaryButton(title: "重启 \(FlareBrand.name)", glyph: .relaunch) {
+                        FlarePrimaryButton(title: L("重启 %@", FlareBrand.name), glyph: .relaunch) {
                             Permissions.relaunchApp()
                         }
                         Text(Permissions.runningFromApplications()
-                             ? "正在从 /Applications/Flare Pro.app 运行。"
-                             : "⚠ 当前路径：\(Bundle.main.bundlePath)。请改用「应用程序」中的副本。")
+                             ? L("正在从 /Applications/Flare Pro.app 运行。")
+                             : L("⚠ 当前路径：%@。请改用「应用程序」中的副本。", Bundle.main.bundlePath))
                             .font(.caption)
                             .foregroundStyle(Permissions.runningFromApplications() ? theme.textMuted : theme.warning)
                             .fixedSize(horizontal: false, vertical: true)
                     }
                 }
 
-                settingsBlock(title: "关于", subtitle: FlareBrand.tagline) {
+                settingsBlock(title: L("关于"), subtitle: FlareBrand.tagline) {
                     VStack(alignment: .leading, spacing: 12) {
                         HStack(spacing: 12) {
                             FlareBrandMark(size: 32, cornerRadius: 8)
@@ -290,7 +313,7 @@ struct SettingsPane: View {
                                 Text(FlareBrand.name)
                                     .font(.system(size: 14, weight: .semibold))
                                     .foregroundStyle(theme.textPrimary)
-                                Text("版本 \(UpdateChecker.currentVersion) (\(UpdateChecker.currentBuild)) · \(archLabel)")
+                                Text(L("版本 %@ (%@) · %@", UpdateChecker.currentVersion, UpdateChecker.currentBuild, archLabel))
                                     .font(.system(size: 11))
                                     .foregroundStyle(theme.textMuted)
                             }
@@ -306,12 +329,12 @@ struct SettingsPane: View {
                         }
 
                         HStack(spacing: 8) {
-                            FlarePrimaryButton(title: checkingUpdate ? "检查中…" : "检查更新", glyph: .refresh) {
+                            FlarePrimaryButton(title: checkingUpdate ? L("检查中…") : L("检查更新"), glyph: .refresh) {
                                 Task { await runUpdateCheck() }
                             }
                             .disabled(checkingUpdate)
 
-                            FlareSecondaryButton(title: "官网", glyph: .home) {
+                            FlareSecondaryButton(title: L("官网"), glyph: .home) {
                                 openURL(FlareBrand.websiteURL)
                             }
                             FlareSecondaryButton(title: "GitHub", glyph: .documents) {
@@ -320,9 +343,9 @@ struct SettingsPane: View {
                         }
 
                         VStack(alignment: .leading, spacing: 6) {
-                            linkRow("官方网站", FlareBrand.websiteURL)
-                            linkRow("下载页面", FlareBrand.downloadURL)
-                            linkRow("问题反馈", FlareBrand.supportEmail)
+                            linkRow(L("官方网站"), FlareBrand.websiteURL)
+                            linkRow(L("下载页面"), FlareBrand.downloadURL)
+                            linkRow(L("问题反馈"), FlareBrand.supportEmail)
                         }
                         .padding(.top, 4)
                     }
@@ -383,29 +406,29 @@ struct SettingsPane: View {
     private func runUpdateCheck() async {
         await MainActor.run {
             checkingUpdate = true
-            updateStatus = "正在检查…"
+            updateStatus = L("正在检查…")
         }
         let result = await UpdateChecker.check()
         await MainActor.run {
             checkingUpdate = false
             switch result {
             case .upToDate(let current):
-                updateStatus = "已是最新版 \(current)"
+                updateStatus = L("已是最新版 %@", current)
                 ToastController.shared.show(updateStatus)
             case .updateAvailable(let remote):
-                updateStatus = "发现新版本 \(remote.version)"
+                updateStatus = L("发现新版本 %@", remote.version)
                 let alert = NSAlert()
-                alert.messageText = "发现新版本 \(remote.version)"
+                alert.messageText = L("发现新版本 %@", remote.version)
                 alert.informativeText = (remote.notes?.isEmpty == false)
                     ? (remote.notes ?? "")
-                    : "当前 \(UpdateChecker.currentVersion)，建议前往官网下载。"
-                alert.addButton(withTitle: "前往下载")
-                alert.addButton(withTitle: "稍后再说")
+                    : L("当前 %@，建议前往官网下载。", UpdateChecker.currentVersion)
+                alert.addButton(withTitle: L("前往下载"))
+                alert.addButton(withTitle: L("稍后再说"))
                 if alert.runModal() == .alertFirstButtonReturn {
                     openURL(remote.downloadURL ?? FlareBrand.downloadURL)
                 }
             case .failed(let message):
-                updateStatus = "检查失败：\(message)"
+                updateStatus = L("检查失败：%@", message)
                 ToastController.shared.show(updateStatus)
             }
         }
@@ -414,16 +437,16 @@ struct SettingsPane: View {
     private func refreshPermissionLabel() {
         switch Permissions.currentState() {
         case .granted:
-            permissionLabel = "已就绪"
+            permissionLabel = L("已就绪")
             permissionOK = true
         case .needsRelaunch:
-            permissionLabel = "需重启生效"
+            permissionLabel = L("需重启生效")
             permissionOK = false
         case .unknown:
-            permissionLabel = "检查中…"
+            permissionLabel = L("检查中…")
             permissionOK = false
         case .denied:
-            permissionLabel = "未授权"
+            permissionLabel = L("未授权")
             permissionOK = false
         }
     }
@@ -481,7 +504,7 @@ struct SettingsPane: View {
                     .lineLimit(2)
             }
             Spacer()
-            Button("选择…", action: choose)
+            Button(L("选择…"), action: choose)
                 .font(.system(size: 12, weight: .medium))
                 .foregroundStyle(theme.textPrimary)
                 .buttonStyle(.plain)
@@ -497,7 +520,7 @@ struct SettingsPane: View {
             (.area, area), (.window, window), (.screen, screen), (.delay, delay), (.longShot, longShot), (.translate, translate), (.record, record), (.history, history)
         ]
         if let conflict = others.first(where: { $0.0 != action && $0.1 == shortcut }) {
-            hotkeyError = "与「\(conflict.0.title)」冲突，请换一组快捷键"
+            hotkeyError = L("与「%@」冲突，请换一组快捷键", conflict.0.title)
             reloadShortcuts()
             return
         }
@@ -562,7 +585,7 @@ private struct LogoPickerRow: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 10) {
-            Text("菜单栏与应用内 Logo")
+            Text(L("菜单栏与应用内 Logo"))
                 .font(.system(size: 12, weight: .medium))
                 .foregroundStyle(theme.textPrimary)
             LazyVGrid(columns: [GridItem(.adaptive(minimum: 72), spacing: 10)], alignment: .leading, spacing: 12) {
@@ -588,9 +611,9 @@ private struct LogoPickerRow: View {
                         logoThumb(
                             kind == .custom ? LogoCatalog.currentImage() : nil,
                             selected: kind == .custom,
-                            placeholder: "自选"
+                            placeholder: L("自选")
                         )
-                        Text("自选图片")
+                        Text(L("自选图片"))
                             .font(.system(size: 10, weight: kind == .custom ? .semibold : .regular))
                             .foregroundStyle(kind == .custom ? theme.accent : theme.textMuted)
                     }
@@ -635,13 +658,13 @@ private struct LogoPickerRow: View {
         panel.canChooseDirectories = false
         panel.allowsMultipleSelection = false
         panel.allowedFileTypes = ["png", "jpg", "jpeg", "heic", "tif", "tiff", "webp"]
-        panel.title = "选择 Logo 图片"
+        panel.title = L("选择 Logo 图片")
         guard panel.runModal() == .OK, let url = panel.url else { return }
         if LogoCatalog.installCustom(from: url) {
             kind = .custom
-            ToastController.shared.show("已更换 Logo")
+            ToastController.shared.show(L("已更换 Logo"))
         } else {
-            ToastController.shared.show("无法读取这张图片")
+            ToastController.shared.show(L("无法读取这张图片"))
         }
     }
 }

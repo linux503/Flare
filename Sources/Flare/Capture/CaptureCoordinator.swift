@@ -52,7 +52,7 @@ final class CaptureCoordinator: ObservableObject {
         guard Permissions.prepareForCapture() else { return }
         guard ensureCanStartCapture() else { return }
         if ScreenRecorder.shared.isRecording {
-            ToastController.shared.show("请先停止录屏")
+            ToastController.shared.show(L("请先停止录屏"))
             return
         }
         CaptureConflict.warnBeforeCaptureIfNeeded()
@@ -65,7 +65,7 @@ final class CaptureCoordinator: ObservableObject {
         Task {
             try await Task.sleep(nanoseconds: 280_000_000)
             do {
-                let frame = try await ScreenCapturer.captureDisplay(targetDisplayID, excludeSelf: true)
+                let frame = try await ScreenCapturer.captureDisplay(targetDisplayID)
                 await MainActor.run {
                     Permissions.markCaptureSucceeded()
                     self.finish(with: frame.image, scale: frame.scale)
@@ -83,21 +83,20 @@ final class CaptureCoordinator: ObservableObject {
         guard Permissions.prepareForCapture() else { return }
         guard ensureCanStartCapture() else { return }
         if ScreenRecorder.shared.isRecording {
-            ToastController.shared.show("请先停止录屏")
+            ToastController.shared.show(L("请先停止录屏"))
             return
         }
         CaptureConflict.warnBeforeCaptureIfNeeded()
         let targetDisplayID = resolveTargetDisplayID()
         isCapturing = true
         suppressHomeUntil = Date().addingTimeInterval(Double(seconds) + 4)
-        hideFlareWindows()
         DelayOverlayController.shared.start(seconds: seconds) { [weak self] in
             guard let self else { return }
             self.resignForCapture()
             Task {
                 try await Task.sleep(nanoseconds: 180_000_000)
                 do {
-                    let frame = try await ScreenCapturer.captureDisplay(targetDisplayID, excludeSelf: true)
+                    let frame = try await ScreenCapturer.captureDisplay(targetDisplayID)
                     await MainActor.run {
                         Permissions.markCaptureSucceeded()
                         self.finish(with: frame.image, scale: frame.scale)
@@ -123,13 +122,12 @@ final class CaptureCoordinator: ObservableObject {
         guard Permissions.prepareForCapture() else { return }
         guard ensureCanStartCapture() else { return }
         if ScreenRecorder.shared.isRecording {
-            ToastController.shared.show("请先停止录屏")
+            ToastController.shared.show(L("请先停止录屏"))
             return
         }
         CaptureConflict.warnBeforeCaptureIfNeeded()
 
         isCapturing = true
-        hideFlareWindows()
         DispatchQueue.main.asyncAfter(deadline: .now() + 0.06) {
             Task {
                 do {
@@ -151,15 +149,15 @@ final class CaptureCoordinator: ObservableObject {
         guard isCapturing else { return true }
         if overlayControllers.isEmpty && !longCaptureInProgress {
             endCaptureSession(restoreHome: true)
-            ToastController.shared.show("上次截图未完成，已自动恢复")
+            ToastController.shared.show(L("上次截图未完成，已自动恢复"))
             return true
         }
-        ToastController.shared.show("截图进行中，按 Esc 取消")
+        ToastController.shared.show(L("截图进行中，按 Esc 取消"))
         return false
     }
 
     private func captureActiveDisplay() async throws -> CapturedFrame {
-        try await ScreenCapturer.captureDisplay(resolveTargetDisplayID(), excludeSelf: true)
+        try await ScreenCapturer.captureDisplay(resolveTargetDisplayID())
     }
 
     /// 全屏/延时截图：优先截前台应用所在显示器，避免在 Flare 界面里误截另一块屏或桌面
@@ -219,11 +217,9 @@ final class CaptureCoordinator: ObservableObject {
         return NSScreen.screens.first { NSMouseInRect(appKitPoint, $0.frame, false) }
     }
 
-    /// 截图前隐藏 Flare 并尽量把焦点还给用户正在用的应用，避免截到 Flare 自己的界面
+    /// 全屏 / 延时：把焦点还给前台应用，但不再藏起 Flare 窗口，这样才能截到主界面、临邮等。
     private func resignForCapture() {
-        hideFlareWindows()
         let front = NSWorkspace.shared.frontmostApplication
-        NSApp.hide(nil)
         if let front,
            front.bundleIdentifier != Bundle.main.bundleIdentifier,
            front.activationPolicy == .regular {
@@ -306,11 +302,11 @@ final class CaptureCoordinator: ObservableObject {
         dismissOverlays()
         if !LongScreenshot.ensureAccessibility(prompt: true) {
             endCaptureSession(restoreHome: true)
-            ToastController.shared.show("请在系统设置中打开「辅助功能」权限后再试长截图")
+            ToastController.shared.show(L("请在系统设置中打开「辅助功能」权限后再试长截图"))
             NSWorkspace.shared.open(URL(string: "x-apple.systempreferences:com.apple.preference.security?Privacy_Accessibility")!)
             return
         }
-        ToastController.shared.show("正在长截图…按 Esc 取消")
+        ToastController.shared.show(L("正在长截图…按 Esc 取消"))
         longCaptureInProgress = true
         Task {
             do {
@@ -332,11 +328,11 @@ final class CaptureCoordinator: ObservableObject {
                     if let err = error as? LongScreenshot.Error {
                         switch err {
                         case .cancelled:
-                            ToastController.shared.show("已取消长截图")
+                            ToastController.shared.show(L("已取消长截图"))
                         case .needsAccessibility:
-                            ToastController.shared.show("长截图需要「辅助功能」权限")
+                            ToastController.shared.show(L("长截图需要「辅助功能」权限"))
                         case .noSegment:
-                            ToastController.shared.show("未能截取到可滚动内容，请对准网页或列表后再试")
+                            ToastController.shared.show(L("未能截取到可滚动内容，请对准网页或列表后再试"))
                         }
                     } else {
                         Permissions.handleCaptureFailure(error: error)
@@ -421,18 +417,18 @@ final class CaptureCoordinator: ObservableObject {
         if action == .ocr {
             HistoryStore.shared.add(image: image)
             DispatchQueue.main.async { StatusBarController.shared?.reloadMenu() }
-            ToastController.shared.show("正在识别文字…")
+            ToastController.shared.show(L("正在识别文字…"))
             Task {
                 do {
                     let url = try await TextFileService.createTXTFromOCR(image: image, askWhere: true)
                     await MainActor.run {
-                        ToastController.shared.show("已保存 \(url.lastPathComponent)")
+                        ToastController.shared.show(L("已保存 %@", url.lastPathComponent))
                         TextFileService.reveal(url)
                     }
                 } catch {
                     await MainActor.run {
                         if (error as? TextFileService.TextFileError) != .cancelled {
-                            ToastController.shared.show("OCR 导出失败")
+                            ToastController.shared.show(L("OCR 导出失败"))
                         }
                     }
                 }
@@ -445,7 +441,7 @@ final class CaptureCoordinator: ObservableObject {
             return
         }
 
-        ToastController.shared.show("正在检查敏感信息…")
+        ToastController.shared.show(L("正在检查敏感信息…"))
         Task {
             let plan = await PrivacyGuard.plan(for: image)
             await MainActor.run {
@@ -476,12 +472,12 @@ final class CaptureCoordinator: ObservableObject {
             if let outbound {
                 ImageExporter.copyToClipboard(ScreenshotWatermark.applyIfNeeded(outbound))
                 if case .redacted = plan {
-                    ToastController.shared.show("已脱敏复制，原图仅保存在本地历史", fontSize: 11)
+                    ToastController.shared.show(L("已脱敏复制，原图仅保存在本地历史"), fontSize: 11)
                 } else {
-                    ToastController.shared.show("已复制到剪贴板", fontSize: 11)
+                    ToastController.shared.show(L("已复制到剪贴板"), fontSize: 11)
                 }
             } else {
-                ToastController.shared.show("原图仅保存在本地历史")
+                ToastController.shared.show(L("原图仅保存在本地历史"))
             }
         case .save:
             do {
@@ -490,15 +486,15 @@ final class CaptureCoordinator: ObservableObject {
                     ImageExporter.copyToClipboard(ScreenshotWatermark.applyIfNeeded(outbound))
                 }
                 if case .redacted = plan {
-                    ToastController.shared.show("原图已保存，剪贴板为脱敏图")
+                    ToastController.shared.show(L("原图已保存，剪贴板为脱敏图"))
                 } else if outbound == nil {
-                    ToastController.shared.show("原图已仅本地保存：\(url.lastPathComponent)")
+                    ToastController.shared.show(L("原图已仅本地保存：%@", url.lastPathComponent))
                 } else {
-                    ToastController.shared.show("已保存：\(url.lastPathComponent)")
+                    ToastController.shared.show(L("已保存：%@", url.lastPathComponent))
                 }
                 HistoryStore.shared.add(image: local, fileURL: url)
             } catch {
-                ToastController.shared.show("保存失败，已保留到历史")
+                ToastController.shared.show(L("保存失败，已保留到历史"))
                 HistoryStore.shared.add(image: local)
             }
             StatusBarController.shared?.reloadMenu()
@@ -507,10 +503,10 @@ final class CaptureCoordinator: ObservableObject {
             if let outbound {
                 PinWindowController.shared.pin(image: ScreenshotWatermark.applyIfNeeded(outbound))
                 if case .redacted = plan {
-                    ToastController.shared.show("已钉出脱敏图，原图仅在本地历史")
+                    ToastController.shared.show(L("已钉出脱敏图，原图仅在本地历史"))
                 }
             } else {
-                ToastController.shared.show("原图仅保存在本地历史")
+                ToastController.shared.show(L("原图仅保存在本地历史"))
             }
         }
 

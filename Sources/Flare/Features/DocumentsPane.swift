@@ -8,8 +8,8 @@ struct DocumentsPane: View {
         ScrollView {
             VStack(alignment: .leading, spacing: 16) {
                 FlarePageHeader(
-                    title: "新建文档",
-                    subtitle: "一键创建空白文件并打开"
+                    title: L("新建文档"),
+                    subtitle: L("一键创建空白文件并打开")
                 )
 
                 VStack(spacing: 0) {
@@ -26,7 +26,7 @@ struct DocumentsPane: View {
                 .flareGlass(cornerRadius: 10)
 
                 HStack(spacing: 12) {
-                    FlareSecondaryButton(title: "打开文档文件夹", glyph: .folder) {
+                    FlareSecondaryButton(title: L("打开文档文件夹"), glyph: .folder) {
                         try? FileManager.default.createDirectory(
                             at: AppSettings.shared.documentDirectory,
                             withIntermediateDirectories: true
@@ -61,7 +61,7 @@ struct DocumentsPane: View {
                         .foregroundStyle(theme.textSecondary)
                 }
                 Spacer()
-                Text("创建")
+                Text(L("创建"))
                     .font(.system(size: 13, weight: .regular))
                     .foregroundStyle(theme.accent)
                 FlareChevron()

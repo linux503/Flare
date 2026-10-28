@@ -104,7 +104,7 @@ final class ScreenRecorder: NSObject, ObservableObject {
         guard Permissions.prepareForCapture() else { return }
         guard !isRecording, !isCountingDown, !isStarting else { return }
         guard !CaptureCoordinator.shared.isCapturing else {
-            ToastController.shared.show("请先结束截图再录屏")
+            ToastController.shared.show(L("请先结束截图再录屏"))
             return
         }
         RecordAreaPicker.pick(windowOnly: windowOnly, onPicked: { [weak self] selection in
@@ -166,7 +166,7 @@ final class ScreenRecorder: NSObject, ObservableObject {
     private func startOnMain(countdown: Bool?) {
         guard !isRecording, !isCountingDown, !isStarting else { return }
         guard !CaptureCoordinator.shared.isCapturing else {
-            ToastController.shared.show("请先结束截图再录屏")
+            ToastController.shared.show(L("请先结束截图再录屏"))
             return
         }
 
@@ -185,7 +185,7 @@ final class ScreenRecorder: NSObject, ObservableObject {
                 await MainActor.run {
                     self.isStarting = false
                     Permissions.handleCaptureFailure(error: error)
-                    ToastController.shared.show("无法开始录屏：\(error.localizedDescription)")
+                    ToastController.shared.show(L("无法开始录屏：%@", error.localizedDescription))
                     self.cleanup(failed: true)
                 }
             }
@@ -197,7 +197,7 @@ final class ScreenRecorder: NSObject, ObservableObject {
         pendingCountdown = true
         MainMenuController.shared?.reload()
         StatusBarController.shared?.refreshRecordingAppearance()
-        ToastController.shared.show("\(seconds) 秒后开始录屏…")
+        ToastController.shared.show(L("%@ 秒后开始录屏…", seconds))
         DelayOverlayController.shared.start(seconds: seconds, onFire: { [weak self] in
             guard let self else { return }
             self.isCountingDown = false
@@ -210,7 +210,7 @@ final class ScreenRecorder: NSObject, ObservableObject {
                     await MainActor.run {
                         self.isStarting = false
                         Permissions.handleCaptureFailure(error: error)
-                        ToastController.shared.show("无法开始录屏：\(error.localizedDescription)")
+                        ToastController.shared.show(L("无法开始录屏：%@", error.localizedDescription))
                         self.cleanup(failed: true)
                         MainMenuController.shared?.reload()
                         StatusBarController.shared?.refreshRecordingAppearance()
@@ -226,7 +226,7 @@ final class ScreenRecorder: NSObject, ObservableObject {
         DelayOverlayController.shared.cancelExternal()
         isCountingDown = false
         pendingCountdown = false
-        ToastController.shared.show("已取消录屏倒计时")
+        ToastController.shared.show(L("已取消录屏倒计时"))
         MainMenuController.shared?.reload()
         StatusBarController.shared?.refreshRecordingAppearance()
     }
@@ -281,7 +281,7 @@ final class ScreenRecorder: NSObject, ObservableObject {
             f.dateFormat = "yyyy-MM-dd HH.mm.ss"
             return f.string(from: Date())
         }()
-        let kind = recordingWindow ? "窗口录屏" : (plan.isArea ? "区域录屏" : "录屏")
+        let kind = recordingWindow ? L("窗口录屏") : (plan.isArea ? L("区域录屏") : L("录屏"))
         let url = dir.appendingPathComponent("\(FlareBrand.name) \(kind) \(stamp).mov")
         if FileManager.default.fileExists(atPath: url.path) {
             try FileManager.default.removeItem(at: url)
@@ -321,7 +321,7 @@ final class ScreenRecorder: NSObject, ObservableObject {
             if !granted {
                 useMic = false
                 await MainActor.run {
-                    ToastController.shared.show("未授权麦克风，已跳过人声")
+                    ToastController.shared.show(L("未授权麦克风，已跳过人声"))
                 }
             }
         }
@@ -448,8 +448,8 @@ final class ScreenRecorder: NSObject, ObservableObject {
             RecordingHUDController.shared.show()
             self.startTimer()
             let audioHint = AppSettings.shared.recordAudioSource.toastHint
-            let scope = recordingWindow ? "正在录制窗口" : "录屏中"
-            ToastController.shared.show("\(scope)\(audioHint) · ⌘⌥R 停止 · Esc 停止")
+            let scope = recordingWindow ? L("正在录制窗口") : L("录屏中")
+            ToastController.shared.show(L("%@%@ · ⌘⌥R 停止 · Esc 停止", scope, audioHint))
             StatusBarController.shared?.refreshRecordingAppearance()
             MainMenuController.shared?.reload()
         }
@@ -469,7 +469,7 @@ final class ScreenRecorder: NSObject, ObservableObject {
         pauseBeganPTS = nil
         timelineLock.unlock()
         RecordingHUDController.shared.updatePaused(true)
-        ToastController.shared.show("已暂停录屏")
+        ToastController.shared.show(L("已暂停录屏"))
         MainMenuController.shared?.reload()
         StatusBarController.shared?.refreshRecordingAppearance()
     }
@@ -485,7 +485,7 @@ final class ScreenRecorder: NSObject, ObservableObject {
         dropSamples = false
         timelineLock.unlock()
         RecordingHUDController.shared.updatePaused(false)
-        ToastController.shared.show("继续录屏")
+        ToastController.shared.show(L("继续录屏"))
         MainMenuController.shared?.reload()
         StatusBarController.shared?.refreshRecordingAppearance()
     }
@@ -531,15 +531,15 @@ final class ScreenRecorder: NSObject, ObservableObject {
             if discard {
                 if let url { try? FileManager.default.removeItem(at: url) }
                 self.cleanup(failed: true)
-                ToastController.shared.show("已丢弃录屏")
+                ToastController.shared.show(L("已丢弃录屏"))
             } else {
                 self.cleanup(failed: !ok)
                 if ok, let url {
-                    ToastController.shared.show("录屏已保存：\(url.lastPathComponent)")
+                    ToastController.shared.show(L("录屏已保存：%@", url.lastPathComponent))
                     NSWorkspace.shared.activateFileViewerSelecting([url])
                     SoundPlayer.playShutter()
                 } else {
-                    ToastController.shared.show(finishResult.2?.localizedDescription ?? "录屏保存失败")
+                    ToastController.shared.show(finishResult.2?.localizedDescription ?? L("录屏保存失败"))
                 }
             }
             self.restoreHiddenWindows(showRecord: AppSettings.shared.recordHideFlareWindows)
@@ -621,9 +621,9 @@ final class ScreenRecorder: NSObject, ObservableObject {
 
         var errorDescription: String? {
             switch self {
-            case .noDisplay: return "未找到显示器"
-            case .writerSetup: return "无法创建视频文件"
-            case .microphoneUnavailable: return "无法使用麦克风"
+            case .noDisplay: return L("未找到显示器")
+            case .writerSetup: return L("无法创建视频文件")
+            case .microphoneUnavailable: return L("无法使用麦克风")
             }
         }
     }
@@ -633,7 +633,7 @@ extension ScreenRecorder: SCStreamDelegate {
     func stream(_ stream: SCStream, didStopWithError error: Error) {
         DispatchQueue.main.async {
             if self.isRecording {
-                ToastController.shared.show("录屏中断")
+                ToastController.shared.show(L("录屏中断"))
                 Task { await self.finishRecording(discard: false) }
             }
         }

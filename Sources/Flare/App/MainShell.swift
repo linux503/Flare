@@ -6,12 +6,12 @@ enum MainTab: String, CaseIterable, Identifiable {
     var id: String { rawValue }
     var title: String {
         switch self {
-        case .home: return "截图"
-        case .record: return "录制"
-        case .mailbox: return "临时邮箱"
-        case .documents: return "新建"
-        case .history: return "历史"
-        case .settings: return "设置"
+        case .home: return L("截图")
+        case .record: return L("录制")
+        case .mailbox: return L("临邮")
+        case .documents: return L("新建")
+        case .history: return L("历史")
+        case .settings: return L("设置")
         }
     }
     var glyph: SnapGlyph {
@@ -24,6 +24,10 @@ enum MainTab: String, CaseIterable, Identifiable {
         case .settings: return .settings
         }
     }
+
+    static let captureTabs: [MainTab] = [.home, .record]
+    static let toolTabs: [MainTab] = [.mailbox, .documents]
+    static let libraryTabs: [MainTab] = [.history]
 }
 
 final class HomeWindowController {
@@ -31,18 +35,10 @@ final class HomeWindowController {
     private var window: NSWindow?
     private var model = MainShellModel()
     private var themeObserver: NSObjectProtocol?
-    private var settingsObserver: NSObjectProtocol?
 
     private init() {
         themeObserver = NotificationCenter.default.addObserver(
             forName: .flareThemeChanged,
-            object: nil,
-            queue: .main
-        ) { [weak self] _ in
-            self?.applyWindowChrome()
-        }
-        settingsObserver = NotificationCenter.default.addObserver(
-            forName: .flareSettingsChanged,
             object: nil,
             queue: .main
         ) { [weak self] _ in
@@ -55,9 +51,7 @@ final class HomeWindowController {
     }
 
     func show(tab: MainTab = .home) {
-        withAnimation(.easeInOut(duration: 0.2)) {
-            model.tab = tab
-        }
+        model.tab = tab
         if window == nil {
             let hosting = NSHostingController(rootView: MainShellView(model: model))
             let window = NSWindow(
@@ -75,8 +69,8 @@ final class HomeWindowController {
             window.center()
             window.setFrameAutosaveName("FlareHome")
             window.isReleasedWhenClosed = false
-            window.minSize = NSSize(width: 880, height: 580)
-            window.animationBehavior = .documentWindow
+            window.minSize = NSSize(width: 860, height: 580)
+            window.animationBehavior = .utilityWindow
             self.window = window
             applyWindowChrome()
         }
@@ -183,10 +177,10 @@ struct MainShellView: View {
 
             HStack(spacing: 0) {
                 sidebar(theme)
-                    .frame(width: 208)
+                    .frame(width: 188)
 
                 Rectangle()
-                    .fill(theme.stroke.opacity(0.85))
+                    .fill(theme.stroke.opacity(0.7))
                     .frame(width: 1)
 
                 VStack(spacing: 0) {
@@ -194,45 +188,15 @@ struct MainShellView: View {
                         updateBanner(remote, theme: theme)
                     }
 
-                    ZStack {
-                        switch model.tab {
-                        case .home:
-                            HomePane(
-                                onOpenSettings: { select(.settings) },
-                                onOpenHistory: { select(.history) }
-                            )
-                            .flareTabTransition()
-                            .id(MainTab.home)
-                        case .record:
-                            RecordPane()
-                                .flareTabTransition()
-                                .id(MainTab.record)
-                        case .mailbox:
-                            MailboxPane()
-                                .flareTabTransition()
-                                .id(MainTab.mailbox)
-                        case .documents:
-                            DocumentsPane()
-                                .flareTabTransition()
-                                .id(MainTab.documents)
-                        case .history:
-                            HistoryPane()
-                                .flareTabTransition()
-                                .id(MainTab.history)
-                        case .settings:
-                            SettingsPane(onBack: { select(.home) })
-                                .flareTabTransition()
-                                .id(MainTab.settings)
-                        }
-                    }
-                    .frame(maxWidth: .infinity, maxHeight: .infinity)
-                    .animation(.easeInOut(duration: 0.2), value: model.tab)
+                    tabContent
+                        .frame(maxWidth: .infinity, maxHeight: .infinity)
+                        .transaction { $0.animation = nil }
                 }
             }
         }
         .environment(\.flareTheme, theme)
         .preferredColorScheme(theme.preferredColorScheme)
-        .frame(minWidth: 880, minHeight: 580)
+        .frame(minWidth: 860, minHeight: 580)
         .task {
             await model.refreshUpdateQuietly()
         }
@@ -248,16 +212,16 @@ struct MainShellView: View {
         HStack(spacing: 12) {
             SnapIcon(.update, size: .body, opacity: 1, tint: theme.accent)
             VStack(alignment: .leading, spacing: 2) {
-                Text("发现新版本 \(remote.version)")
+                Text(L("发现新版本 %@", remote.version))
                     .font(.system(size: 13, weight: .semibold))
                     .foregroundStyle(theme.textPrimary)
-                Text((remote.notes?.isEmpty == false) ? (remote.notes ?? "") : "当前 \(UpdateChecker.currentVersion)，建议更新以获得更快体验。")
+                Text((remote.notes?.isEmpty == false) ? (remote.notes ?? "") : L("当前 %@，建议更新以获得更快体验。", UpdateChecker.currentVersion))
                     .font(.system(size: 11))
                     .foregroundStyle(theme.textMuted)
                     .lineLimit(2)
             }
             Spacer(minLength: 8)
-            Button("立即更新") {
+            Button(L("立即更新")) {
                 model.openUpdateDownload()
             }
             .font(.system(size: 12, weight: .semibold))
@@ -267,7 +231,7 @@ struct MainShellView: View {
             .background(theme.accent, in: Capsule())
             .buttonStyle(.plain)
 
-            Button("稍后") {
+            Button(L("稍后")) {
                 model.dismissUpdate(skipVersion: true)
             }
             .font(.system(size: 12, weight: .medium))
@@ -284,65 +248,58 @@ struct MainShellView: View {
         }
     }
 
-    private func select(_ tab: MainTab) {
-        withAnimation(.easeInOut(duration: 0.2)) {
-            model.tab = tab
+    @ViewBuilder
+    private var tabContent: some View {
+        switch model.tab {
+        case .home:
+            HomePane(
+                onOpenSettings: { select(.settings) },
+                onOpenHistory: { select(.history) }
+            )
+        case .record:
+            RecordPane()
+        case .mailbox:
+            MailboxPane()
+        case .documents:
+            DocumentsPane()
+        case .history:
+            HistoryPane()
+        case .settings:
+            SettingsPane(onBack: { select(.home) })
         }
+    }
+
+    private func select(_ tab: MainTab) {
+        guard model.tab != tab else { return }
+        model.tab = tab
     }
 
     private func sidebar(_ theme: FlarePalette) -> some View {
         VStack(alignment: .leading, spacing: 0) {
-            HStack(spacing: 10) {
-                FlareBrandMark(size: 32, cornerRadius: 8)
-                VStack(alignment: .leading, spacing: 2) {
+            HStack(spacing: 9) {
+                FlareBrandMark(size: 28, cornerRadius: 7)
+                VStack(alignment: .leading, spacing: 1) {
                     Text(FlareBrand.name)
-                        .font(.system(size: 15, weight: .bold, design: .rounded))
+                        .font(.system(size: 14, weight: .bold, design: .rounded))
                         .foregroundStyle(theme.textPrimary)
                     Text(FlareBrand.tagline)
-                        .font(.system(size: 11, weight: .medium))
+                        .font(.system(size: 10, weight: .medium))
                         .foregroundStyle(theme.textMuted)
                 }
             }
-            .padding(.leading, 16)
-            .padding(.trailing, 12)
-            .padding(.top, 44)
-            .padding(.bottom, 18)
+            .padding(.leading, 14)
+            .padding(.trailing, 10)
+            .padding(.top, 42)
+            .padding(.bottom, 10)
 
-            VStack(spacing: 2) {
-                ForEach(MainTab.allCases) { tab in
-                    Button {
-                        select(tab)
-                    } label: {
-                        HStack(spacing: 10) {
-                            SnapIcon(
-                                tab.glyph,
-                                size: .body,
-                                opacity: model.tab == tab ? 1 : 0.55,
-                                tint: model.tab == tab ? theme.textPrimary : theme.textMuted
-                            )
-                            Text(tab.title)
-                                .font(.system(size: 13, weight: model.tab == tab ? .semibold : .medium))
-                            Spacer()
-                            if model.tab == tab {
-                                Circle()
-                                    .fill(theme.accent)
-                                    .frame(width: 5, height: 5)
-                            }
-                        }
-                        .padding(.horizontal, 10)
-                        .padding(.vertical, 7)
-                        .background(
-                            RoundedRectangle(cornerRadius: 8, style: .continuous)
-                                .fill(model.tab == tab ? theme.fillStrong : Color.clear)
-                        )
-                        .foregroundStyle(model.tab == tab ? theme.textPrimary : theme.textSecondary)
-                    }
-                    .buttonStyle(FlareChipButtonStyle())
-                }
+            VStack(alignment: .leading, spacing: 2) {
+                sidebarSection(L("捕获"), tabs: MainTab.captureTabs, theme: theme)
+                sidebarSection(L("工具"), tabs: MainTab.toolTabs, theme: theme)
+                sidebarSection(L("资料"), tabs: MainTab.libraryTabs, theme: theme)
             }
-            .padding(.horizontal, 10)
+            .padding(.horizontal, 8)
 
-            Spacer()
+            Spacer(minLength: 8)
 
             VStack(alignment: .leading, spacing: 8) {
                 if model.availableUpdate != nil {
@@ -353,29 +310,39 @@ struct MainShellView: View {
                             Circle()
                                 .fill(theme.accent)
                                 .frame(width: 6, height: 6)
-                            Text("有新版本可更新")
+                            Text(L("有新版本"))
                                 .font(.system(size: 11, weight: .semibold))
                         }
                         .foregroundStyle(theme.accent)
                     }
                     .buttonStyle(.plain)
+                    .padding(.horizontal, 10)
                 }
 
-                Button {
-                    Task { await UpdateChecker.checkAndPrompt() }
-                } label: {
-                    Text("检查更新")
-                        .font(.system(size: 11, weight: .medium))
-                        .foregroundStyle(theme.textMuted)
+                SidebarNavRow(
+                    tab: .settings,
+                    selected: model.tab == .settings,
+                    theme: theme
+                ) {
+                    select(.settings)
                 }
-                .buttonStyle(.plain)
+                .padding(.horizontal, 8)
 
-                Text("v\(FlareBrand.version)")
-                    .font(.system(size: 12, weight: .medium, design: .monospaced))
-                    .foregroundStyle(theme.textMuted.opacity(0.85))
+                HStack {
+                    Text("v\(FlareBrand.version)")
+                        .font(.system(size: 11, weight: .medium, design: .monospaced))
+                        .foregroundStyle(theme.textMuted.opacity(0.8))
+                    Spacer()
+                    Button(L("检查更新")) {
+                        Task { await UpdateChecker.checkAndPrompt() }
+                    }
+                    .font(.system(size: 10, weight: .medium))
+                    .foregroundStyle(theme.textMuted)
+                    .buttonStyle(.plain)
+                }
+                .padding(.horizontal, 14)
             }
-            .padding(.horizontal, 24)
-            .padding(.bottom, 20)
+            .padding(.bottom, 16)
         }
         .background {
             ZStack {
@@ -388,5 +355,62 @@ struct MainShellView: View {
                 theme.sidebar.opacity(themeController.windowOpacity < 0.98 ? 0.55 : 0.96)
             }
         }
+    }
+
+    @ViewBuilder
+    private func sidebarSection(_ title: String, tabs: [MainTab], theme: FlarePalette) -> some View {
+        Text(title)
+            .font(.system(size: 10, weight: .semibold))
+            .foregroundStyle(theme.textMuted)
+            .padding(.horizontal, 10)
+            .padding(.top, 12)
+            .padding(.bottom, 4)
+        ForEach(tabs) { tab in
+            SidebarNavRow(
+                tab: tab,
+                selected: model.tab == tab,
+                theme: theme
+            ) {
+                select(tab)
+            }
+        }
+    }
+}
+
+private struct SidebarNavRow: View {
+    let tab: MainTab
+    let selected: Bool
+    let theme: FlarePalette
+    let action: () -> Void
+    @State private var hovering = false
+
+    var body: some View {
+        Button(action: action) {
+            HStack(spacing: 8) {
+                RoundedRectangle(cornerRadius: 1.5, style: .continuous)
+                    .fill(selected ? theme.accent : Color.clear)
+                    .frame(width: 3, height: 14)
+                SnapIcon(
+                    tab.glyph,
+                    size: .body,
+                    opacity: selected ? 1 : (hovering ? 0.85 : 0.55),
+                    tint: selected ? theme.textPrimary : theme.textMuted
+                )
+                Text(tab.title)
+                    .font(.system(size: 13, weight: selected ? .semibold : .medium))
+                Spacer(minLength: 0)
+            }
+            .padding(.trailing, 8)
+            .padding(.vertical, 6)
+            .background(
+                RoundedRectangle(cornerRadius: 8, style: .continuous)
+                    .fill(selected ? theme.fillStrong : (hovering ? theme.fill : Color.clear))
+            )
+            .foregroundStyle(selected ? theme.textPrimary : theme.textSecondary)
+            .contentShape(RoundedRectangle(cornerRadius: 8, style: .continuous))
+        }
+        .buttonStyle(.plain)
+        .onHover { hovering = $0 }
+        .help(tab.title)
     }
 }

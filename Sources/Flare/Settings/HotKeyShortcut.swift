@@ -14,7 +14,7 @@ struct HotKeyShortcut: Equatable, Hashable {
     }
 
     var displayString: String {
-        guard isValid else { return "未设置" }
+        guard isValid else { return L("未设置") }
         return HotKeyShortcut.symbolString(modifiers: modifiers) + HotKeyShortcut.keyName(keyCode: keyCode)
     }
 
@@ -96,14 +96,14 @@ enum HotKeyAction: String, CaseIterable, Identifiable {
 
     var title: String {
         switch self {
-        case .area: return "区域截图"
-        case .window: return "窗口截图"
-        case .screen: return "全屏截图"
-        case .delay: return "延时截图"
-        case .longShot: return "长截图"
-        case .translate: return "翻译"
-        case .record: return "屏幕录制"
-        case .history: return "历史记录"
+        case .area: return L("区域截图")
+        case .window: return L("窗口截图")
+        case .screen: return L("全屏截图")
+        case .delay: return L("延时截图")
+        case .longShot: return L("长截图")
+        case .translate: return L("翻译")
+        case .record: return L("屏幕录制")
+        case .history: return L("历史记录")
         }
     }
 

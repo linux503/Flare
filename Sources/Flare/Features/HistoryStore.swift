@@ -16,7 +16,6 @@ final class HistoryStore: ObservableObject {
     static let shared = HistoryStore()
 
     @Published private(set) var items: [HistoryItem] = []
-
     private let ioQueue = DispatchQueue(label: "app.flare.history.io", qos: .utility)
     private let thumbCache = NSCache<NSString, NSImage>()
     /// 原图内存缓存：后台落盘完成前也能打开清晰图（刻意收紧，小而快）
@@ -194,12 +193,17 @@ final class HistoryStore: ObservableObject {
     }
 
     func thumbnailAsync(for item: HistoryItem) async -> NSImage? {
-        if let cached = thumbnail(for: item) { return cached }
+        let key = item.id.uuidString as NSString
+        if let cached = thumbCache.object(forKey: key) { return cached }
         return await withCheckedContinuation { cont in
             ioQueue.async {
+                if let cached = self.thumbCache.object(forKey: key) {
+                    cont.resume(returning: cached)
+                    return
+                }
                 let img = NSImage(contentsOf: item.thumbnailURL)
                 if let img {
-                    self.thumbCache.setObject(img, forKey: item.id.uuidString as NSString)
+                    self.thumbCache.setObject(img, forKey: key)
                 }
                 cont.resume(returning: img)
             }

@@ -48,7 +48,7 @@ enum UpdateChecker {
             return .upToDate(current: currentVersion)
         }
         guard let url = URL(string: FlareBrand.updateFeedURL) else {
-            return .failed("更新地址无效")
+            return .failed(L("更新地址无效"))
         }
         var request = URLRequest(url: url)
         request.timeoutInterval = 12
@@ -57,7 +57,7 @@ enum UpdateChecker {
         do {
             let (data, response) = try await URLSession.shared.data(for: request)
             if let http = response as? HTTPURLResponse, !(200...299).contains(http.statusCode) {
-                return .failed("服务器返回 \(http.statusCode)")
+                return .failed(L("服务器返回 %@", http.statusCode))
             }
             let remote = try JSONDecoder().decode(RemoteVersion.self, from: data)
             let newerVersion = isNewer(remote.version, than: currentVersion)
@@ -105,28 +105,28 @@ enum UpdateChecker {
     @MainActor
     static func checkAndPrompt(silentIfCurrent: Bool = false) async {
         if isMacAppStoreBuild {
-            ToastController.shared.show("请在 App Store 检查更新")
+            ToastController.shared.show(L("请在 App Store 检查更新"))
             if let url = URL(string: "macappstore://showUpdatesPage") {
                 NSWorkspace.shared.open(url)
             }
             return
         }
-        ToastController.shared.show("正在检查更新…")
+        ToastController.shared.show(L("正在检查更新…"))
         let result = await check()
         switch result {
         case .upToDate(let current):
             if !silentIfCurrent {
-                ToastController.shared.show("已是最新版 \(current)")
+                ToastController.shared.show(L("已是最新版 %@", current))
             }
         case .updateAvailable(let remote):
             let alert = NSAlert()
-            alert.messageText = "发现新版本 \(remote.version)"
+            alert.messageText = L("发现新版本 %@", remote.version)
             alert.informativeText = remote.notes?.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty == false
                 ? (remote.notes ?? "")
-                : "当前版本 \(currentVersion)，建议前往官网下载更新。"
+                : L("当前版本 %@，建议前往官网下载更新。", currentVersion)
             alert.alertStyle = .informational
-            alert.addButton(withTitle: "前往下载")
-            alert.addButton(withTitle: "稍后再说")
+            alert.addButton(withTitle: L("前往下载"))
+            alert.addButton(withTitle: L("稍后再说"))
             let response = alert.runModal()
             if response == .alertFirstButtonReturn {
                 let link = remote.downloadURL.flatMap(URL.init(string:))
@@ -137,7 +137,7 @@ enum UpdateChecker {
                 }
             }
         case .failed(let message):
-            ToastController.shared.show("检查更新失败：\(message)")
+            ToastController.shared.show(L("检查更新失败：%@", message))
         }
     }
 }

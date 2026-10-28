@@ -13,7 +13,7 @@ final class MailboxStore: ObservableObject {
     @Published var messages: [OtpixClient.Message] = []
     @Published var selected: OtpixClient.Message?
     @Published var mail: OtpixClient.Mail?
-    @Published var status = "无需注册，只收不发 · 来信 24 小时后删除"
+    @Published var status = L("无需注册，只收不发 · 来信 24 小时后删除")
     @Published var busy = false
     @Published var openingId: String?
     @Published var errorText = ""
@@ -64,7 +64,7 @@ final class MailboxStore: ObservableObject {
 
     func create() async {
         let local = OtpixClient.validLocal(prefix) ?? OtpixClient.randomLocal()
-        await apply(addr: "\(local)@\(domain)", note: "地址已就绪，复制后贴到注册页")
+        await apply(addr: "\(local)@\(domain)", note: L("地址已就绪，复制后贴到注册页"))
         prefix = ""
     }
 
@@ -82,11 +82,11 @@ final class MailboxStore: ObservableObject {
             do {
                 let box = try await OtpixClient.restore(key: rk)
                 guard box.ok, let next = box.addr else {
-                    errorText = box.error ?? "恢复码无效"
+                    errorText = box.error ?? L("恢复码无效")
                     return
                 }
                 recover = box.recover ?? rk
-                await apply(addr: next, note: "已打开这个邮箱")
+                await apply(addr: next, note: L("已打开这个邮箱"))
                 openInput = ""
             } catch {
                 errorText = error.localizedDescription
@@ -94,16 +94,16 @@ final class MailboxStore: ObservableObject {
             return
         }
         if let full = OtpixClient.validAddr(raw) {
-            await apply(addr: full, note: "已打开这个邮箱")
+            await apply(addr: full, note: L("已打开这个邮箱"))
             openInput = ""
             return
         }
         if let local = OtpixClient.validLocal(raw) {
-            await apply(addr: "\(local)@\(domain)", note: "已打开这个邮箱")
+            await apply(addr: "\(local)@\(domain)", note: L("已打开这个邮箱"))
             openInput = ""
             return
         }
-        errorText = "填写完整地址、前缀，或恢复码 RK-xxxx"
+        errorText = L("填写完整地址、前缀，或恢复码 RK-xxxx")
     }
 
     func refresh() async {
@@ -116,9 +116,9 @@ final class MailboxStore: ObservableObject {
                 let newcomers = next.filter { !knownIds.contains($0.id) }
                 messages = next
                 if next.isEmpty {
-                    status = "等待来信 · 每 4 秒检查"
+                    status = L("等待来信 · 每 4 秒检查")
                 } else {
-                    status = "已收到 \(next.count) 封 · 每 4 秒检查"
+                    status = L("已收到 %@ 封 · 每 4 秒检查", next.count)
                 }
                 errorText = ""
 
@@ -132,9 +132,9 @@ final class MailboxStore: ObservableObject {
                     knownIds.formUnion(nextIds)
                     await openMail(newest)
                     if let code = newest.codes?.first {
-                        ToastController.shared.show("收到验证码 \(code)")
+                        ToastController.shared.show(L("收到验证码 %@", code))
                     } else {
-                        ToastController.shared.show("收到新邮件")
+                        ToastController.shared.show(L("收到新邮件"))
                     }
                 } else {
                     knownIds.formUnion(nextIds)
@@ -143,10 +143,10 @@ final class MailboxStore: ObservableObject {
                     }
                 }
             } else {
-                errorText = inbox.error ?? "收件箱暂时读不到"
+                errorText = inbox.error ?? L("收件箱暂时读不到")
             }
         } catch {
-            errorText = "网络中断，正在重试"
+            errorText = L("网络中断，正在重试")
         }
     }
 
@@ -176,10 +176,10 @@ final class MailboxStore: ObservableObject {
             selected = nil
             mail = nil
             knownIds = []
-            status = "收件箱已清空"
-            ToastController.shared.show("收件箱已清空")
+            status = L("收件箱已清空")
+            ToastController.shared.show(L("收件箱已清空"))
         } catch {
-            errorText = "清空失败"
+            errorText = L("清空失败")
         }
     }
 
@@ -187,34 +187,34 @@ final class MailboxStore: ObservableObject {
         guard !addr.isEmpty else { return }
         NSPasteboard.general.clearContents()
         NSPasteboard.general.setString(addr, forType: .string)
-        ToastController.shared.show("已复制 \(addr)")
+        ToastController.shared.show(L("已复制 %@", addr))
     }
 
     func copyRecover() {
         guard !recover.isEmpty else { return }
         NSPasteboard.general.clearContents()
         NSPasteboard.general.setString(recover, forType: .string)
-        ToastController.shared.show("已复制恢复码")
+        ToastController.shared.show(L("已复制恢复码"))
     }
 
     func copyShare() {
         guard let share = OtpixClient.shareURL(for: addr) else { return }
         NSPasteboard.general.clearContents()
         NSPasteboard.general.setString(share.absoluteString, forType: .string)
-        ToastController.shared.show("已复制分享链接")
+        ToastController.shared.show(L("已复制分享链接"))
     }
 
     func copyCode(_ code: String) {
         NSPasteboard.general.clearContents()
         NSPasteboard.general.setString(code, forType: .string)
-        ToastController.shared.show("已复制验证码 \(code)")
+        ToastController.shared.show(L("已复制验证码 %@", code))
     }
 
     func copyMailText() {
         guard let text = mail?.text?.trimmingCharacters(in: .whitespacesAndNewlines), !text.isEmpty else { return }
         NSPasteboard.general.clearContents()
         NSPasteboard.general.setString(text, forType: .string)
-        ToastController.shared.show("已复制正文")
+        ToastController.shared.show(L("已复制正文"))
     }
 
     func openMailPage() {
@@ -226,11 +226,11 @@ final class MailboxStore: ObservableObject {
     func remainLabel(for item: OtpixClient.Message) -> String {
         if let exp = item.expires_at {
             let left = exp - Date().timeIntervalSince1970
-            if left <= 0 { return "即将删除" }
+            if left <= 0 { return L("即将删除") }
             let hours = Int(left) / 3600
             let minutes = (Int(left) % 3600) / 60
-            if hours >= 1 { return "还剩 \(hours) 小时" }
-            return "还剩 \(max(1, minutes)) 分钟"
+            if hours >= 1 { return L("还剩 %@ 小时", hours) }
+            return L("还剩 %@ 分钟", max(1, minutes))
         }
         return item.ago ?? ""
     }
@@ -244,7 +244,7 @@ final class MailboxStore: ObservableObject {
         openInput = recover
         knownIds = []
         didPrimeIds = false
-        status = "无需注册，只收不发"
+        status = L("无需注册，只收不发")
         errorText = ""
         persist()
     }
@@ -256,7 +256,7 @@ final class MailboxStore: ObservableObject {
         do {
             let box = try await OtpixClient.create(addr: next)
             guard box.ok, let created = box.addr else {
-                errorText = box.error ?? "地址无效"
+                errorText = box.error ?? L("地址无效")
                 return
             }
             addr = created
@@ -284,37 +284,37 @@ struct MailboxPane: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
             header
-                .padding(.horizontal, 28)
-                .padding(.top, 40)
-                .padding(.bottom, 14)
+                .padding(.horizontal, 24)
+                .padding(.top, 36)
+                .padding(.bottom, 12)
 
             if !store.errorText.isEmpty {
                 errorBanner
-                    .padding(.horizontal, 28)
-                    .padding(.bottom, 12)
+                    .padding(.horizontal, 24)
+                    .padding(.bottom, 10)
             }
 
             if store.isInside {
                 addressBar
-                    .padding(.horizontal, 28)
-                    .padding(.bottom, 12)
+                    .padding(.horizontal, 24)
+                    .padding(.bottom, 10)
                 if !store.codes.isEmpty {
                     otpStrip
-                        .padding(.horizontal, 28)
-                        .padding(.bottom, 12)
+                        .padding(.horizontal, 24)
+                        .padding(.bottom, 10)
                 }
-                HStack(alignment: .top, spacing: 12) {
+                HStack(alignment: .top, spacing: 10) {
                     inboxColumn
                     readerColumn
                 }
-                .padding(.horizontal, 28)
-                .padding(.bottom, 20)
+                .padding(.horizontal, 24)
+                .padding(.bottom, 18)
                 .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
             } else {
                 ScrollView {
                     welcomeStage
-                        .padding(.horizontal, 28)
-                        .padding(.bottom, 28)
+                        .padding(.horizontal, 24)
+                        .padding(.bottom, 24)
                 }
             }
         }
@@ -340,17 +340,34 @@ struct MailboxPane: View {
 
     private var header: some View {
         FlarePageHeader(
-            title: "临时邮箱",
+            title: L("临邮"),
             subtitle: store.isInside
                 ? store.status
-                : "无需注册，只收不发 · 来信 24 小时后自动删除"
+                : L("临时邮箱 · 无需注册，只收不发")
         ) {
             if store.isInside {
                 HStack(spacing: 8) {
-                    FlarePrimaryButton(title: "复制地址", glyph: .copy, action: store.copyAddr)
-                    FlareSecondaryButton(title: "刷新", glyph: .refresh) {
-                        Task { await store.refresh() }
+                    Button(action: store.copyAddr) {
+                        HStack(spacing: 6) {
+                            SnapIcon(.copy, size: .caption, opacity: 1, tint: theme.inverseText)
+                            Text(L("复制地址"))
+                                .font(.system(size: 12, weight: .semibold))
+                        }
+                        .padding(.horizontal, 12)
+                        .padding(.vertical, 6)
+                        .background(theme.inverseFill, in: RoundedRectangle(cornerRadius: 8, style: .continuous))
+                        .foregroundStyle(theme.inverseText)
                     }
+                    .buttonStyle(.plain)
+                    Button {
+                        Task { await store.refresh() }
+                    } label: {
+                        SnapIcon(.refresh, size: .body, opacity: 0.9, tint: theme.textPrimary)
+                            .frame(width: 32, height: 28)
+                            .background(theme.fillStrong, in: RoundedRectangle(cornerRadius: 8, style: .continuous))
+                    }
+                    .buttonStyle(.plain)
+                    .help(L("刷新收件箱"))
                     moreMenu
                 }
             }
@@ -359,32 +376,26 @@ struct MailboxPane: View {
 
     private var moreMenu: some View {
         Menu {
-            Button("复制恢复码", action: store.copyRecover)
+            Button(L("复制恢复码"), action: store.copyRecover)
                 .disabled(store.recover.isEmpty)
-            Button("复制分享链接", action: store.copyShare)
+            Button(L("复制分享链接"), action: store.copyShare)
             Divider()
-            Button("换一个地址") {
+            Button(L("换一个地址")) {
                 Task { await store.recreate() }
             }
             .disabled(store.busy)
-            Button("清空收件箱") {
+            Button(L("清空收件箱")) {
                 Task { await store.clear() }
             }
             .disabled(store.addr.isEmpty || store.busy)
             Divider()
-            Button("退出此邮箱") {
+            Button(L("退出此邮箱")) {
                 store.leaveBox()
             }
         } label: {
-            HStack(spacing: 4) {
-                SnapIcon(.more, size: .caption, opacity: 1, tint: theme.accent)
-                Text("更多")
-                    .font(.system(size: 13, weight: .semibold))
-            }
-            .padding(.horizontal, 10)
-            .padding(.vertical, 5)
-            .background(theme.fill, in: RoundedRectangle(cornerRadius: 7, style: .continuous))
-            .foregroundStyle(theme.accent)
+            SnapIcon(.more, size: .body, opacity: 0.9, tint: theme.textPrimary)
+                .frame(width: 32, height: 28)
+                .background(theme.fillStrong, in: RoundedRectangle(cornerRadius: 8, style: .continuous))
         }
         .menuStyle(.borderlessButton)
         .menuIndicator(.hidden)
@@ -411,40 +422,50 @@ struct MailboxPane: View {
 
     private var addressBar: some View {
         HStack(spacing: 12) {
-            SnapIconWell(.mail, side: 36, iconSize: .title, cornerRadius: 10)
-            VStack(alignment: .leading, spacing: 3) {
+            ZStack {
+                RoundedRectangle(cornerRadius: 10, style: .continuous)
+                    .fill(theme.fillStrong)
+                SnapIcon(.mail, size: .title, opacity: 0.95, tint: theme.textPrimary)
+            }
+            .frame(width: 40, height: 40)
+
+            VStack(alignment: .leading, spacing: 5) {
                 Button(action: store.copyAddr) {
-                    HStack(alignment: .firstTextBaseline, spacing: 0) {
+                    HStack(spacing: 6) {
                         Text(store.localPart)
-                            .font(.system(size: 16, weight: .semibold))
+                            .font(.system(size: 17, weight: .semibold, design: .rounded))
                             .foregroundStyle(theme.textPrimary)
+                            .lineLimit(1)
+                            .minimumScaleFactor(0.6)
                         if !store.domainPart.isEmpty {
                             Text("@\(store.domainPart)")
-                                .font(.system(size: 16, weight: .medium))
+                                .font(.system(size: 11, weight: .semibold))
+                                .padding(.horizontal, 7)
+                                .padding(.vertical, 3)
+                                .background(theme.accentSoft, in: Capsule())
                                 .foregroundStyle(theme.accent)
                         }
                     }
-                    .lineLimit(1)
-                    .minimumScaleFactor(0.7)
                 }
                 .buttonStyle(.plain)
-                .help("轻点复制完整地址")
+                .help(L("轻点复制完整地址"))
 
                 HStack(spacing: 8) {
                     liveDot
-                    Text(store.messages.isEmpty ? "等待来信" : "\(store.messages.count) 封来信")
-                        .font(.system(size: 12))
+                    Text(store.messages.isEmpty ? L("等待来信") : L("%@ 封来信", store.messages.count))
+                        .font(.system(size: 11, weight: .medium))
                         .foregroundStyle(theme.textSecondary)
                     if !store.recover.isEmpty {
-                        Text("·")
-                            .foregroundStyle(theme.textMuted)
                         Button(action: store.copyRecover) {
                             Text(store.recover)
-                                .font(.system(size: 11, weight: .semibold, design: .monospaced))
+                                .font(.system(size: 10, weight: .semibold, design: .monospaced))
+                                .padding(.horizontal, 6)
+                                .padding(.vertical, 2)
+                                .background(theme.fill, in: Capsule())
                                 .foregroundStyle(theme.textMuted)
                         }
                         .buttonStyle(.plain)
-                        .help("轻点复制恢复码")
+                        .help(L("轻点复制恢复码"))
                     }
                 }
             }
@@ -456,7 +477,7 @@ struct MailboxPane: View {
         }
         .padding(.horizontal, 14)
         .padding(.vertical, 12)
-        .flareGlass(cornerRadius: 12)
+        .flareGlass(cornerRadius: 14)
     }
 
     private var liveDot: some View {
@@ -467,38 +488,59 @@ struct MailboxPane: View {
     }
 
     private var otpStrip: some View {
-        HStack(spacing: 10) {
+        HStack(spacing: 8) {
             ForEach(store.codes, id: \.self) { code in
                 Button {
                     store.copyCode(code)
                 } label: {
-                    HStack(spacing: 12) {
-                        VStack(alignment: .leading, spacing: 2) {
-                            Text("验证码")
-                                .font(.system(size: 11, weight: .medium))
-                                .foregroundStyle(theme.accent)
+                    HStack(spacing: 10) {
+                        Text(L("验证码"))
+                            .font(.system(size: 11, weight: .semibold))
+                            .foregroundStyle(theme.accent)
+                        if isDigitCode(code) {
+                            HStack(spacing: 4) {
+                                ForEach(Array(code.enumerated()), id: \.offset) { _, ch in
+                                    Text(String(ch))
+                                        .font(.system(size: 20, weight: .bold, design: .rounded))
+                                        .frame(width: 26, height: 32)
+                                        .background(theme.fill, in: RoundedRectangle(cornerRadius: 6, style: .continuous))
+                                        .foregroundStyle(theme.textPrimary)
+                                }
+                            }
+                        } else {
                             Text(code)
-                                .font(.system(size: 28, weight: .bold, design: .rounded))
-                                .tracking(2)
+                                .font(.system(size: 22, weight: .bold, design: .rounded))
+                                .tracking(1.5)
                                 .foregroundStyle(theme.textPrimary)
                         }
-                        SnapIcon(.copy, size: .body, opacity: 1, tint: theme.accent)
+                        Spacer(minLength: 0)
+                        Text(L("复制"))
+                            .font(.system(size: 11, weight: .semibold))
+                            .foregroundStyle(theme.accent)
                     }
-                    .padding(.horizontal, 16)
-                    .padding(.vertical, 12)
+                    .padding(.horizontal, 14)
+                    .padding(.vertical, 10)
                     .frame(maxWidth: .infinity, alignment: .leading)
                     .background(theme.accentSoft, in: RoundedRectangle(cornerRadius: 12, style: .continuous))
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 12, style: .continuous)
+                            .strokeBorder(theme.accent.opacity(0.22), lineWidth: 1)
+                    )
                 }
                 .buttonStyle(FlareCardButtonStyle())
-                .help("轻点复制验证码")
+                .help(L("轻点复制验证码"))
             }
         }
+    }
+
+    private func isDigitCode(_ code: String) -> Bool {
+        (4...8).contains(code.count) && code.allSatisfy(\.isNumber)
     }
 
     private var inboxColumn: some View {
         VStack(alignment: .leading, spacing: 0) {
             HStack {
-                Text("收件箱")
+                Text(L("收件箱"))
                     .font(.system(size: 12, weight: .semibold))
                     .foregroundStyle(theme.textMuted)
                 Spacer()
@@ -513,15 +555,15 @@ struct MailboxPane: View {
             if store.messages.isEmpty {
                 VStack(spacing: 10) {
                     SnapIconWell(.mail, side: 36, iconSize: .title, cornerRadius: 9)
-                    Text("还没有来信")
+                    Text(L("还没有来信"))
                         .font(.system(size: 14, weight: .semibold))
                         .foregroundStyle(theme.textPrimary)
-                    Text("复制地址，贴到注册页。验证码会自动出现。")
+                    Text(L("复制地址，贴到注册页。验证码会自动出现。"))
                         .font(.system(size: 12))
                         .foregroundStyle(theme.textSecondary)
                         .multilineTextAlignment(.center)
                         .fixedSize(horizontal: false, vertical: true)
-                    FlareSecondaryButton(title: "复制地址", glyph: .copy, action: store.copyAddr)
+                    FlareSecondaryButton(title: L("复制地址"), glyph: .copy, action: store.copyAddr)
                 }
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
                 .padding(16)
@@ -541,7 +583,7 @@ struct MailboxPane: View {
                 }
             }
         }
-        .frame(width: 268)
+        .frame(width: 280)
         .frame(maxHeight: .infinity, alignment: .top)
         .flareGlass(cornerRadius: 12)
     }
@@ -554,7 +596,7 @@ struct MailboxPane: View {
                 VStack(spacing: 10) {
                     ProgressView()
                         .controlSize(.small)
-                    Text("正在打开邮件…")
+                    Text(L("正在打开邮件…"))
                         .font(.system(size: 13))
                         .foregroundStyle(theme.textSecondary)
                 }
@@ -563,10 +605,10 @@ struct MailboxPane: View {
             } else {
                 VStack(spacing: 8) {
                     SnapIconWell(.ocr, side: 36, iconSize: .title, cornerRadius: 9)
-                    Text("等待验证码")
+                    Text(L("等待验证码"))
                         .font(.system(size: 16, weight: .semibold))
                         .foregroundStyle(theme.textPrimary)
-                    Text("来信后会自动打开，数字验证码会出现在上方。")
+                    Text(L("来信后会自动打开，数字验证码会出现在上方。"))
                         .font(.system(size: 12))
                         .foregroundStyle(theme.textSecondary)
                         .multilineTextAlignment(.center)
@@ -583,20 +625,24 @@ struct MailboxPane: View {
         return Button {
             Task { await store.openMail(item) }
         } label: {
-            HStack(alignment: .top, spacing: 10) {
+            HStack(alignment: .top, spacing: 8) {
+                RoundedRectangle(cornerRadius: 1.5, style: .continuous)
+                    .fill(selected ? theme.accent : Color.clear)
+                    .frame(width: 3, height: 28)
+                    .padding(.top, 2)
                 senderBadge(item.sender ?? "", selected: selected)
                 VStack(alignment: .leading, spacing: 3) {
                     HStack(alignment: .firstTextBaseline, spacing: 6) {
                         Text(senderName(item.sender))
-                            .font(.system(size: 13, weight: .semibold))
+                            .font(.system(size: 13, weight: selected ? .semibold : .medium))
                             .foregroundStyle(theme.textPrimary)
                             .lineLimit(1)
                         Spacer(minLength: 4)
                         Text(item.ago ?? "")
-                            .font(.system(size: 11))
+                            .font(.system(size: 10))
                             .foregroundStyle(theme.textMuted)
                     }
-                    Text(item.subject?.isEmpty == false ? (item.subject ?? "") : "无主题")
+                    Text(item.subject?.isEmpty == false ? (item.subject ?? "") : L("无主题"))
                         .font(.system(size: 12))
                         .foregroundStyle(theme.textSecondary)
                         .lineLimit(2)
@@ -607,9 +653,10 @@ struct MailboxPane: View {
                     }
                 }
             }
-            .padding(.horizontal, 12)
-            .padding(.vertical, 10)
-            .background(selected ? theme.accentSoft : Color.clear)
+            .padding(.leading, 8)
+            .padding(.trailing, 10)
+            .padding(.vertical, 8)
+            .background(selected ? theme.fillStrong : Color.clear)
             .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
@@ -617,7 +664,7 @@ struct MailboxPane: View {
 
     private func senderName(_ sender: String?) -> String {
         let raw = sender?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
-        if raw.isEmpty { return "未知发件人" }
+        if raw.isEmpty { return L("未知发件人") }
         if let start = raw.firstIndex(of: "<") {
             let name = raw[..<start].trimmingCharacters(in: .whitespacesAndNewlines)
             if !name.isEmpty { return name }
@@ -639,34 +686,46 @@ struct MailboxPane: View {
     }
 
     private func mailReader(_ mail: OtpixClient.Mail) -> some View {
-        ScrollView {
-            VStack(alignment: .leading, spacing: 12) {
-                Text(mail.subject ?? "无主题")
-                    .font(.system(size: 18, weight: .semibold))
+        VStack(alignment: .leading, spacing: 0) {
+            VStack(alignment: .leading, spacing: 8) {
+                Text(mail.subject ?? L("无主题"))
+                    .font(.system(size: 16, weight: .semibold))
                     .foregroundStyle(theme.textPrimary)
                     .fixedSize(horizontal: false, vertical: true)
                 HStack(spacing: 8) {
                     Text(senderName(mail.sender))
-                        .font(.system(size: 12))
+                        .font(.system(size: 11))
                         .foregroundStyle(theme.textSecondary)
                         .lineLimit(1)
                     if let selected = store.selected {
                         Text(store.remainLabel(for: selected))
-                            .font(.system(size: 12))
+                            .font(.system(size: 11))
                             .foregroundStyle(theme.textMuted)
                     }
                     Spacer(minLength: 0)
+                    if let text = mail.text, !text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+                        Button(L("复制正文"), action: store.copyMailText)
+                            .buttonStyle(.plain)
+                            .font(.system(size: 11, weight: .medium))
+                            .foregroundStyle(theme.accent)
+                    }
+                    if mail.html?.isEmpty == false || mail.id != nil {
+                        Button(L("网页版"), action: store.openMailPage)
+                            .buttonStyle(.plain)
+                            .font(.system(size: 11, weight: .medium))
+                            .foregroundStyle(theme.accent)
+                    }
                 }
                 if let codes = mail.codes, !codes.isEmpty {
-                    HStack(spacing: 8) {
+                    HStack(spacing: 6) {
                         ForEach(codes, id: \.self) { code in
                             Button {
                                 store.copyCode(code)
                             } label: {
                                 Text(code)
-                                    .font(.system(size: 16, weight: .bold, design: .rounded))
-                                    .padding(.horizontal, 12)
-                                    .padding(.vertical, 6)
+                                    .font(.system(size: 13, weight: .bold, design: .rounded))
+                                    .padding(.horizontal, 10)
+                                    .padding(.vertical, 4)
                                     .background(theme.accentSoft, in: Capsule())
                                     .foregroundStyle(theme.accent)
                             }
@@ -674,49 +733,48 @@ struct MailboxPane: View {
                         }
                     }
                 }
-                HStack(spacing: 8) {
-                    if let text = mail.text, !text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
-                        FlareSecondaryButton(title: "复制正文", glyph: .copy, action: store.copyMailText)
-                    }
-                    if mail.html?.isEmpty == false || mail.id != nil {
-                        FlareSecondaryButton(title: "网页版", glyph: .link, action: store.openMailPage)
-                    }
-                }
-                Divider().overlay(theme.stroke)
-                if let text = mail.text, !text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
-                    Text(text)
-                        .font(.system(size: 14))
-                        .foregroundStyle(theme.textPrimary)
-                        .textSelection(.enabled)
-                        .lineSpacing(5)
-                } else {
-                    Text("这封信没有纯文本，可用网页版查看。")
-                        .font(.system(size: 13))
-                        .foregroundStyle(theme.textMuted)
-                }
             }
-            .padding(16)
-            .frame(maxWidth: .infinity, alignment: .topLeading)
+            .padding(.horizontal, 14)
+            .padding(.top, 14)
+            .padding(.bottom, 10)
+
+            Rectangle()
+                .fill(theme.stroke)
+                .frame(height: 1)
+
+            ScrollView {
+                Group {
+                    if let text = mail.text, !text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+                        Text(text)
+                            .font(.system(size: 13))
+                            .foregroundStyle(theme.textPrimary)
+                            .textSelection(.enabled)
+                            .lineSpacing(4)
+                    } else {
+                        Text(L("这封信没有纯文本，可用网页版查看。"))
+                            .font(.system(size: 13))
+                            .foregroundStyle(theme.textMuted)
+                    }
+                }
+                .padding(14)
+                .frame(maxWidth: .infinity, alignment: .topLeading)
+            }
         }
         .flareGlass(cornerRadius: 12)
     }
 
     private var welcomeStage: some View {
-        VStack(alignment: .leading, spacing: 16) {
-            VStack(alignment: .leading, spacing: 16) {
-                VStack(alignment: .leading, spacing: 6) {
-                    Text("获取一个地址")
-                        .font(.system(size: 20, weight: .semibold))
-                        .foregroundStyle(theme.textPrimary)
-                    Text("复制后贴到注册页。验证码会自动出现在收件箱。")
-                        .font(.system(size: 13))
-                        .foregroundStyle(theme.textSecondary)
-                }
-
+        VStack(alignment: .leading, spacing: 12) {
+            VStack(alignment: .leading, spacing: 12) {
+                Text(L("取一个地址"))
+                    .font(.system(size: 16, weight: .semibold))
+                    .foregroundStyle(theme.textPrimary)
+                Text(L("复制后贴到注册页，验证码会自动出现。"))
+                    .font(.system(size: 12))
+                    .foregroundStyle(theme.textSecondary)
                 domainChips
-
-                HStack(spacing: 10) {
-                    field($store.prefix, placeholder: "前缀，可空")
+                HStack(spacing: 8) {
+                    field($store.prefix, placeholder: L("前缀，可空"))
                         .onSubmit {
                             Task { await store.create() }
                         }
@@ -729,47 +787,50 @@ struct MailboxPane: View {
                             } else {
                                 SnapIcon(.plus, size: .caption, opacity: 1, tint: theme.inverseText)
                             }
-                            Text("立即创建")
-                                .font(.system(size: 14, weight: .semibold))
+                            Text(L("创建"))
+                                .font(.system(size: 13, weight: .semibold))
                         }
-                        .padding(.horizontal, 14)
-                        .padding(.vertical, 8)
-                        .background(theme.accent, in: RoundedRectangle(cornerRadius: 8, style: .continuous))
+                        .padding(.horizontal, 12)
+                        .padding(.vertical, 7)
+                        .background(theme.inverseFill, in: RoundedRectangle(cornerRadius: 8, style: .continuous))
                         .foregroundStyle(theme.inverseText)
                     }
-                    .buttonStyle(FlareChipButtonStyle())
+                    .buttonStyle(.plain)
                     .disabled(store.busy)
                 }
-
-                Text("只收不发  ·  来信 24 小时后删除  ·  用恢复码换设备")
-                    .font(.system(size: 12))
+                Text(L("只收不发 · 来信 24 小时后删除"))
+                    .font(.system(size: 11))
                     .foregroundStyle(theme.textMuted)
             }
-            .padding(20)
+            .padding(16)
             .frame(maxWidth: .infinity, alignment: .leading)
             .flareGlass(cornerRadius: 14)
 
-            VStack(alignment: .leading, spacing: 12) {
-                VStack(alignment: .leading, spacing: 4) {
-                    Text("打开已有邮箱")
-                        .font(.system(size: 15, weight: .semibold))
-                        .foregroundStyle(theme.textPrimary)
-                    Text(store.recover.isEmpty ? "填写完整地址或恢复码 RK-xxxx" : "已填入上一只邮箱的恢复码")
-                        .font(.system(size: 12))
-                        .foregroundStyle(theme.textSecondary)
-                }
-                HStack(spacing: 10) {
-                    field($store.openInput, placeholder: "地址 / 前缀 / RK-xxxx")
+            VStack(alignment: .leading, spacing: 10) {
+                Text(L("打开已有邮箱"))
+                    .font(.system(size: 13, weight: .semibold))
+                    .foregroundStyle(theme.textPrimary)
+                Text(store.recover.isEmpty ? L("填写地址或恢复码 RK-xxxx") : L("已填入上一只邮箱的恢复码"))
+                    .font(.system(size: 11))
+                    .foregroundStyle(theme.textSecondary)
+                HStack(spacing: 8) {
+                    field($store.openInput, placeholder: L("地址 / 前缀 / RK-xxxx"))
                         .onSubmit {
                             Task { await store.openKnown() }
                         }
-                    FlareSecondaryButton(title: "打开", glyph: .success) {
+                    Button(L("打开")) {
                         Task { await store.openKnown() }
                     }
+                    .buttonStyle(.plain)
+                    .font(.system(size: 12, weight: .semibold))
+                    .padding(.horizontal, 12)
+                    .padding(.vertical, 7)
+                    .background(theme.fillStrong, in: RoundedRectangle(cornerRadius: 8, style: .continuous))
+                    .foregroundStyle(theme.textPrimary)
                     .disabled(store.busy)
                 }
             }
-            .padding(16)
+            .padding(14)
             .frame(maxWidth: .infinity, alignment: .leading)
             .flareGlass(cornerRadius: 12)
         }

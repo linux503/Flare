@@ -104,9 +104,9 @@ enum FlareMenu {
 
     static func recordingSubtitle() -> String {
         let rec = ScreenRecorder.shared
-        if rec.isCountingDown { return "倒计时中…" }
-        if rec.isPaused { return "已暂停 · \(formatDuration(rec.elapsedSeconds))" }
-        if rec.isRecording { return "录制中 · \(formatDuration(rec.elapsedSeconds))" }
+        if rec.isCountingDown { return L("倒计时中…") }
+        if rec.isPaused { return L("已暂停 · %@", formatDuration(rec.elapsedSeconds)) }
+        if rec.isRecording { return L("录制中 · %@", formatDuration(rec.elapsedSeconds)) }
         return FlareBrand.tagline
     }
 

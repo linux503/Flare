@@ -17,15 +17,15 @@ enum PrivacyKind: String, CaseIterable {
     var title: String {
         switch self {
         case .apiKey: return "API Key"
-        case .mnemonic: return "助记词"
-        case .privateKey: return "私钥"
-        case .wallet: return "钱包地址"
-        case .bankCard: return "银行卡"
-        case .idDocument: return "身份证件"
-        case .email: return "邮箱"
-        case .phone: return "电话"
-        case .customer: return "客户资料"
-        case .qrCode: return "二维码"
+        case .mnemonic: return L("助记词")
+        case .privateKey: return L("私钥")
+        case .wallet: return L("钱包地址")
+        case .bankCard: return L("银行卡")
+        case .idDocument: return L("身份证件")
+        case .email: return L("邮箱")
+        case .phone: return L("电话")
+        case .customer: return L("客户资料")
+        case .qrCode: return L("二维码")
         case .cookieToken: return "Cookie / Token"
         }
     }

@@ -27,6 +27,14 @@
       "tab.shot": "Capture",
       "tab.rec": "Record",
       "tab.ev": "Evidence",
+      "tab.tr": "Translate",
+      "tab.mail": "Mail",
+      "img.tr": "截图翻译演示",
+      "img.mail": "临邮演示",
+      "proof.translate": "Translate · 自动识别语言再翻译",
+      "proof.mail": "Temp Mail · 验证码自动出现",
+      "plat.r9": "打码 / 高级水印",
+      "plat.r10": "中文 / English 界面",
       "img.shot": "截图演示",
       "img.rec": "录屏演示",
       "img.ev": "证据演示",
@@ -43,7 +51,7 @@
       "feat.tag": "功能",
       "feat.h2": "四件事，做到结果可交付",
       "feat.capture": "截图即用",
-      "feat.captureP": "区域 / 窗口 / 全屏。框选后复制、标注，或直接翻译。",
+      "feat.captureP": "区域 / 窗口 / 全屏。框选后标注、打码、加水印，或直接翻译。",
       "feat.record": "录屏成片",
       "feat.recordP": "全屏、区域或窗口。先选默认范围，再开始。导出 H.264 MOV。",
       "feat.redact": "分享前脱敏",
@@ -91,7 +99,7 @@
       "wn.summary": "更新记录",
       "start.summary": "开始使用（macOS）",
       "start.1": "放到 /Applications，授权「屏幕录制」后完全退出再打开",
-      "start.2": "菜单栏单击区域截图；⌘⌥R 录屏；侧栏可开临时邮箱",
+      "start.2": "菜单栏单击区域截图；⌘⌥T 翻译；⌘⌥R 录屏；侧栏可开临邮",
       "start.3": "Windows / Android：下载后打开链接即可网页长截图",
       "install.h3": "安装建议",
       "install.1": "macOS：放到 /Applications，授权后重启应用",
@@ -129,6 +137,14 @@
       "tab.shot": "Capture",
       "tab.rec": "Record",
       "tab.ev": "Evidence",
+      "tab.tr": "Translate",
+      "tab.mail": "Mail",
+      "img.tr": "Translate demo",
+      "img.mail": "Temp mail demo",
+      "proof.translate": "Translate · detects the language, then translates",
+      "proof.mail": "Temp Mail · codes appear automatically",
+      "plat.r9": "Redact / premium watermark",
+      "plat.r10": "Chinese / English UI",
       "img.shot": "Capture demo",
       "img.rec": "Record demo",
       "img.ev": "Evidence demo",
@@ -145,7 +161,7 @@
       "feat.tag": "Features",
       "feat.h2": "Four outcomes you can ship",
       "feat.capture": "Capture ready",
-      "feat.captureP": "Region / window / display. Copy, annotate, or translate in place.",
+      "feat.captureP": "Region / window / display. Annotate, redact, watermark, or translate in place.",
       "feat.record": "Record a clip",
       "feat.recordP": "Full screen, region, or a window. Pick the default, then start. H.264 MOV.",
       "feat.redact": "Redact before share",
@@ -193,7 +209,7 @@
       "wn.summary": "Release notes",
       "start.summary": "Getting started (macOS)",
       "start.1": "Move to /Applications, grant Screen Recording, fully quit and relaunch",
-      "start.2": "Menu-bar click for region shot; ⌘⌥R record; sidebar for temp mailbox",
+      "start.2": "Menu-bar click for region shot; ⌘⌥T translate; ⌘⌥R record; sidebar for temp mail",
       "start.3": "Windows / Android: download, open a URL, stitch a long page",
       "install.h3": "Install tips",
       "install.1": "macOS: move to /Applications, grant access, relaunch",
@@ -229,8 +245,8 @@
     window.__flareI18n = dict;
     document.documentElement.lang = lang === "en" ? "en" : "zh-Hans";
     document.title = lang === "en"
-      ? "Flare — Capture, record, redact, webpage evidence"
-      : "Flare — 截图、录屏、隐私脱敏与网页证据快照";
+      ? "Flare — Capture, record, translate, temp mail, webpage evidence"
+      : "Flare — 截图、录屏、翻译、临时邮箱与网页证据快照";
 
     document.querySelectorAll("[data-i18n]").forEach((el) => {
       const key = el.getAttribute("data-i18n");

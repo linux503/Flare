@@ -68,7 +68,7 @@ enum CaptureConflict {
         guard let names = rivalNamesText() else { return }
         didWarnRunningAppsThisSession = true
         ToastController.shared.show(
-            "检测到 \(names) 正在运行，窗口可能截成黑屏。请先退出这些截图/录屏软件后再试",
+            L("检测到 %@ 正在运行，窗口可能截成黑屏。请先退出这些截图/录屏软件后再试", names),
             duration: 4.2
         )
     }
@@ -84,12 +84,12 @@ enum CaptureConflict {
 
     static func hotkeyConflictMessage(shortcut: HotKeyShortcut) -> String {
         if isSystemScreenshotShortcut(shortcut) {
-            return "\(shortcut.displayString) 是系统截图快捷键（⌘⇧3/4/5）。请改键，或关掉系统设置里的截图快捷键"
+            return L("%@ 是系统截图快捷键（⌘⇧3/4/5）。请改键，或关掉系统设置里的截图快捷键", shortcut.displayString)
         }
         if let names = rivalNamesText() {
-            return "快捷键 \(shortcut.displayString) 注册失败，可能被 \(names) 占用。请改键或退出该软件"
+            return L("快捷键 %@ 注册失败，可能被 %@ 占用。请改键或退出该软件", shortcut.displayString, names)
         }
-        return "快捷键 \(shortcut.displayString) 已被系统或其他软件占用，请到设置里改成别的组合"
+        return L("快捷键 %@ 已被系统或其他软件占用，请到设置里改成别的组合", shortcut.displayString)
     }
 
     static func windowSharingIsBlocked(_ id: CGWindowID) -> Bool {
@@ -128,11 +128,11 @@ enum CaptureConflict {
 
     static func explainBlackWindow(id: CGWindowID) -> String {
         if windowSharingIsBlocked(id) {
-            return "该窗口禁止被截屏（银行/密码/DRM 视频常见），系统会填成黑屏"
+            return L("该窗口禁止被截屏（银行/密码/DRM 视频常见），系统会填成黑屏")
         }
         if let names = rivalNamesText() {
-            return "窗口是黑的：\(names) 可能占用了屏幕采集。请退出后重试，或改用区域截图"
+            return L("窗口是黑的：%@ 可能占用了屏幕采集。请退出后重试，或改用区域截图", names)
         }
-        return "窗口是黑的：系统保护内容（浏览器全屏视频/DRM）无法采集。可改用区域截图试试"
+        return L("窗口是黑的：系统保护内容（浏览器全屏视频/DRM）无法采集。可改用区域截图试试")
     }
 }

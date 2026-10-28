@@ -12,12 +12,12 @@ enum AppLogoKind: String, CaseIterable, Identifiable {
 
     var title: String {
         switch self {
-        case .spark: return "墨黑闪光"
-        case .iris: return "琥珀镜头"
-        case .bolt: return "电光快拍"
-        case .dusk: return "录制红点"
-        case .coral: return "墨白长截"
-        case .custom: return "自选"
+        case .spark: return L("墨黑闪光")
+        case .iris: return L("琥珀镜头")
+        case .bolt: return L("电光快拍")
+        case .dusk: return L("录制红点")
+        case .coral: return L("墨白长截")
+        case .custom: return L("自选")
         }
     }
 
@@ -49,6 +49,9 @@ enum LogoCatalog {
     static func invalidate() {
         cacheKey = nil
         cache = nil
+        DispatchQueue.main.async {
+            NotificationCenter.default.post(name: .flareLogoChanged, object: nil)
+        }
     }
 
     static func currentImage() -> NSImage? {

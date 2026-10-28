@@ -1,22 +1,22 @@
 {
-  "version": "1.3.23",
-  "build": 37,
-  "notes": "请立即升级：临时邮箱、截图翻译、窗口录屏，以及多项稳定性修复。",
+  "version": "1.3.24",
+  "build": 38,
+  "notes": "请立即升级：支持英文界面、翻译进菜单、截图高级水印、全新临邮与更清晰的 Logo。",
   "changelog": [
-    "临时邮箱：验证码自动出现，复制地址一键可用",
-    "截图工具栏可直接翻译，敏感信息先过隐私闸门",
-    "录屏可选全屏 / 区域 / 窗口，开始前可改默认范围",
-    "窗口透明度与毛玻璃恢复可用",
-    "修复连点录屏、邮件串台、翻译结果被旧请求覆盖"
+    "支持英文界面：设置里可切换中文 / English，默认跟随系统",
+    "翻译入口进菜单栏与顶部菜单，快捷键 ⌘⌥T",
+    "截图可加或取消高级水印，工具栏一键开关",
+    "截图工具栏精简，标注与打码更顺手",
+    "临邮重新设计，Logo 更清晰，侧栏更大更好认"
   ],
   "changelogEn": [
-    "Temporary mailbox: codes appear automatically, one-tap copy",
-    "Translate from the capture toolbar, with privacy gating first",
-    "Record full screen, region, or a window; pick the default first",
-    "Window opacity and glass restored",
-    "Fixes for double-start recording, mailbox races, and stale translations"
+    "English UI: switch Chinese / English in Settings, follows the system by default",
+    "Translate is now in the menu bar and app menus, shortcut ⌘⌥T",
+    "Add or remove a premium watermark on captures, one tap in the toolbar",
+    "Simpler capture toolbar with stronger markup and redaction",
+    "Redesigned Temp Mail, crisper logo, and a larger sidebar"
   ],
-  "downloadURL": "https://linux503.github.io/Flare/downloads/Flare-Pro-1.3.23-Universal.dmg",
+  "downloadURL": "https://linux503.github.io/Flare/downloads/Flare-Pro-1.3.24-Universal.dmg",
   "windowsURL": "https://github.com/linux503/Flare/releases/download/v1.3.19/Flare-Windows-x64.exe",
   "androidURL": "https://linux503.github.io/Flare/downloads/Flare-Android.apk",
   "minOS": "14.0",

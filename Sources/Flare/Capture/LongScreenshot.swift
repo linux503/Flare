@@ -18,9 +18,9 @@ enum LongScreenshot {
 
         var errorDescription: String? {
             switch self {
-            case .cancelled: return "已取消长截图"
-            case .noSegment: return "未能截取到长截图内容"
-            case .needsAccessibility: return "长截图需要「辅助功能」权限才能自动滚动"
+            case .cancelled: return L("已取消长截图")
+            case .noSegment: return L("未能截取到长截图内容")
+            case .needsAccessibility: return L("长截图需要「辅助功能」权限才能自动滚动")
             }
         }
     }
@@ -656,7 +656,7 @@ enum LongScreenshot {
         selectionRectInPoints: CGRect,
         targetSize: CGSize
     ) async throws -> CGImage {
-        let frame = try await ScreenCapturer.captureDisplay(displayID, excludeSelf: true)
+        let frame = try await ScreenCapturer.captureDisplay(displayID)
         let crop = CGRect(
             x: selectionRectInPoints.origin.x * frame.scale,
             y: (frame.bounds.height - selectionRectInPoints.origin.y - selectionRectInPoints.height) * frame.scale,

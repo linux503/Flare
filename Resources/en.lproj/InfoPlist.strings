@@ -1,0 +1,3 @@
+"NSAccessibilityUsageDescription" = "Flare Pro needs Accessibility access to auto-scroll pages and lists during scrolling capture.";
+"NSMicrophoneUsageDescription" = "Flare Pro needs microphone access to record your voice during screen recording.";
+"NSScreenCaptureUsageDescription" = "Flare Pro needs Screen Recording access to capture your screen for area/window screenshots and annotation.";

@@ -10,15 +10,15 @@ enum AppThemeKind: String, CaseIterable, Identifiable {
 
     var title: String {
         switch self {
-        case .ink: return "墨黑"
-        case .frost: return "霜白"
+        case .ink: return L("墨黑")
+        case .frost: return L("霜白")
         }
     }
 
     var subtitle: String {
         switch self {
-        case .ink: return "深色界面 · 夜间舒适"
-        case .frost: return "浅色界面 · 日间清晰"
+        case .ink: return L("深色界面 · 夜间舒适")
+        case .frost: return L("浅色界面 · 日间清晰")
         }
     }
 
@@ -160,15 +160,13 @@ final class ThemeController: ObservableObject {
     }
 
     func set(_ kind: AppThemeKind) {
-        withAnimation(.easeInOut(duration: 0.24)) {
+        withAnimation(.easeOut(duration: 0.14)) {
             self.kind = kind
         }
     }
 
     func setOpacity(_ value: Double) {
-        withAnimation(.easeOut(duration: 0.15)) {
-            windowOpacity = value
-        }
+        windowOpacity = value
     }
 }
 
@@ -264,4 +262,5 @@ extension View {
 
 extension Notification.Name {
     static let flareThemeChanged = Notification.Name("flareThemeChanged")
+    static let flareLogoChanged = Notification.Name("flareLogoChanged")
 }

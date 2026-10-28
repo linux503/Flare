@@ -95,7 +95,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
                             ]
                         )
                         if ok, !first {
-                            ToastController.shared.show("\(FlareBrand.name) 已就绪 · 单击菜单栏打开菜单")
+                            ToastController.shared.show(L("%@ 已就绪 · 单击菜单栏打开菜单", FlareBrand.name))
                         } else if !ok {
                             Permissions.showReauthorizationHintIfNeeded()
                             Permissions.startPolling()
@@ -119,15 +119,15 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         guard rec.isRecording || rec.isCountingDown else { return .terminateNow }
 
         let alert = NSAlert()
-        alert.messageText = "正在录屏"
-        alert.informativeText = rec.isCountingDown ? "倒计时尚未结束，确定退出？" : "退出前请选择如何处理当前录屏。"
+        alert.messageText = L("正在录屏")
+        alert.informativeText = rec.isCountingDown ? L("倒计时尚未结束，确定退出？") : L("退出前请选择如何处理当前录屏。")
         if rec.isRecording {
-            alert.addButton(withTitle: "保存并退出")
-            alert.addButton(withTitle: "丢弃并退出")
-            alert.addButton(withTitle: "取消")
+            alert.addButton(withTitle: L("保存并退出"))
+            alert.addButton(withTitle: L("丢弃并退出"))
+            alert.addButton(withTitle: L("取消"))
         } else {
-            alert.addButton(withTitle: "退出")
-            alert.addButton(withTitle: "取消")
+            alert.addButton(withTitle: L("退出"))
+            alert.addButton(withTitle: L("取消"))
         }
 
         switch alert.runModal() {

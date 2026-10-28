@@ -40,7 +40,7 @@ enum OfficePackage {
                   <w:r><w:t>\(bodyTitle)</w:t></w:r>
                 </w:p>
                 <w:p>
-                  <w:r><w:t>创建于 \(xmlEscape(displayNow())) · \(xmlEscape(FlareBrand.name))</w:t></w:r>
+                  <w:r><w:t>\(xmlEscape(L("创建于 %@ · %@", displayNow(), FlareBrand.name)))</w:t></w:r>
                 </w:p>
                 <w:p><w:r><w:t></w:t></w:r></w:p>
                 <w:sectPr>
@@ -167,7 +167,7 @@ enum OfficePackage {
                     <p:txBody>
                       <a:bodyPr/><a:lstStyle/>
                       <a:p>
-                        <a:r><a:rPr lang="zh-CN" sz="1800"/><a:t>创建于 \(xmlEscape(displayNow())) · \(xmlEscape(FlareBrand.name))</a:t></a:r>
+                        <a:r><a:rPr lang="zh-CN" sz="1800"/><a:t>\(xmlEscape(L("创建于 %@ · %@", displayNow(), FlareBrand.name)))</a:t></a:r>
                       </a:p>
                     </p:txBody>
                   </p:sp>
@@ -253,7 +253,7 @@ enum OfficePackage {
 
     static func writeXLSX(to url: URL, title: String) throws {
         let now = isoNow()
-        let sheetName = "工作表1"
+        let sheetName = L("工作表1")
         let entries: [ZipEntry] = [
             ZipEntry(path: "[Content_Types].xml", text: """
             <?xml version="1.0" encoding="UTF-8" standalone="yes"?>
@@ -313,9 +313,9 @@ enum OfficePackage {
             <?xml version="1.0" encoding="UTF-8" standalone="yes"?>
             <sst xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" count="4" uniqueCount="4">
               <si><t>\(xmlEscape(title))</t></si>
-              <si><t>列 B</t></si>
-              <si><t>列 C</t></si>
-              <si><t>创建于 \(xmlEscape(displayNow())) · \(xmlEscape(FlareBrand.name))</t></si>
+              <si><t>\(xmlEscape(L("列 B")))</t></si>
+              <si><t>\(xmlEscape(L("列 C")))</t></si>
+              <si><t>\(xmlEscape(L("创建于 %@ · %@", displayNow(), FlareBrand.name)))</t></si>
             </sst>
             """),
             ZipEntry(path: "xl/styles.xml", text: """

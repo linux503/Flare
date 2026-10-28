@@ -73,7 +73,7 @@ final class DelayOverlayController {
         container.addSubview(title)
         label = title
 
-        let hint = NSTextField(labelWithString: "Esc 取消")
+        let hint = NSTextField(labelWithString: L("Esc 取消"))
         hint.font = NSFont.systemFont(ofSize: 12, weight: .medium)
         hint.textColor = NSColor.white.withAlphaComponent(0.55)
         hint.alignment = .center

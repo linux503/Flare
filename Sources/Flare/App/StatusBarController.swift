@@ -41,7 +41,7 @@ final class StatusBarController: NSObject {
         if let button = item.button {
             button.image = FlareBrand.statusBarSymbol()
             button.imageScaling = .scaleNone
-            button.toolTip = "\(FlareBrand.name) — 单击打开菜单"
+            button.toolTip = L("%@ — 单击打开菜单", FlareBrand.name)
             button.target = self
             button.action = #selector(statusButtonClicked(_:))
             button.sendAction(on: [.leftMouseUp, .rightMouseUp])
@@ -62,12 +62,12 @@ final class StatusBarController: NSObject {
             button.image = FlareBrand.statusBarRecordingSymbol()
             let clock = String(format: "%02d:%02d", ScreenRecorder.shared.elapsedSeconds / 60, ScreenRecorder.shared.elapsedSeconds % 60)
             let t = ScreenRecorder.shared.isPaused
-                ? "录屏已暂停 \(clock)"
-                : (ScreenRecorder.shared.isCountingDown ? "录屏倒计时" : "正在录屏 \(clock)")
-            button.toolTip = "\(FlareBrand.name) — \(t) · 单击打开菜单"
+                ? L("录屏已暂停 %@", clock)
+                : (ScreenRecorder.shared.isCountingDown ? L("录屏倒计时") : L("正在录屏 %@", clock))
+            button.toolTip = L("%@ — %@ · 单击打开菜单", FlareBrand.name, t)
         } else {
             button.image = FlareBrand.statusBarSymbol()
-            button.toolTip = "\(FlareBrand.name) — 单击打开菜单"
+            button.toolTip = L("%@ — 单击打开菜单", FlareBrand.name)
         }
     }
 
@@ -98,35 +98,35 @@ final class StatusBarController: NSObject {
         let rec = ScreenRecorder.shared
         if rec.isRecording {
             menu.addItem(item(
-                rec.isPaused ? "继续录屏" : "暂停录屏",
+                rec.isPaused ? L("继续录屏") : L("暂停录屏"),
                 rec.isPaused ? .play : .pause,
                 "", [],
                 #selector(togglePauseRecord)
             ))
-            menu.addItem(hot("停止并保存", .record, #selector(stopRecord), glyph: .stop))
-            menu.addItem(item("丢弃录屏", .trash, "", [], #selector(discardRecord)))
+            menu.addItem(hot(L("停止并保存"), .record, #selector(stopRecord), glyph: .stop))
+            menu.addItem(item(L("丢弃录屏"), .trash, "", [], #selector(discardRecord)))
         } else if rec.isCountingDown {
-            menu.addItem(item("取消倒计时", .close, "", [], #selector(stopRecord)))
+            menu.addItem(item(L("取消倒计时"), .close, "", [], #selector(stopRecord)))
         } else {
-            menu.addItem(hot("区域截图", .area, #selector(captureArea)))
-            menu.addItem(hot("窗口截图", .window, #selector(captureWindow)))
-            menu.addItem(hot("全屏截图", .screen, #selector(captureScreen)))
-            menu.addItem(hot("翻译", .translate, #selector(captureTranslate)))
+            menu.addItem(hot(L("区域截图"), .area, #selector(captureArea)))
+            menu.addItem(hot(L("窗口截图"), .window, #selector(captureWindow)))
+            menu.addItem(hot(L("全屏截图"), .screen, #selector(captureScreen)))
+            menu.addItem(hot(L("翻译"), .translate, #selector(captureTranslate)))
             menu.addItem(FlareMenu.separator())
-            menu.addItem(hot("开始录屏", .record, #selector(startRecord), glyph: .record))
-            menu.addItem(item("全屏录屏", .screen, "", [], #selector(startRecordFull)))
-            menu.addItem(item("区域录屏", .area, "", [], #selector(startRecordArea)))
-            menu.addItem(item("窗口录屏", .window, "", [], #selector(startRecordWindow)))
+            menu.addItem(hot(L("开始录屏（%@）", AppSettings.shared.recordMode.displayName), .record, #selector(startRecord), glyph: .record))
+            menu.addItem(item(L("全屏录屏"), .screen, "", [], #selector(startRecordFull)))
+            menu.addItem(item(L("区域录屏"), .area, "", [], #selector(startRecordArea)))
+            menu.addItem(item(L("窗口录屏"), .window, "", [], #selector(startRecordWindow)))
         }
 
         menu.addItem(FlareMenu.separator())
         if rec.isRecording || rec.isCountingDown {
-            menu.addItem(hot("翻译", .translate, #selector(captureTranslate)))
+            menu.addItem(hot(L("翻译"), .translate, #selector(captureTranslate)))
         }
-        menu.addItem(item("临时邮箱", .mail, "", [], #selector(showMailbox)))
-        menu.addItem(item("打开主面板", .home, "", [], #selector(showHome)))
-        menu.addItem(item("偏好设置…", .settings, ",", [.command], #selector(showSettings)))
-        menu.addItem(item("退出 \(FlareBrand.name)", .quit, "q", [.command], #selector(quit)))
+        menu.addItem(item(L("临邮"), .mail, "", [], #selector(showMailbox)))
+        menu.addItem(item(L("打开主面板"), .home, "", [], #selector(showHome)))
+        menu.addItem(item(L("偏好设置…"), .settings, ",", [.command], #selector(showSettings)))
+        menu.addItem(item(L("退出 %@", FlareBrand.name), .quit, "q", [.command], #selector(quit)))
 
         return menu
     }

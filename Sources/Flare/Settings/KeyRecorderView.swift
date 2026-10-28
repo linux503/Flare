@@ -88,7 +88,7 @@ final class RecorderButton: NSButton {
 
     func showRecording() {
         isRecording = true
-        title = "按下快捷键…"
+        title = L("按下快捷键…")
         contentTintColor = FlareBrand.accent
     }
 

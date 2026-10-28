@@ -9,7 +9,7 @@ struct HomePane: View {
     @ObservedObject private var capture = CaptureCoordinator.shared
     @Environment(\.flareTheme) private var theme
     @State private var permissionOK: Bool? = nil
-    @State private var permissionLabel = "检查中"
+    @State private var permissionLabel = L("检查中")
     @State private var shortcutTick = 0
 
     var body: some View {
@@ -40,10 +40,10 @@ struct HomePane: View {
     private var topBar: some View {
         HStack(alignment: .center, spacing: 16) {
             VStack(alignment: .leading, spacing: 5) {
-                Text("截图")
+                Text(L("截图"))
                     .font(.system(size: 26, weight: .bold, design: .rounded))
                     .foregroundStyle(theme.textPrimary)
-                Text(capture.isCapturing ? "正在截图…" : "双击识别窗口；双击选区按「设置 → 截图后」处理；Esc 退出")
+                Text(capture.isCapturing ? L("正在截图…") : L("双击识别窗口；双击选区按「设置 → 截图后」处理；Esc 退出"))
                     .font(.system(size: 12, weight: .medium))
                     .foregroundStyle(theme.textMuted)
                     .animation(.easeOut(duration: 0.2), value: capture.isCapturing)
@@ -81,7 +81,7 @@ struct HomePane: View {
             .foregroundStyle(theme.textPrimary)
         }
         .buttonStyle(FlareChipButtonStyle())
-        .help("检查屏幕录制权限")
+        .help(L("检查屏幕录制权限"))
     }
 
     private var heroCapture: some View {
@@ -91,10 +91,10 @@ struct HomePane: View {
         } label: {
             HStack(alignment: .center, spacing: 16) {
                 VStack(alignment: .leading, spacing: 6) {
-                    Text("区域截图")
+                    Text(L("区域截图"))
                         .font(.system(size: 17, weight: .bold, design: .rounded))
                         .foregroundStyle(theme.textPrimary)
-                    Text("拖选画面后确认导出 · 菜单栏可打开截图菜单")
+                    Text(L("拖选画面后确认导出 · 菜单栏可打开截图菜单"))
                         .font(.system(size: 11, weight: .medium))
                         .foregroundStyle(theme.textSecondary)
                         .fixedSize(horizontal: false, vertical: true)
@@ -128,23 +128,23 @@ struct HomePane: View {
         let _ = shortcutTick
         return VStack(spacing: 10) {
             HStack(spacing: 10) {
-                railItem("窗口", .window, .window) { CaptureCoordinator.shared.startWindowCapture() }
-                railItem("全屏", .screen, .screen) { CaptureCoordinator.shared.startFullScreenCapture() }
+                railItem(L("窗口"), .window, .window) { CaptureCoordinator.shared.startWindowCapture() }
+                railItem(L("全屏"), .screen, .screen) { CaptureCoordinator.shared.startFullScreenCapture() }
             }
             HStack(spacing: 10) {
-                railItem("延时 3s", .delay, .delay) { CaptureCoordinator.shared.startDelayedCapture(seconds: 3) }
-                railItem("长截图", .longShot, .longShot) { CaptureCoordinator.shared.startLongAreaCapture() }
+                railItem(L("延时 3s"), .delay, .delay) { CaptureCoordinator.shared.startDelayedCapture(seconds: 3) }
+                railItem(L("长截图"), .longShot, .longShot) { CaptureCoordinator.shared.startLongAreaCapture() }
             }
             featureRow(
-                title: "网页证据快照",
-                subtitle: "报价 · 订单 · 链上页面留档",
+                title: L("网页证据快照"),
+                subtitle: L("报价 · 订单 · 链上页面留档"),
                 glyph: .link
             ) {
                 EvidenceWindowController.shared.show()
             }
             featureRow(
-                title: "临时邮箱",
-                subtitle: "收验证码 · 无需注册",
+                title: L("临邮"),
+                subtitle: L("临时邮箱 · 收验证码"),
                 glyph: .mail
             ) {
                 HomeWindowController.shared.showMailbox()
@@ -215,16 +215,16 @@ struct HomePane: View {
         HStack(spacing: 12) {
             SnapIcon(.tip, size: .body, opacity: 0.85, tint: theme.textSecondary)
             VStack(alignment: .leading, spacing: 3) {
-                Text("更快开始")
+                Text(L("更快开始"))
                     .font(.system(size: 13, weight: .semibold))
                     .foregroundStyle(theme.textPrimary)
-                Text("菜单栏图标单击打开菜单；侧栏「录制」可屏幕录制；设置里可切换主题。")
+                Text(L("菜单栏图标单击打开菜单；侧栏「录制」可屏幕录制；设置里可切换主题。"))
                     .font(.system(size: 11))
                     .foregroundStyle(theme.textMuted)
                     .fixedSize(horizontal: false, vertical: true)
             }
             Spacer(minLength: 8)
-            Button("去录制") {
+            Button(L("去录制")) {
                 HomeWindowController.shared.showRecord()
             }
                 .font(.system(size: 11, weight: .semibold))
@@ -234,7 +234,7 @@ struct HomePane: View {
                 .padding(.vertical, 5)
                 .background(theme.fillStrong)
                 .clipShape(RoundedRectangle(cornerRadius: 6, style: .continuous))
-            Button("设置", action: onOpenSettings)
+            Button(L("设置"), action: onOpenSettings)
                 .font(.system(size: 11, weight: .semibold))
                 .foregroundStyle(theme.textPrimary)
                 .buttonStyle(.plain)
@@ -257,11 +257,11 @@ struct HomePane: View {
     private var recentStrip: some View {
         VStack(alignment: .leading, spacing: 12) {
             HStack {
-                Text("最近截图")
+                Text(L("最近截图"))
                     .font(.system(size: 13, weight: .semibold))
                     .foregroundStyle(theme.textSecondary)
                 Spacer()
-                Button("查看全部", action: onOpenHistory)
+                Button(L("查看全部"), action: onOpenHistory)
                     .font(.system(size: 11, weight: .semibold))
                     .foregroundStyle(theme.textPrimary)
                     .buttonStyle(.plain)
@@ -293,16 +293,16 @@ struct HomePane: View {
         switch Permissions.currentState() {
             case .granted:
                 permissionOK = true
-                permissionLabel = "已就绪"
+                permissionLabel = L("已就绪")
             case .needsRelaunch:
                 permissionOK = false
-                permissionLabel = "需重启"
+                permissionLabel = L("需重启")
             case .unknown:
                 permissionOK = nil
-                permissionLabel = "检查中"
+                permissionLabel = L("检查中")
             case .denied:
                 permissionOK = false
-                permissionLabel = "需授权"
+                permissionLabel = L("需授权")
         }
     }
 }

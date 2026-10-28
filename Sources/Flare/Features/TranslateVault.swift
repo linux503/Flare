@@ -7,6 +7,7 @@ enum TranslateVault {
         var apiBaseURL: String
         var apiKey: String
         var model: String
+        var fallbackModels: [String]?
     }
 
     private static let magic = Data([0x46, 0x4C, 0x52, 0x56]) // FLRV

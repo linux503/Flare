@@ -19,12 +19,12 @@ struct HistoryPane: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
             FlarePageHeader(
-                title: "历史记录",
+                title: L("历史记录"),
                 subtitle: store.items.isEmpty
-                    ? "截图会出现在这里 · 保留 \(AppSettings.shared.historyRetention.displayName)"
-                    : "共 \(store.items.count) 张 · 保留 \(AppSettings.shared.historyRetention.displayName)"
+                    ? L("截图会出现在这里 · 保留 %@", AppSettings.shared.historyRetention.displayName)
+                    : L("共 %@ 张 · 保留 %@", store.items.count, AppSettings.shared.historyRetention.displayName)
             ) {
-                FlareSecondaryButton(title: "清空", glyph: .trash) {
+                FlareSecondaryButton(title: L("清空"), glyph: .trash) {
                     confirmClear = true
                 }
                 .disabled(store.items.isEmpty)
@@ -37,13 +37,13 @@ struct HistoryPane: View {
             if store.items.isEmpty {
                 VStack(spacing: 14) {
                     SnapIcon(.history, size: .display, opacity: 0.45)
-                    Text("还没有截图")
+                    Text(L("还没有截图"))
                         .font(.system(size: 13, weight: .semibold))
                         .foregroundStyle(theme.textPrimary)
-                    Text("使用快捷键或侧栏「截图」开始")
+                    Text(L("使用快捷键或侧栏「截图」开始"))
                         .font(.caption)
                         .foregroundStyle(theme.textMuted)
-                    FlarePrimaryButton(title: "去截图", glyph: .area) {
+                    FlarePrimaryButton(title: L("去截图"), glyph: .area) {
                         HomeWindowController.shared.show(tab: .home)
                     }
                     .padding(.top, 4)
@@ -61,15 +61,15 @@ struct HistoryPane: View {
                 }
             }
         }
-        .confirmationDialog("清空全部历史？", isPresented: $confirmClear, titleVisibility: .visible) {
-            Button("清空全部", role: .destructive) {
+        .confirmationDialog(L("清空全部历史？"), isPresented: $confirmClear, titleVisibility: .visible) {
+            Button(L("清空全部"), role: .destructive) {
                 store.clear()
                 StatusBarController.shared?.reloadMenu()
-                ToastController.shared.show("已清空历史")
+                ToastController.shared.show(L("已清空历史"))
             }
-            Button("取消", role: .cancel) {}
+            Button(L("取消"), role: .cancel) {}
         } message: {
-            Text("将删除 \(store.items.count) 条记录，此操作不可撤销。")
+            Text(L("将删除 %@ 条记录，此操作不可撤销。", store.items.count))
         }
     }
 }
@@ -118,25 +118,25 @@ struct HistoryCard: View {
             }
         }
         .contextMenu {
-            Button("编辑", action: openEditor)
-            Button("OCR 保存 TXT…") {
+            Button(L("编辑"), action: openEditor)
+            Button(L("OCR 保存 TXT…")) {
                 guard let image = store.image(for: item) else { return }
                 Task {
                     if let url = try? await TextFileService.createTXTFromOCR(image: image, askWhere: true) {
                         await MainActor.run {
-                            ToastController.shared.show("已保存 \(url.lastPathComponent)")
+                            ToastController.shared.show(L("已保存 %@", url.lastPathComponent))
                             TextFileService.reveal(url)
                         }
                     }
                 }
             }
-            Button("截图翻译") {
+            Button(L("截图翻译")) {
                 guard let image = store.image(for: item) else { return }
                 Task { @MainActor in
                     await PrivacyGuard.presentTranslate(from: image)
                 }
             }
-            Button("删除", role: .destructive) {
+            Button(L("删除"), role: .destructive) {
                 store.delete(item)
                 StatusBarController.shared?.reloadMenu()
             }
@@ -156,6 +156,6 @@ struct HistoryCard: View {
                 .contentShape(Rectangle())
         }
         .buttonStyle(FlareChipButtonStyle())
-        .help(glyph == .edit ? "编辑" : glyph == .copy ? "复制" : "删除")
+        .help(glyph == .edit ? L("编辑") : glyph == .copy ? L("复制") : L("删除"))
     }
 }

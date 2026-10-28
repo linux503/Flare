@@ -6,7 +6,7 @@ import WebKit
 
 /// 网页业务留档。只做本机核对，不构成司法鉴定或法定电子证据。
 enum EvidenceSnapshot {
-    static let disclaimer = "本快照仅用于报价、聊天、订单或链上页面的业务留档与核对，不具备司法鉴定效力，也不能单独作为法律意义上的电子证据。"
+    static let disclaimer = L("本快照仅用于报价、聊天、订单或链上页面的业务留档与核对，不具备司法鉴定效力，也不能单独作为法律意义上的电子证据。")
 
     struct Result {
         let folder: URL
@@ -32,34 +32,34 @@ enum EvidenceSnapshot {
     @MainActor
     static func capture(urlString: String, note: String, progress: @escaping (String) -> Void) async throws -> Result {
         let pageURL = try normalize(urlString)
-        var timeline: [(Date, String)] = [(Date(), "开始记录网址")]
-        progress("正在打开网页…")
+        var timeline: [(Date, String)] = [(Date(), L("开始记录网址"))]
+        progress(L("正在打开网页…"))
 
         let loader = PageLoader()
         let loaded = try await loader.load(pageURL) { progress($0) }
-        timeline.append((Date(), "页面加载完成"))
+        timeline.append((Date(), L("页面加载完成")))
 
-        progress("正在截取完整页面…")
+        progress(L("正在截取完整页面…"))
         let image = try await loader.fullPageImage()
-        timeline.append((Date(), "完成页面长截图"))
+        timeline.append((Date(), L("完成页面长截图")))
 
-        progress("正在计算哈希…")
+        progress(L("正在计算哈希…"))
         let htmlData = Data(loaded.html.utf8)
         let htmlHash = sha256(htmlData)
         guard let png = ImageExporter.pngData(from: image) else {
             throw Failure.encoding
         }
         let imageHash = sha256(png)
-        timeline.append((Date(), "已计算 HTML 与图片哈希"))
+        timeline.append((Date(), L("已计算 HTML 与图片哈希")))
 
-        progress("正在读取证书…")
+        progress(L("正在读取证书…"))
         let cert = await CertificateReader.read(host: pageURL.host ?? pageURL.absoluteString, url: pageURL)
-        timeline.append((Date(), cert == nil ? "未能读取证书" : "已记录域名与证书"))
+        timeline.append((Date(), cert == nil ? L("未能读取证书") : L("已记录域名与证书")))
 
-        progress("正在核对链上状态…")
+        progress(L("正在核对链上状态…"))
         let chain = await ChainLookup.lookup(url: loaded.finalURL)
         if chain != nil {
-            timeline.append((Date(), "已查询区块高度或交易状态"))
+            timeline.append((Date(), L("已查询区块高度或交易状态")))
         }
 
         let capturedAt = Date()
@@ -70,7 +70,7 @@ enum EvidenceSnapshot {
             html: htmlHash,
             image: imageHash
         )
-        timeline.append((Date(), "已生成防篡改校验"))
+        timeline.append((Date(), L("已生成防篡改校验")))
 
         let folder = try makeFolder(at: capturedAt)
         try htmlData.write(to: folder.appendingPathComponent("page.html"))
@@ -94,7 +94,7 @@ enum EvidenceSnapshot {
         try record.json.write(to: manifest)
         let pdfURL = folder.appendingPathComponent("evidence.pdf")
         try PDFWriter.write(record: record, image: image, to: pdfURL)
-        timeline.append((Date(), "已导出带时间线的 PDF"))
+        timeline.append((Date(), L("已导出带时间线的 PDF")))
         return Result(folder: folder, pdf: pdfURL)
     }
 
@@ -135,10 +135,10 @@ enum EvidenceSnapshot {
 
         var errorDescription: String? {
             switch self {
-            case .emptyURL: return "请先填写网页地址"
-            case .badURL: return "网址无法打开"
-            case .load: return "网页加载失败"
-            case .encoding: return "无法生成快照图片"
+            case .emptyURL: return L("请先填写网页地址")
+            case .badURL: return L("网址无法打开")
+            case .load: return L("网页加载失败")
+            case .encoding: return L("无法生成快照图片")
             }
         }
     }
@@ -207,7 +207,7 @@ private final class PageLoader: NSObject, WKNavigationDelegate {
         let view = WKWebView(frame: NSRect(x: 0, y: 0, width: 1280, height: 900), configuration: config)
         view.navigationDelegate = self
         webView = view
-        progress("正在加载 \(url.host ?? url.absoluteString)")
+        progress(L("正在加载 %@", url.host ?? url.absoluteString))
         return try await withCheckedThrowingContinuation { cont in
             finish = { cont.resume(with: $0) }
             view.load(URLRequest(url: url))
@@ -314,7 +314,7 @@ private enum CertificateReader {
         return EvidenceSnapshot.CertInfo(
             host: host,
             subject: subject,
-            issuer: issuer.isEmpty ? "未知" : issuer,
+            issuer: issuer.isEmpty ? L("未知") : issuer,
             notBefore: notBefore,
             notAfter: notAfter,
             fingerprint: fingerprint
@@ -398,7 +398,7 @@ private enum ChainLookup {
               let result = json["result"] as? [String: Any] else { return nil }
         let statusHex = result["status"] as? String ?? ""
         let blockHex = result["blockNumber"] as? String ?? ""
-        let status = statusHex == "0x1" ? "成功" : (statusHex == "0x0" ? "失败" : "未知")
+        let status = statusHex == "0x1" ? L("成功") : (statusHex == "0x0" ? L("失败") : L("未知"))
         let block = hexToDecimal(blockHex)
         return EvidenceSnapshot.ChainInfo(network: name, tx: tx, status: status, block: block)
     }
@@ -413,8 +413,8 @@ private enum ChainLookup {
         return EvidenceSnapshot.ChainInfo(
             network: "Bitcoin",
             tx: tx,
-            status: confirmed ? "已确认" : "未确认",
-            block: height.map(String.init) ?? "未上块"
+            status: confirmed ? L("已确认") : L("未确认"),
+            block: height.map(String.init) ?? L("未上块")
         )
     }
 
@@ -450,7 +450,7 @@ private enum PDFWriter {
         NSColor.white.setFill()
         page.fill()
         var y = page.height - 48
-        ("Flare 网页证据快照" as NSString).draw(at: NSPoint(x: 40, y: y), withAttributes: [.font: titleFont, .foregroundColor: NSColor.black])
+        (L("Flare 网页证据快照") as NSString).draw(at: NSPoint(x: 40, y: y), withAttributes: [.font: titleFont, .foregroundColor: NSColor.black])
         y -= 28
         let box = NSRect(x: 40, y: y - 52, width: page.width - 80, height: 52)
         NSColor(calibratedWhite: 0.95, alpha: 1).setFill()
@@ -461,29 +461,29 @@ private enum PDFWriter {
         stamp.dateFormat = "yyyy-MM-dd HH:mm:ss"
         stamp.timeZone = TimeZone(identifier: record.timeZone) ?? .current
         let lines = [
-            "网址：\(record.url)",
-            "标题：\(record.title.isEmpty ? "—" : record.title)",
-            "时间：\(stamp.string(from: record.capturedAt))  \(record.timeZone)",
-            "域名：\(record.domain)",
-            "备注：\(record.note.isEmpty ? "—" : record.note)",
+            L("网址：%@", record.url),
+            L("标题：%@", record.title.isEmpty ? "—" : record.title),
+            L("时间：%@  %@", stamp.string(from: record.capturedAt), record.timeZone),
+            L("域名：%@", record.domain),
+            L("备注：%@", record.note.isEmpty ? "—" : record.note),
             "HTML SHA-256：\(record.htmlSha256)",
-            "图片 SHA-256：\(record.imageSha256)",
-            "校验：\(record.integrity)"
+            L("图片 SHA-256：%@", record.imageSha256),
+            L("校验：%@", record.integrity)
         ]
         for line in lines {
             y = drawWrapped(line, in: NSRect(x: 40, y: y - 28, width: page.width - 80, height: 28), font: font, color: .black) - 4
         }
         if let cert = record.cert {
             y -= 8
-            y = drawWrapped("证书：\(cert.subject) · \(cert.issuer)", in: NSRect(x: 40, y: y - 24, width: page.width - 80, height: 24), font: font, color: .black) - 2
-            y = drawWrapped("有效期：\(cert.notBefore) — \(cert.notAfter) · \(cert.fingerprint)", in: NSRect(x: 40, y: y - 24, width: page.width - 80, height: 24), font: small, color: .darkGray) - 4
+            y = drawWrapped(L("证书：%@ · %@", cert.subject, cert.issuer), in: NSRect(x: 40, y: y - 24, width: page.width - 80, height: 24), font: font, color: .black) - 2
+            y = drawWrapped(L("有效期：%@ — %@ · %@", cert.notBefore, cert.notAfter, cert.fingerprint), in: NSRect(x: 40, y: y - 24, width: page.width - 80, height: 24), font: small, color: .darkGray) - 4
         }
         if let chain = record.chain {
-            y = drawWrapped("链上：\(chain.network) · \(chain.status) · 区块 \(chain.block)", in: NSRect(x: 40, y: y - 24, width: page.width - 80, height: 24), font: font, color: .black) - 2
-            y = drawWrapped("交易：\(chain.tx)", in: NSRect(x: 40, y: y - 24, width: page.width - 80, height: 24), font: small, color: .darkGray) - 4
+            y = drawWrapped(L("链上：%@ · %@ · 区块 %@", chain.network, chain.status, chain.block), in: NSRect(x: 40, y: y - 24, width: page.width - 80, height: 24), font: font, color: .black) - 2
+            y = drawWrapped(L("交易：%@", chain.tx), in: NSRect(x: 40, y: y - 24, width: page.width - 80, height: 24), font: small, color: .darkGray) - 4
         }
         y -= 10
-        ("时间线" as NSString).draw(at: NSPoint(x: 40, y: y), withAttributes: [.font: NSFont.systemFont(ofSize: 13, weight: .semibold)])
+        (L("时间线") as NSString).draw(at: NSPoint(x: 40, y: y), withAttributes: [.font: NSFont.systemFont(ofSize: 13, weight: .semibold)])
         y -= 20
         for item in record.timeline {
             let text = "\(stamp.string(from: item.0))  \(item.1)"
@@ -516,7 +516,7 @@ private enum PDFWriter {
             let ns = NSGraphicsContext(cgContext: ctx, flipped: true)
             NSGraphicsContext.saveGraphicsState()
             NSGraphicsContext.current = ns
-            ("页面长截图" as NSString).draw(at: NSPoint(x: margin, y: 28), withAttributes: [.font: font, .foregroundColor: NSColor.darkGray])
+            (L("页面长截图") as NSString).draw(at: NSPoint(x: margin, y: 28), withAttributes: [.font: font, .foregroundColor: NSColor.darkGray])
             let avail = page.height - 56
             let slice = min(remain, avail)
             let srcH = slice / scale

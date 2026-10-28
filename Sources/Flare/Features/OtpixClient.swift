@@ -154,7 +154,7 @@ enum OtpixError: LocalizedError {
 
     var errorDescription: String? {
         switch self {
-        case .network: return "网络中断，请稍后重试"
+        case .network: return L("网络中断，请稍后重试")
         case .message(let text): return text
         }
     }

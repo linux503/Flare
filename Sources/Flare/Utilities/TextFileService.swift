@@ -30,10 +30,10 @@ enum TextFileService {
             let f = DateFormatter()
             f.dateFormat = "yyyy-MM-dd HH:mm:ss"
             body = """
-            # OCR 结果
-            创建于 \(f.string(from: Date())) · \(FlareBrand.name)
+            # \(L("OCR 结果"))
+            \(L("创建于 %@ · %@", f.string(from: Date()), FlareBrand.name))
 
-            （未识别到文字）
+            \(L("（未识别到文字）"))
             """
         } else {
             body = text + "\n"
@@ -65,7 +65,7 @@ enum TextFileService {
         case cancelled
         var errorDescription: String? {
             switch self {
-            case .cancelled: return "已取消"
+            case .cancelled: return L("已取消")
             }
         }
     }

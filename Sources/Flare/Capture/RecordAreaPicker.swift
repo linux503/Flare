@@ -80,7 +80,7 @@ enum RecordAreaPicker {
                 controller.onRecordAreaConfirmed = { viewRect, windowID in
                     cleanup()
                     guard let selection = makeSelection(viewRect: viewRect, frame: frame, windowID: windowID) else {
-                        ToastController.shared.show("选区无效，请重试")
+                        ToastController.shared.show(L("选区无效，请重试"))
                         onCancel()
                         return
                     }

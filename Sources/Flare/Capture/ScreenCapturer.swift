@@ -173,10 +173,10 @@ enum ScreenCapturer {
 
         var errorDescription: String? {
             switch self {
-            case .noDisplay: return "未找到可用显示器"
-            case .cancelled: return "已取消"
-            case .permissionDenied: return "没有屏幕录制权限"
-            case .windowNotFound: return "未找到目标窗口"
+            case .noDisplay: return L("未找到可用显示器")
+            case .cancelled: return L("已取消")
+            case .permissionDenied: return L("没有屏幕录制权限")
+            case .windowNotFound: return L("未找到目标窗口")
             }
         }
     }
@@ -213,7 +213,7 @@ enum WindowCapturer {
 
             let name = info[kCGWindowName as String] as? String ?? ""
             let owner = info[kCGWindowOwnerName as String] as? String ?? "Unknown"
-            if owner == "Flare" || owner == "Flare Pro" || owner == "Snap" || owner == "Window Server" { return nil }
+            if owner == "Window Server" { return nil }
             return WindowInfo(id: id, name: name, owner: owner, bounds: bounds, layer: layer)
         }
     }

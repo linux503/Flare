@@ -94,7 +94,7 @@ final class HotKeyManager {
             }
         } else if usedFallbackMonitor {
             DispatchQueue.main.async {
-                ToastController.shared.show("部分快捷键改用备用监听", duration: 3.2)
+                ToastController.shared.show(L("部分快捷键改用备用监听"), duration: 3.2)
             }
         }
         // 回写后通知 UI（设置中心 / 主菜单）刷新到同一套快捷键

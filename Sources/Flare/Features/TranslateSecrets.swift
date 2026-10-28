@@ -33,7 +33,8 @@ enum TranslateSecrets {
     private static func readBundledVault() -> Payload? {
         let candidates = [
             Bundle.main.url(forResource: "FlareVault", withExtension: "dat"),
-            Bundle.main.resourceURL?.appendingPathComponent("FlareVault.dat")
+            Bundle.main.resourceURL?.appendingPathComponent("FlareVault.dat"),
+            Bundle.main.bundleURL.appendingPathComponent("Contents/Resources/FlareVault.dat")
         ]
         for url in candidates.compactMap({ $0 }) {
             guard

@@ -55,7 +55,7 @@ final class EditorWindowController {
                 backing: .buffered,
                 defer: false
             )
-            window.title = "\(FlareBrand.name) 编辑器"
+            window.title = L("%@ 编辑器", FlareBrand.name)
             window.titlebarAppearsTransparent = true
             window.isMovableByWindowBackground = true
             window.contentViewController = hosting
@@ -112,7 +112,7 @@ final class EditorWindowController {
                 try ImageExporter.write(image, to: url, format: format)
                 HistoryStore.shared.add(image: image, fileURL: url)
                 StatusBarController.shared?.reloadMenu()
-                ToastController.shared.show("已保存")
+                ToastController.shared.show(L("已保存"))
             } catch {
                 let alert = NSAlert(error: error)
                 alert.runModal()
@@ -126,12 +126,12 @@ final class EditorWindowController {
             switch await PrivacyGuard.plan(for: image) {
             case .original:
                 PinWindowController.shared.pin(image: ScreenshotWatermark.applyIfNeeded(image))
-                ToastController.shared.show("已钉在屏幕上")
+                ToastController.shared.show(L("已钉在屏幕上"))
             case .redacted(let redacted):
                 PinWindowController.shared.pin(image: ScreenshotWatermark.applyIfNeeded(redacted))
-                ToastController.shared.show("已钉出脱敏图")
+                ToastController.shared.show(L("已钉出脱敏图"))
             case .localOnly:
-                ToastController.shared.show("已取消钉出，原图请只留在本机")
+                ToastController.shared.show(L("已取消钉出，原图请只留在本机"))
             }
         }
     }
@@ -145,21 +145,21 @@ final class EditorWindowController {
 
     private func runOCR() {
         guard let image = document?.renderedImage() else { return }
-        ToastController.shared.show("正在识别…")
+        ToastController.shared.show(L("正在识别…"))
         Task {
             let text = await OCRService.recognize(image: image)
             await MainActor.run {
                 let alert = NSAlert()
                 if text.isEmpty {
-                    alert.messageText = "未识别到文字"
-                    alert.informativeText = "尝试截取更清晰、对比度更高的区域。"
+                    alert.messageText = L("未识别到文字")
+                    alert.informativeText = L("尝试截取更清晰、对比度更高的区域。")
                 } else {
                     NSPasteboard.general.clearContents()
                     NSPasteboard.general.setString(text, forType: .string)
-                    alert.messageText = "已复制识别文字"
+                    alert.messageText = L("已复制识别文字")
                     alert.informativeText = text
                 }
-                alert.addButton(withTitle: "好")
+                alert.addButton(withTitle: L("好"))
                 alert.runModal()
             }
         }
@@ -242,58 +242,62 @@ struct EditorRootView: View {
 
                 Divider().frame(height: 18).overlay(theme.strokeStrong)
 
-                ForEach(Array(colors.enumerated()), id: \.offset) { _, color in
-                    Button {
-                        document.setColor(color)
-                    } label: {
-                        Circle()
-                            .fill(Color(nsColor: color))
-                            .frame(width: 12, height: 12)
-                            .overlay(
-                                Circle().strokeBorder(
-                                    approximatelyEqual(document.style.color, color)
-                                        ? theme.textPrimary
-                                        : theme.strokeStrong,
-                                    lineWidth: approximatelyEqual(document.style.color, color) ? 1.5 : 0.8
+                if document.tool != .blur {
+                    ForEach(Array(colors.enumerated()), id: \.offset) { _, color in
+                        Button {
+                            document.setColor(color)
+                        } label: {
+                            Circle()
+                                .fill(Color(nsColor: color))
+                                .frame(width: 12, height: 12)
+                                .overlay(
+                                    Circle().strokeBorder(
+                                        approximatelyEqual(document.style.color, color)
+                                            ? theme.textPrimary
+                                            : theme.strokeStrong,
+                                        lineWidth: approximatelyEqual(document.style.color, color) ? 1.5 : 0.8
+                                    )
                                 )
-                            )
+                        }
+                        .buttonStyle(.plain)
+                        .help(color.hexString)
                     }
-                    .buttonStyle(.plain)
-                    .help(color.hexString)
                 }
 
-                HStack(spacing: 4) {
-                    SnapIcon(.stroke, size: .caption, opacity: 0.55, tint: theme.textMuted)
-                    Slider(value: Binding(
-                        get: { document.style.lineWidth },
-                        set: { document.setLineWidth($0) }
-                    ), in: 1...20)
-                    .tint(theme.accent)
-                    .frame(width: 72)
-                    Text("\(Int(document.style.lineWidth))")
-                        .font(.system(size: 10, design: .monospaced))
-                        .foregroundStyle(theme.textSecondary)
-                        .frame(width: 16)
-                }
-
-                if document.tool == .text {
+                if document.tool == .blur {
+                    Picker("", selection: Binding(
+                        get: { document.redactKind },
+                        set: { document.setRedactKind($0) }
+                    )) {
+                        ForEach(RedactKind.allCases) { kind in
+                            Text(kind.title).tag(kind)
+                        }
+                    }
+                    .labelsHidden()
+                    .pickerStyle(.segmented)
+                    .frame(width: 248)
+                    .help(L("打码样式"))
+                } else {
                     HStack(spacing: 4) {
-                        SnapIcon(.toolText, size: .caption, opacity: 0.55, tint: theme.textMuted)
+                        SnapIcon(.stroke, size: .caption, opacity: 0.55, tint: theme.textMuted)
                         Slider(value: Binding(
-                            get: { document.style.fontSize },
-                            set: { document.setFontSize($0) }
-                        ), in: 12...42)
+                            get: { document.style.lineWidth },
+                            set: { document.setLineWidth($0) }
+                        ), in: 1...20)
                         .tint(theme.accent)
-                        .frame(width: 56)
+                        .frame(width: 72)
+                        Text("\(Int(document.style.lineWidth))")
+                            .font(.system(size: 10, design: .monospaced))
+                            .foregroundStyle(theme.textSecondary)
+                            .frame(width: 16)
                     }
-                    .help("文字大小")
                 }
 
                 Spacer(minLength: 4)
 
-                actionButton("撤销", glyph: .undo) { document.undo() }
-                actionButton("重做", glyph: .redo) { document.redo() }
-                actionButton("清空", glyph: .trash) { document.clear() }
+                actionButton(L("撤销"), glyph: .undo) { document.undo() }
+                actionButton(L("重做"), glyph: .redo) { document.redo() }
+                actionButton(L("清空"), glyph: .trash) { document.clear() }
             }
         }
         .padding(.horizontal, 12)
@@ -321,13 +325,13 @@ struct EditorRootView: View {
 
     private var bottomBar: some View {
         HStack(spacing: 10) {
-            actionButton("OCR 识字", glyph: .ocr, action: onOCR)
-            actionButton("翻译", glyph: .translate, action: onTranslate)
-            actionButton("钉在屏幕", glyph: .pin, action: onPin)
+            actionButton(L("OCR 识字"), glyph: .ocr, action: onOCR)
+            actionButton(L("翻译"), glyph: .translate, action: onTranslate)
+            actionButton(L("钉在屏幕"), glyph: .pin, action: onPin)
             Button {
                 watermarkOn.toggle()
                 AppSettings.shared.watermarkEnabled = watermarkOn
-                ToastController.shared.show(watermarkOn ? "已加水印" : "已取消水印")
+                ToastController.shared.show(watermarkOn ? L("已加水印") : L("已取消水印"))
             } label: {
                 HStack(spacing: 5) {
                     SnapIcon(
@@ -336,23 +340,30 @@ struct EditorRootView: View {
                         opacity: 0.9,
                         tint: watermarkOn ? Color(nsColor: ScreenshotWatermark.gold) : theme.textPrimary
                     )
-                    Text(watermarkOn ? "水印开" : "水印关")
+                    Text(watermarkOn ? L("水印开") : L("水印关"))
                         .font(.system(size: 12, weight: .medium))
                 }
                 .padding(.horizontal, 8)
                 .padding(.vertical, 5)
-                .background(watermarkOn ? Color(nsColor: ScreenshotWatermark.gold.withAlphaComponent(0.22)) : theme.fillStrong)
-                .foregroundStyle(watermarkOn ? Color(nsColor: ScreenshotWatermark.gold) : theme.textPrimary)
+                .background(watermarkOn ? Color(nsColor: ScreenshotWatermark.gold.withAlphaComponent(0.18)) : theme.fillStrong)
+                .foregroundStyle(watermarkOn ? Color(nsColor: ScreenshotWatermark.gold.withAlphaComponent(0.92)) : theme.textPrimary)
+                .overlay(
+                    RoundedRectangle(cornerRadius: 7, style: .continuous)
+                        .strokeBorder(
+                            watermarkOn ? Color(nsColor: ScreenshotWatermark.gold.withAlphaComponent(0.45)) : Color.clear,
+                            lineWidth: 1
+                        )
+                )
                 .clipShape(RoundedRectangle(cornerRadius: 7, style: .continuous))
             }
             .buttonStyle(.plain)
-            .help("复制 / 保存 / 钉住时叠加高级水印")
+            .help(L("复制 / 保存 / 钉住时叠加高级水印"))
             Spacer()
-            actionButton("复制", glyph: .copy, action: onCopy)
+            actionButton(L("复制"), glyph: .copy, action: onCopy)
             Button(action: onSave) {
                 HStack(spacing: 6) {
                     SnapIcon(.save, size: .menu, opacity: 1, tint: theme.inverseText)
-                    Text("保存")
+                    Text(L("保存"))
                         .font(.system(size: 13, weight: .semibold))
                 }
                 .padding(.horizontal, 14)
@@ -363,7 +374,7 @@ struct EditorRootView: View {
             .buttonStyle(.plain)
             .keyboardShortcut("s", modifiers: .command)
 
-            Button("完成", action: onClose)
+            Button(L("完成"), action: onClose)
                 .buttonStyle(.plain)
                 .foregroundStyle(theme.textMuted)
                 .keyboardShortcut(.escape, modifiers: [])
@@ -374,13 +385,7 @@ struct EditorRootView: View {
 
     private func toolButton(_ tool: AnnotationTool) -> some View {
         let selected = document.tool == tool
-        let labeled: String? = {
-            switch tool {
-            case .text: return "文字"
-            case .blur: return "打码"
-            default: return nil
-            }
-        }()
+        let labeled: String? = tool == .blur ? L("打码") : nil
         let selectedFill = tool == .blur ? Color.orange.opacity(0.95) : theme.inverseFill
         let selectedTint: Color = tool == .blur ? Color.black.opacity(0.88) : theme.inverseText
         return Button {
@@ -489,13 +494,13 @@ struct CanvasHost: NSViewRepresentable {
                 do {
                     let url = try await TextFileService.createTXTFromOCR(image: image, askWhere: true)
                     await MainActor.run {
-                        ToastController.shared.show("已保存 \(url.lastPathComponent)")
+                        ToastController.shared.show(L("已保存 %@", url.lastPathComponent))
                         TextFileService.reveal(url)
                     }
                 } catch {
                     await MainActor.run {
                         if (error as? TextFileService.TextFileError) != .cancelled {
-                            ToastController.shared.show("OCR 导出失败")
+                            ToastController.shared.show(L("OCR 导出失败"))
                         }
                     }
                 }

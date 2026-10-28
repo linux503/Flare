@@ -18,10 +18,10 @@ struct RecordPane: View {
         ScrollView {
             VStack(alignment: .leading, spacing: 24) {
                 FlarePageHeader(
-                    title: "屏幕录制",
+                    title: L("屏幕录制"),
                     subtitle: recorder.isRecording
-                        ? (recorder.isPaused ? "已暂停 · \(format(recorder.elapsedSeconds))" : "录制中 · \(format(recorder.elapsedSeconds))")
-                        : "全屏 / 区域 / 窗口 · H.264 MOV · 快捷键 \(AppSettings.shared.shortcut(for: .record).displayString)"
+                        ? (recorder.isPaused ? L("已暂停 · %@", format(recorder.elapsedSeconds)) : L("录制中 · %@", format(recorder.elapsedSeconds)))
+                        : L("全屏 / 区域 / 窗口 · H.264 MOV · 快捷键 %@", AppSettings.shared.shortcut(for: .record).displayString)
                 )
 
                 heroCard
@@ -32,6 +32,9 @@ struct RecordPane: View {
             .padding(.horizontal, 28)
             .padding(.top, 40)
             .padding(.bottom, 32)
+            .onAppear {
+                recordMode = AppSettings.shared.recordMode
+            }
         }
     }
 
@@ -65,40 +68,48 @@ struct RecordPane: View {
                 }
             }
 
+            if !recorder.isRecording, !recorder.isCountingDown {
+                VStack(alignment: .leading, spacing: 8) {
+                    Text(L("默认范围"))
+                        .font(.system(size: 12, weight: .semibold))
+                        .foregroundStyle(theme.textMuted)
+                    Picker("", selection: $recordMode) {
+                        ForEach(RecordCaptureMode.allCases) { mode in
+                            Text(mode.displayName).tag(mode)
+                        }
+                    }
+                    .pickerStyle(.segmented)
+                    .labelsHidden()
+                    .onChange(of: recordMode) { _, mode in
+                        AppSettings.shared.recordMode = mode
+                    }
+                    Text(recordMode.hint)
+                        .font(.system(size: 12))
+                        .foregroundStyle(theme.textSecondary)
+                }
+            }
+
             HStack(spacing: 10) {
                 if recorder.isRecording {
                     FlareSecondaryButton(
-                        title: recorder.isPaused ? "继续" : "暂停",
+                        title: recorder.isPaused ? L("继续") : L("暂停"),
                         glyph: recorder.isPaused ? .refresh : .delay
                     ) {
                         ScreenRecorder.shared.togglePause()
                     }
-                    FlarePrimaryButton(title: "停止并保存", glyph: .save) {
+                    FlarePrimaryButton(title: L("停止并保存"), glyph: .save) {
                         ScreenRecorder.shared.stop()
                     }
-                    FlareSecondaryButton(title: "丢弃", glyph: .trash) {
+                    FlareSecondaryButton(title: L("丢弃"), glyph: .trash) {
                         ScreenRecorder.shared.cancelAndDiscard()
                     }
                 } else if recorder.isCountingDown {
-                    FlarePrimaryButton(title: "取消倒计时", glyph: .close) {
+                    FlarePrimaryButton(title: L("取消倒计时"), glyph: .close) {
                         ScreenRecorder.shared.stop()
                     }
                 } else {
-                    FlarePrimaryButton(title: "全屏录屏", glyph: .screen) {
-                        ScreenRecorder.shared.startFullScreen()
-                    }
-                    FlareSecondaryButton(title: "区域录屏", glyph: .area) {
-                        ScreenRecorder.shared.startArea()
-                    }
-                    FlareSecondaryButton(title: "窗口录屏", glyph: .window) {
-                        ScreenRecorder.shared.startWindow()
-                    }
-                    FlareSecondaryButton(title: "立即开始", glyph: .play) {
-                        switch recordMode {
-                        case .area: ScreenRecorder.shared.startArea(countdown: false)
-                        case .window: ScreenRecorder.shared.startWindow(countdown: false)
-                        case .fullScreen: ScreenRecorder.shared.startFullScreen(countdown: false)
-                        }
+                    FlarePrimaryButton(title: L("开始%@录制", recordMode.displayName), glyph: .play) {
+                        ScreenRecorder.shared.start()
                     }
                 }
             }
@@ -116,32 +127,26 @@ struct RecordPane: View {
 
     private var controls: some View {
         HStack(spacing: 10) {
-            tipChip("⌘⌥R", "开始/停止")
-            tipChip("Esc", "停止")
-            tipChip("⌘P", "暂停/继续")
+            tipChip("⌘⌥R", L("开始/停止"))
+            tipChip("Esc", L("停止"))
+            tipChip("⌘P", L("暂停/继续"))
         }
     }
 
     private var optionsBlock: some View {
         VStack(alignment: .leading, spacing: 0) {
-            Text("录制选项")
+            Text(L("录制选项"))
                 .font(.system(size: 13, weight: .semibold))
                 .foregroundStyle(theme.textSecondary)
                 .padding(.bottom, 14)
 
-            optionRow("默认范围") {
-                menuPicker($recordMode, RecordCaptureMode.allCases, \.displayName) {
-                    AppSettings.shared.recordMode = $0
-                }
-            }
-            rowDivider
-            optionRow("清晰度") {
+            optionRow(L("清晰度")) {
                 menuPicker($quality, RecordQualityPreset.allCases, \.displayName) {
                     AppSettings.shared.recordQuality = $0
                 }
             }
             rowDivider
-            optionRow("帧率") {
+            optionRow(L("帧率")) {
                 Picker("", selection: $fps) {
                     Text("15 FPS").tag(15)
                     Text("24 FPS").tag(24)
@@ -155,18 +160,18 @@ struct RecordPane: View {
                 }
             }
             rowDivider
-            optionRow("声音") {
+            optionRow(L("声音")) {
                 menuPicker($audioSource, RecordAudioSource.allCases, \.displayName) {
                     AppSettings.shared.recordAudioSource = $0
                 }
             }
             rowDivider
-            optionRow("开始前倒计时") {
+            optionRow(L("开始前倒计时")) {
                 Picker("", selection: $countdown) {
-                    Text("关闭").tag(0)
-                    Text("3 秒").tag(3)
-                    Text("5 秒").tag(5)
-                    Text("10 秒").tag(10)
+                    Text(L("关闭")).tag(0)
+                    Text(L("3 秒")).tag(3)
+                    Text(L("5 秒")).tag(5)
+                    Text(L("10 秒")).tag(10)
                 }
                 .labelsHidden()
                 .pickerStyle(.menu)
@@ -177,15 +182,15 @@ struct RecordPane: View {
 
             groupDivider
 
-            optionRow("显示鼠标指针") {
+            optionRow(L("显示鼠标指针")) {
                 alignedToggle($showCursor) { AppSettings.shared.recordShowCursor = $0 }
             }
             rowDivider
-            optionRow("排除 Flare 窗口") {
+            optionRow(L("排除 Flare 窗口")) {
                 alignedToggle($excludeFlare) { AppSettings.shared.recordExcludeFlare = $0 }
             }
             rowDivider
-            optionRow("开始时隐藏窗口") {
+            optionRow(L("开始时隐藏窗口")) {
                 alignedToggle($hideWindows) { AppSettings.shared.recordHideFlareWindows = $0 }
             }
         }
@@ -203,7 +208,7 @@ struct RecordPane: View {
 
     private var folderRow: some View {
         HStack(spacing: 12) {
-            FlareSecondaryButton(title: "打开录屏文件夹", glyph: .folder) {
+            FlareSecondaryButton(title: L("打开录屏文件夹"), glyph: .folder) {
                 ScreenRecorder.shared.openRecordingsFolder()
             }
             Text(recordPath)
@@ -212,7 +217,7 @@ struct RecordPane: View {
                 .lineLimit(1)
                 .truncationMode(.middle)
             Spacer()
-            Button("选择…") { chooseFolder() }
+            Button(L("选择…")) { chooseFolder() }
                 .font(.system(size: 11, weight: .semibold))
                 .buttonStyle(.plain)
                 .foregroundStyle(theme.textPrimary)
@@ -224,19 +229,19 @@ struct RecordPane: View {
     }
 
     private var statusTitle: String {
-        if recorder.isCountingDown { return "倒计时中" }
-        if recorder.isPaused { return "已暂停" }
-        if recorder.isRecording { return "正在录屏" }
-        return "准备就绪"
+        if recorder.isCountingDown { return L("倒计时中") }
+        if recorder.isPaused { return L("已暂停") }
+        if recorder.isRecording { return L("正在录屏") }
+        return L("准备就绪")
     }
 
     private var statusSubtitle: String {
-        if recorder.isCountingDown { return "按 Esc 可取消" }
+        if recorder.isCountingDown { return L("按 Esc 可取消") }
         if recorder.isRecording {
             let audio = AppSettings.shared.recordAudioSource.toastHint
-            return "浮动条可停止 · MOV\(audio)"
+            return L("浮动条可停止 · MOV%@", audio)
         }
-        return "全屏、框选区域，或点选窗口录制"
+        return L("默认 %@ · %@ · 快捷键按此开始", recordMode.displayName, recordMode.hint)
     }
 
     private func tipChip(_ key: String, _ label: String) -> some View {
@@ -272,7 +277,8 @@ struct RecordPane: View {
             Text(title)
                 .font(.system(size: 13, weight: .medium))
                 .foregroundStyle(theme.textPrimary)
-                .frame(width: 132, alignment: .leading)
+                .lineLimit(1)
+                .frame(minWidth: 132, alignment: .leading)
             Spacer(minLength: 8)
             control()
                 .frame(width: 168, alignment: .trailing)

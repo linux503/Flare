@@ -4,8 +4,8 @@ import SwiftUI
 enum FlareBrand {
     /// 对外品牌名
     static let name = "Flare Pro"
-    static let tagline = "一拍即得"
-    static let version = "1.3.23"
+    static let tagline = L("一拍即得")
+    static let version = "1.3.24"
 
     /// 官网 / 下载 / 更新源（GitHub Pages）
     static let websiteURL = "https://linux503.github.io/Flare/"
@@ -84,7 +84,7 @@ struct FlareBrandMark: View {
         .frame(width: size, height: size)
         .clipShape(RoundedRectangle(cornerRadius: cornerRadius, style: .continuous))
         .id(stamp)
-        .onReceive(NotificationCenter.default.publisher(for: .flareSettingsChanged)) { _ in
+        .onReceive(NotificationCenter.default.publisher(for: .flareLogoChanged)) { _ in
             stamp += 1
         }
         .accessibilityLabel(FlareBrand.name)

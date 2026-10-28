@@ -246,13 +246,13 @@ final class CaptureOverlayView: NSView {
                 drawWindowHighlight(hover)
                 let hint: String
                 switch mode {
-                case .translate: hint = "双击窗口后翻译"
-                case .recordArea: hint = "单击选择窗口 · 双击开始录制"
-                default: hint = "单击或双击识别窗口"
+                case .translate: hint = L("双击窗口后翻译")
+                case .recordArea: hint = L("单击选择窗口 · 双击开始录制")
+                default: hint = L("单击或双击识别窗口")
                 }
                 drawHint(hint)
             } else if mode == .recordArea {
-                drawHint("单击窗口或拖动框选")
+                drawHint(L("单击窗口或拖动框选"))
             }
         }
 
@@ -800,7 +800,7 @@ final class CaptureOverlayView: NSView {
            let color = colorAt(mouseLocation) {
             NSPasteboard.general.clearContents()
             NSPasteboard.general.setString(color.hexString, forType: .string)
-            ToastController.shared.show("已复制 \(color.hexString)")
+            ToastController.shared.show(L("已复制 %@", color.hexString))
             return
         }
         super.keyDown(with: event)
@@ -881,7 +881,7 @@ final class CaptureOverlayView: NSView {
         bar.spacing = 6
         bar.edgeInsets = NSEdgeInsets(top: 8, left: 10, bottom: 8, right: 10)
         bar.wantsLayer = true
-        bar.layer?.backgroundColor = NSColor.black.withAlphaComponent(0.82).cgColor
+        bar.layer?.backgroundColor = NSColor.black.withAlphaComponent(0.68).cgColor
         bar.layer?.cornerRadius = 12
         bar.layer?.borderWidth = 1
         bar.layer?.borderColor = NSColor.white.withAlphaComponent(0.16).cgColor
@@ -890,138 +890,138 @@ final class CaptureOverlayView: NSView {
         }
 
         if mode == .translate {
-            let start = makeBarButton(title: "翻译", glyph: .translate, primary: true) { [weak self] in
+            let start = makeBarButton(title: L("翻译"), glyph: .translate, primary: true) { [weak self] in
                 self?.commitSelection(.translate)
             }
-            start.toolTip = "识别文字并翻译（双击选区 / 回车 / ⌘T）"
+            start.toolTip = L("识别文字并翻译（双击选区 / 回车 / ⌘T）")
             bar.addArrangedSubview(start)
 
             addBarDivider(to: bar)
 
-            let again = makeBarButton(title: "重选", glyph: nil, primary: false) { [weak self] in
+            let again = makeBarButton(title: L("重选"), glyph: nil, primary: false) { [weak self] in
                 self?.barReselect()
             }
-            again.toolTip = "清除选区重新框选"
+            again.toolTip = L("清除选区重新框选")
             bar.addArrangedSubview(again)
 
-            let cancel = makeBarButton(title: "取消", glyph: .close, primary: false) { [weak self] in
+            let cancel = makeBarButton(title: L("取消"), glyph: .close, primary: false) { [weak self] in
                 self?.barCancel()
             }
-            cancel.toolTip = "退出 (Esc)"
+            cancel.toolTip = L("退出 (Esc)")
             bar.addArrangedSubview(cancel)
         } else if mode == .recordArea {
             let windowPick = selectedWindowID != nil
             let start = makeBarButton(
-                title: windowPick ? "录制窗口" : "开始录屏",
+                title: windowPick ? L("录制窗口") : L("开始录屏"),
                 glyph: windowPick ? .window : .record,
                 primary: true
             ) { [weak self] in
                 self?.commitRecordArea()
             }
             start.toolTip = windowPick
-                ? "录制当前窗口（双击窗口可直接开始）"
-                : "录制当前选区（双击选区 / 回车）；单击窗口可吸附"
+                ? L("录制当前窗口（双击窗口可直接开始）")
+                : L("录制当前选区（双击选区 / 回车）；单击窗口可吸附")
             bar.addArrangedSubview(start)
 
             addBarDivider(to: bar)
 
-            let again = makeBarButton(title: "重选", glyph: nil, primary: false) { [weak self] in
+            let again = makeBarButton(title: L("重选"), glyph: nil, primary: false) { [weak self] in
                 self?.barReselect()
             }
-            again.toolTip = "清除选区重新框选"
+            again.toolTip = L("清除选区重新框选")
             bar.addArrangedSubview(again)
 
-            let cancel = makeBarButton(title: "取消", glyph: .close, primary: false) { [weak self] in
+            let cancel = makeBarButton(title: L("取消"), glyph: .close, primary: false) { [weak self] in
                 self?.barCancel()
             }
-            cancel.toolTip = "退出 (Esc)"
+            cancel.toolTip = L("退出 (Esc)")
             bar.addArrangedSubview(cancel)
         } else if mode == .longArea {
-            let start = makeBarButton(title: "开始长截图", glyph: .screen, primary: true) { [weak self] in
+            let start = makeBarButton(title: L("开始长截图"), glyph: .screen, primary: true) { [weak self] in
                 self?.commitLongSelection()
             }
-            start.toolTip = "自动滚动拼接（双击选区 / 回车）；尽量框网页内容"
+            start.toolTip = L("自动滚动拼接（双击选区 / 回车）；尽量框网页内容")
             bar.addArrangedSubview(start)
 
-            let cancel = makeBarButton(title: "取消", glyph: .close, primary: false) { [weak self] in
+            let cancel = makeBarButton(title: L("取消"), glyph: .close, primary: false) { [weak self] in
                 self?.barCancel()
             }
-            cancel.toolTip = "退出 (Esc)"
+            cancel.toolTip = L("退出 (Esc)")
             bar.addArrangedSubview(cancel)
 
             addBarDivider(to: bar)
 
-            let again = makeBarButton(title: "重选", glyph: nil, primary: false) { [weak self] in
+            let again = makeBarButton(title: L("重选"), glyph: nil, primary: false) { [weak self] in
                 self?.barReselect()
             }
-            again.toolTip = "清除选区重新框选"
+            again.toolTip = L("清除选区重新框选")
             bar.addArrangedSubview(again)
 
         } else {
         let preferred = AppSettings.shared.afterCaptureAction
 
-        let annotate = makeBarButton(title: "标注", glyph: .edit, primary: true) { [weak self] in
+        let annotate = makeBarButton(title: L("标注"), glyph: .edit, primary: true) { [weak self] in
             self?.enterInlineAnnotate(tool: .line)
         }
         annotate.toolTip = preferred == .editor
-            ? "划线 / 箭头 / 文字（双击选区 / ⌘E）"
-            : "划线 / 箭头 / 文字（⌘E）"
+            ? L("划线 / 箭头 / 文字（双击选区 / ⌘E）")
+            : L("划线 / 箭头 / 文字（⌘E）")
         bar.addArrangedSubview(annotate)
 
-        let redact = makeBarButton(title: "打码", glyph: .toolBlur, primary: false, accent: true) { [weak self] in
+        let redact = makeBarButton(title: L("打码"), glyph: .toolBlur, primary: false, accent: true) { [weak self] in
             self?.enterInlineAnnotate(tool: .blur)
         }
-        redact.toolTip = "拖选区域打马赛克（⌘B）"
+        redact.toolTip = L("拖选打码，可换马赛克 / 模糊 / 涂黑 / 黑条（⌘B）")
         bar.addArrangedSubview(redact)
 
-        let watermark = makeBarButton(title: "水印", glyph: .watermark, primary: false) { [weak self] in
+        let watermark = makeBarButton(title: L("水印"), glyph: .watermark, primary: false) { [weak self] in
             self?.toggleWatermark()
         }
-        watermark.toolTip = "开关高级水印（⌘⇧W）"
+        watermark.toolTip = L("开关高级水印（⌘⇧W）")
         styleWatermarkButton(watermark)
         watermarkButton = watermark
         bar.addArrangedSubview(watermark)
 
-        let translate = makeBarButton(title: "翻译", glyph: .translate, primary: false) { [weak self] in
+        let translate = makeBarButton(title: L("翻译"), glyph: .translate, primary: false) { [weak self] in
             self?.commitSelection(.translate)
         }
-        translate.toolTip = "识别语言并翻译 (⌘⇧T)"
+        translate.toolTip = L("识别语言并翻译 (⌘⇧T)")
         bar.addArrangedSubview(translate)
 
         addBarDivider(to: bar)
 
         let copy = makeBarButton(
-            title: "复制",
+            title: L("复制"),
             glyph: .copy,
             primary: preferred == .clipboard
         ) { [weak self] in
             self?.commitSelection(.clipboard)
         }
-        copy.toolTip = preferred == .clipboard ? "复制到剪贴板（双击选区 / ⌘C）" : "复制到剪贴板 (⌘C)"
+        copy.toolTip = preferred == .clipboard ? L("复制到剪贴板（双击选区 / ⌘C）") : L("复制到剪贴板 (⌘C)")
         bar.addArrangedSubview(copy)
 
         let save = makeBarButton(
-            title: "保存",
+            title: L("保存"),
             glyph: .save,
             primary: preferred == .save
         ) { [weak self] in
             self?.commitSelection(.save)
         }
-        save.toolTip = "保存到文件 (⌘S)"
+        save.toolTip = L("保存到文件 (⌘S)")
         bar.addArrangedSubview(save)
 
         addBarDivider(to: bar)
 
-        let again = makeBarButton(title: "重选", glyph: nil, primary: false) { [weak self] in
+        let again = makeBarButton(title: L("重选"), glyph: nil, primary: false) { [weak self] in
             self?.barReselect()
         }
-        again.toolTip = "清除选区重新框选"
+        again.toolTip = L("清除选区重新框选")
         bar.addArrangedSubview(again)
 
-        let cancel = makeBarButton(title: "取消", glyph: .close, primary: false) { [weak self] in
+        let cancel = makeBarButton(title: L("取消"), glyph: .close, primary: false) { [weak self] in
             self?.barCancel()
         }
-        cancel.toolTip = "退出截图 (Esc)"
+        cancel.toolTip = L("退出截图 (Esc)")
         bar.addArrangedSubview(cancel)
         }
 
@@ -1066,16 +1066,20 @@ final class CaptureOverlayView: NSView {
         annotateCanvas?.showWatermark = AppSettings.shared.watermarkEnabled
         annotateCanvas?.needsDisplay = true
         needsDisplay = true
-        ToastController.shared.show(AppSettings.shared.watermarkEnabled ? "已加水印" : "已取消水印")
+        ToastController.shared.show(AppSettings.shared.watermarkEnabled ? L("已加水印") : L("已取消水印"))
     }
 
     private func styleWatermarkButton(_ button: NSButton) {
         let on = AppSettings.shared.watermarkEnabled
+        let gold = ScreenshotWatermark.gold
+        button.layer?.borderWidth = on ? 1 : 0
         if on {
-            button.layer?.backgroundColor = NSColor(calibratedRed: 0.86, green: 0.72, blue: 0.46, alpha: 0.95).cgColor
-            button.contentTintColor = NSColor.black.withAlphaComponent(0.88)
+            button.layer?.backgroundColor = gold.withAlphaComponent(0.28).cgColor
+            button.layer?.borderColor = gold.withAlphaComponent(0.7).cgColor
+            button.contentTintColor = NSColor.white.withAlphaComponent(0.96)
         } else {
             button.layer?.backgroundColor = NSColor.white.withAlphaComponent(0.10).cgColor
+            button.layer?.borderColor = NSColor.clear.cgColor
             button.contentTintColor = .white
         }
     }
@@ -1114,14 +1118,18 @@ final class CaptureOverlayView: NSView {
             b.imagePosition = .imageLeading
             b.imageHugsTitle = true
         }
-        let width: CGFloat
+        var width: CGFloat
         let height: CGFloat
         if compact {
-            width = title.count >= 3 ? 56 : (title == "水印" || title == "翻译" ? 52 : (title.count >= 2 ? 48 : 40))
+            width = title.count >= 3 ? 56 : (title == L("水印") || title == L("翻译") ? 52 : (title.count >= 2 ? 48 : 40))
             height = 24
         } else {
-            width = title.count >= 3 ? 72 : (title == "OCR" ? 58 : (title == "翻译" || title == "打码" || title == "水印" ? 68 : (title.count >= 2 ? 64 : 52)))
+            width = title.count >= 3 ? 72 : (title == "OCR" ? 58 : (title == L("翻译") || title == L("打码") || title == L("水印") ? 68 : (title.count >= 2 ? 64 : 52)))
             height = 28
+        }
+        if L10n.isEnglish, let font = b.font {
+            let text = (title as NSString).size(withAttributes: [.font: font]).width
+            width = max(width, ceil(text + (glyph == nil ? 16 : iconSize + 22)))
         }
         NSLayoutConstraint.activate([
             b.widthAnchor.constraint(equalToConstant: width),
@@ -1133,8 +1141,8 @@ final class CaptureOverlayView: NSView {
     private func makeAnnotateToolButton(tool: AnnotationTool, selected: Bool, handler: @escaping () -> Void) -> NSButton {
         let label: String?
         switch tool {
-        case .text: label = "文字"
-        case .blur: label = "打码"
+        case .text: label = L("文字")
+        case .blur: label = L("打码")
         default: label = nil
         }
         let b = ClosureButton(title: label ?? "", handler: handler)
@@ -1162,7 +1170,10 @@ final class CaptureOverlayView: NSView {
             b.image = FlareBrand.menuSymbol(tool.glyph, pointSize: 12)
             b.imagePosition = .imageOnly
         }
-        let width: CGFloat = tool == .blur ? 52 : (label == nil ? 28 : 36)
+        var width: CGFloat = tool == .blur ? 52 : (label == nil ? 28 : 36)
+        if L10n.isEnglish, let label, let font = b.font {
+            width = max(width, ceil((label as NSString).size(withAttributes: [.font: font]).width + 30))
+        }
         NSLayoutConstraint.activate([
             b.widthAnchor.constraint(equalToConstant: width),
             b.heightAnchor.constraint(equalToConstant: 28)
@@ -1220,9 +1231,9 @@ final class CaptureOverlayView: NSView {
         showAnnotateBar(near: rect)
         needsDisplay = true
         if tool == .blur {
-            ToastController.shared.show("拖选区域打码 · Esc 返回")
+            ToastController.shared.show(L("拖选打码 · %@ · Esc 返回", AppSettings.shared.redactKind.title))
         } else {
-            ToastController.shared.show("选区内标注 · 单击选文字 · Esc 返回")
+            ToastController.shared.show(L("选区内标注 · Esc 返回"))
         }
     }
 
@@ -1250,7 +1261,7 @@ final class CaptureOverlayView: NSView {
         bar.spacing = 4
         bar.edgeInsets = NSEdgeInsets(top: 6, left: 8, bottom: 6, right: 8)
         bar.wantsLayer = true
-        bar.layer?.backgroundColor = NSColor.black.withAlphaComponent(0.86).cgColor
+        bar.layer?.backgroundColor = NSColor.black.withAlphaComponent(0.72).cgColor
         bar.layer?.cornerRadius = 12
         bar.layer?.borderWidth = 1
         bar.layer?.borderColor = NSColor.white.withAlphaComponent(0.16).cgColor
@@ -1259,13 +1270,12 @@ final class CaptureOverlayView: NSView {
         }
 
         let tools: [(AnnotationTool, String)] = [
-            (.select, "选择并调节"),
-            (.line, "划线"),
-            (.arrow, "箭头"),
-            (.pen, "画笔"),
-            (.rect, "矩形"),
-            (.text, "文字"),
-            (.blur, "打码：拖选区域打马赛克")
+            (.select, L("选择并调节")),
+            (.line, L("划线")),
+            (.arrow, L("箭头")),
+            (.pen, L("画笔")),
+            (.rect, L("矩形")),
+            (.blur, L("打码：拖选后可选马赛克 / 模糊 / 涂黑 / 黑条"))
         ]
         for (tool, tip) in tools {
             let primary = tool == (annotateDocument?.tool ?? .line)
@@ -1281,6 +1291,23 @@ final class CaptureOverlayView: NSView {
             bar.addArrangedSubview(button)
         }
 
+        if annotateDocument?.tool == .blur {
+            addBarDivider(to: bar)
+            for kind in RedactKind.allCases {
+                let selected = (annotateDocument?.redactKind ?? .mosaic) == kind
+                let chip = makeBarButton(title: kind.title, glyph: nil, primary: selected, compact: true) { [weak self] in
+                    self?.annotateDocument?.setRedactKind(kind)
+                    if let r = self?.frozenSelection {
+                        self?.showAnnotateBar(near: r)
+                    }
+                    self?.annotateCanvas?.needsDisplay = true
+                }
+                chip.toolTip = kind.title
+                bar.addArrangedSubview(chip)
+            }
+        }
+
+        if annotateDocument?.tool != .blur {
         for color in AnnotationStyle.palette {
             let swatch = ClosureButton(title: "") { [weak self] in
                 self?.annotateDocument?.setColor(color)
@@ -1306,63 +1333,64 @@ final class CaptureOverlayView: NSView {
             self?.annotateDocument?.setLineWidth(CGFloat(value))
             self?.annotateCanvas?.needsDisplay = true
         }
-        widthSlider.toolTip = "画笔 / 箭头粗细"
+        widthSlider.toolTip = L("画笔 / 箭头粗细")
         widthSlider.translatesAutoresizingMaskIntoConstraints = false
         NSLayoutConstraint.activate([
             widthSlider.widthAnchor.constraint(equalToConstant: 56),
             widthSlider.heightAnchor.constraint(equalToConstant: 16)
         ])
-        bar.addArrangedSubview(widthSlider)
+            bar.addArrangedSubview(widthSlider)
+        }
 
         addBarDivider(to: bar)
 
-        let undo = makeBarButton(title: "撤销", glyph: nil, primary: false, compact: true) { [weak self] in
+        let undo = makeBarButton(title: L("撤销"), glyph: nil, primary: false, compact: true) { [weak self] in
             self?.annotateDocument?.undo()
             self?.annotateCanvas?.needsDisplay = true
         }
-        undo.toolTip = "撤销 (⌘Z)"
+        undo.toolTip = L("撤销 (⌘Z)")
         bar.addArrangedSubview(undo)
 
-        let redo = makeBarButton(title: "重做", glyph: nil, primary: false, compact: true) { [weak self] in
+        let redo = makeBarButton(title: L("重做"), glyph: nil, primary: false, compact: true) { [weak self] in
             self?.annotateDocument?.redo()
             self?.annotateCanvas?.needsDisplay = true
         }
-        redo.toolTip = "重做 (⌘⇧Z)"
+        redo.toolTip = L("重做 (⌘⇧Z)")
         bar.addArrangedSubview(redo)
 
         addBarDivider(to: bar)
 
-        let watermark = makeBarButton(title: "水印", glyph: .watermark, primary: false, compact: true) { [weak self] in
+        let watermark = makeBarButton(title: L("水印"), glyph: .watermark, primary: false, compact: true) { [weak self] in
             self?.toggleWatermark()
         }
-        watermark.toolTip = "开关高级水印（⌘⇧W）"
+        watermark.toolTip = L("开关高级水印（⌘⇧W）")
         styleWatermarkButton(watermark)
         watermarkButton = watermark
         bar.addArrangedSubview(watermark)
 
-        let translate = makeBarButton(title: "翻译", glyph: .translate, primary: false, compact: true) { [weak self] in
+        let translate = makeBarButton(title: L("翻译"), glyph: .translate, primary: false, compact: true) { [weak self] in
             self?.finishInlineAnnotate(.translate)
         }
-        translate.toolTip = "识别文字并翻译（⌘T）"
+        translate.toolTip = L("识别文字并翻译（⌘T）")
         bar.addArrangedSubview(translate)
 
         let preferred = AppSettings.shared.afterCaptureAction
-        let copy = makeBarButton(title: "复制", glyph: .copy, primary: preferred == .clipboard, compact: true) { [weak self] in
+        let copy = makeBarButton(title: L("复制"), glyph: .copy, primary: preferred == .clipboard, compact: true) { [weak self] in
             self?.finishInlineAnnotate(.clipboard)
         }
-        copy.toolTip = "复制标注结果 (⌘C)"
+        copy.toolTip = L("复制标注结果 (⌘C)")
         bar.addArrangedSubview(copy)
 
-        let save = makeBarButton(title: "保存", glyph: .save, primary: preferred == .save, compact: true) { [weak self] in
+        let save = makeBarButton(title: L("保存"), glyph: .save, primary: preferred == .save, compact: true) { [weak self] in
             self?.finishInlineAnnotate(.save)
         }
-        save.toolTip = "保存到文件 (⌘S)"
+        save.toolTip = L("保存到文件 (⌘S)")
         bar.addArrangedSubview(save)
 
-        let done = makeBarButton(title: "完成", glyph: .success, primary: preferred == .editor || preferred == .pin, compact: true) { [weak self] in
+        let done = makeBarButton(title: L("完成"), glyph: .success, primary: preferred == .editor || preferred == .pin, compact: true) { [weak self] in
             self?.finishInlineAnnotate(.from(after: AppSettings.shared.afterCaptureAction))
         }
-        done.toolTip = "按设置默认动作完成（回车）"
+        done.toolTip = L("按设置默认动作完成（回车）")
         bar.addArrangedSubview(done)
 
         bar.translatesAutoresizingMaskIntoConstraints = false

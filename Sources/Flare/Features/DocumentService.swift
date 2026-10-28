@@ -12,10 +12,10 @@ enum DocumentKind: String, CaseIterable, Identifiable {
 
     var title: String {
         switch self {
-        case .txt: return "文本 TXT"
-        case .word: return "Word 文档"
-        case .powerpoint: return "PPT 演示文稿"
-        case .spreadsheet: return "表格 Excel"
+        case .txt: return L("文本 TXT")
+        case .word: return L("Word 文档")
+        case .powerpoint: return L("PPT 演示文稿")
+        case .spreadsheet: return L("表格 Excel")
         }
     }
 
@@ -24,7 +24,7 @@ enum DocumentKind: String, CaseIterable, Identifiable {
         case .txt: return "TXT"
         case .word: return "Word"
         case .powerpoint: return "PPT"
-        case .spreadsheet: return "表格"
+        case .spreadsheet: return L("表格")
         }
     }
 
@@ -39,10 +39,10 @@ enum DocumentKind: String, CaseIterable, Identifiable {
 
     var subtitle: String {
         switch self {
-        case .txt: return "空白纯文本 · .txt"
-        case .word: return "空白文档 · .docx"
-        case .powerpoint: return "空白幻灯片 · .pptx"
-        case .spreadsheet: return "空白表格 · .xlsx"
+        case .txt: return L("空白纯文本 · .txt")
+        case .word: return L("空白文档 · .docx")
+        case .powerpoint: return L("空白幻灯片 · .pptx")
+        case .spreadsheet: return L("空白表格 · .xlsx")
         }
     }
 
@@ -78,9 +78,9 @@ enum DocumentService {
 
         var errorDescription: String? {
             switch self {
-            case .cancelled: return "已取消"
-            case .notAvailable(let kind): return "「\(kind.title)」暂不可用"
-            case .writeFailed: return "创建失败"
+            case .cancelled: return L("已取消")
+            case .notAvailable(let kind): return L("「%@」暂不可用", kind.title)
+            case .writeFailed: return L("创建失败")
             }
         }
     }
@@ -115,8 +115,8 @@ enum DocumentService {
             panel.allowedContentTypes = kind.contentTypes
             panel.nameFieldStringValue = fileName
             panel.directoryURL = dir
-            panel.title = "新建\(kind.title)"
-            panel.prompt = "创建"
+            panel.title = L("新建%@", kind.title)
+            panel.prompt = L("创建")
             guard panel.runModal() == .OK, let url = panel.url else {
                 throw DocumentError.cancelled
             }
@@ -155,7 +155,7 @@ enum DocumentService {
     static func createAndReveal(_ kind: DocumentKind, askWhere: Bool = true) {
         do {
             let url = try create(kind, askWhere: askWhere)
-            ToastController.shared.show("已创建 \(url.lastPathComponent)")
+            ToastController.shared.show(L("已创建 %@", url.lastPathComponent))
             open(url)
             // 稍后再定位 Finder，避免抢焦点盖住打开的文档
             DispatchQueue.main.asyncAfter(deadline: .now() + 0.35) {
@@ -192,7 +192,7 @@ enum DocumentService {
         f.dateFormat = "yyyy-MM-dd HH:mm:ss"
         return """
         # \(title)
-        创建于 \(f.string(from: Date())) · \(FlareBrand.name)
+        \(L("创建于 %@ · %@", f.string(from: Date()), FlareBrand.name))
 
         """
     }

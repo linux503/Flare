@@ -82,11 +82,11 @@ final class PinnedImageWindow: NSObject {
     @objc private func showContextMenu(_ gesture: NSClickGestureRecognizer) {
         guard gesture.state == .ended, let view = gesture.view else { return }
         let menu = NSMenu()
-        menu.addItem(withTitle: "复制", action: #selector(copyPin), keyEquivalent: "").target = self
-        menu.addItem(withTitle: "保存图片", action: #selector(savePin), keyEquivalent: "").target = self
-        menu.addItem(withTitle: "OCR 并保存为 TXT…", action: #selector(ocrTXT), keyEquivalent: "").target = self
+        menu.addItem(withTitle: L("复制"), action: #selector(copyPin), keyEquivalent: "").target = self
+        menu.addItem(withTitle: L("保存图片"), action: #selector(savePin), keyEquivalent: "").target = self
+        menu.addItem(withTitle: L("OCR 并保存为 TXT…"), action: #selector(ocrTXT), keyEquivalent: "").target = self
         menu.addItem(.separator())
-        menu.addItem(withTitle: "关闭", action: #selector(closePin), keyEquivalent: "").target = self
+        menu.addItem(withTitle: L("关闭"), action: #selector(closePin), keyEquivalent: "").target = self
         let loc = gesture.location(in: view)
         menu.popUp(positioning: nil, at: loc, in: view)
     }
@@ -97,13 +97,13 @@ final class PinnedImageWindow: NSObject {
             do {
                 let url = try await TextFileService.createTXTFromOCR(image: image, askWhere: true)
                 await MainActor.run {
-                    ToastController.shared.show("已保存 \(url.lastPathComponent)")
+                    ToastController.shared.show(L("已保存 %@", url.lastPathComponent))
                     TextFileService.reveal(url)
                 }
             } catch {
                 await MainActor.run {
                     if (error as? TextFileService.TextFileError) != .cancelled {
-                        ToastController.shared.show("OCR 导出失败")
+                        ToastController.shared.show(L("OCR 导出失败"))
                     }
                 }
             }
@@ -139,7 +139,7 @@ final class PinnedImageWindow: NSObject {
     @objc private func savePin() {
         guard let image = imageView.image else { return }
         if let url = try? ImageExporter.save(image) {
-            ToastController.shared.show("已保存：\(url.lastPathComponent)")
+            ToastController.shared.show(L("已保存：%@", url.lastPathComponent))
         }
     }
 }

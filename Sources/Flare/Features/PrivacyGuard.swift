@@ -19,30 +19,22 @@ enum PrivacyGuard {
         return ask(image: image, findings: findings)
     }
 
-    /// 翻译前过隐私闸门：本地拦截或改走脱敏图，避免把密钥原文送出去。
+    /// 翻译走 OCR 文本，必须用原图识字。脱敏图会把字涂掉，导致译不出来。
     static func presentTranslate(from image: NSImage) async {
-        switch await plan(for: image) {
-        case .original:
-            TranslateWindowController.shared.present(image: image)
-        case .redacted(let redacted):
-            ToastController.shared.show("已用脱敏图翻译，原图未上传")
-            TranslateWindowController.shared.present(image: redacted)
-        case .localOnly:
-            ToastController.shared.show("已取消翻译，原图请只留在本机")
-        }
+        TranslateWindowController.shared.present(image: image)
     }
 
     /// 复制到剪贴板。返回 false 表示用户选择了仅本地保存。
     @discardableResult
-    static func copyIfAllowed(_ image: NSImage, localOnlyMessage: String = "已取消分享，原图请只保存在本机") async -> Bool {
+    static func copyIfAllowed(_ image: NSImage, localOnlyMessage: String = L("已取消分享，原图请只保存在本机")) async -> Bool {
         switch await plan(for: image) {
         case .original:
             ImageExporter.copyToClipboard(ScreenshotWatermark.applyIfNeeded(image))
-            ToastController.shared.show("已复制到剪贴板")
+            ToastController.shared.show(L("已复制到剪贴板"))
             return true
         case .redacted(let redacted):
             ImageExporter.copyToClipboard(ScreenshotWatermark.applyIfNeeded(redacted))
-            ToastController.shared.show("已脱敏复制，原图未分享")
+            ToastController.shared.show(L("已脱敏复制，原图未分享"))
             return true
         case .localOnly:
             ToastController.shared.show(localOnlyMessage)
@@ -53,18 +45,12 @@ enum PrivacyGuard {
     private static func ask(image: NSImage, findings: [PrivacyFinding]) -> PrivacySharePlan {
         let alert = NSAlert()
         alert.alertStyle = .warning
-        alert.messageText = "发现敏感信息"
+        alert.messageText = L("发现敏感信息")
         let kinds = PrivacyScanner.summary(of: findings)
-        alert.informativeText = """
-        检测到：\(kinds)
-
-        脱敏后分享：剪贴板 / 分享使用遮挡图，原图只留在本地历史。
-        原图仅本地保存：不复制、不外发。
-        检测只在本机进行。
-        """
-        alert.addButton(withTitle: "脱敏后分享")
-        alert.addButton(withTitle: "原图仅本地保存")
-        alert.addButton(withTitle: "仍分享原图")
+        alert.informativeText = L("检测到：%@\n\n脱敏后分享：剪贴板 / 分享使用遮挡图，原图只留在本地历史。\n原图仅本地保存：不复制、不外发。\n检测只在本机进行。", kinds)
+        alert.addButton(withTitle: L("脱敏后分享"))
+        alert.addButton(withTitle: L("原图仅本地保存"))
+        alert.addButton(withTitle: L("仍分享原图"))
         switch alert.runModal() {
         case .alertFirstButtonReturn:
             return .redacted(PrivacyScanner.redact(image, findings: findings))

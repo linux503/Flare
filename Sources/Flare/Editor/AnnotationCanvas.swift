@@ -47,7 +47,7 @@ final class AnnotationCanvasView: NSView {
                 )
                 if rect.width > 4, rect.height > 4 {
                     AnnotationRenderer.draw(
-                        items: [.blur(id: UUID(), rect: rect)],
+                        items: [.blur(id: UUID(), rect: rect, kind: document.redactKind)],
                         in: bounds,
                         baseImage: document.baseImage
                     )
@@ -154,7 +154,7 @@ final class AnnotationCanvasView: NSView {
                     height: abs(point.y - start.y)
                 )
                 if rect.width > 4, rect.height > 4 {
-                    document.add(.blur(id: UUID(), rect: rect))
+                    document.add(.blur(id: UUID(), rect: rect, kind: document.redactKind))
                 }
             }
         default:
@@ -174,9 +174,9 @@ final class AnnotationCanvasView: NSView {
 
     override func rightMouseDown(with event: NSEvent) {
         let menu = NSMenu(title: "Flare")
-        menu.addItem(withTitle: "OCR 并保存为 TXT…", action: #selector(ocrToTXT), keyEquivalent: "").target = self
+        menu.addItem(withTitle: L("OCR 并保存为 TXT…"), action: #selector(ocrToTXT), keyEquivalent: "").target = self
         menu.addItem(.separator())
-        menu.addItem(withTitle: "复制图像", action: #selector(copyImage), keyEquivalent: "").target = self
+        menu.addItem(withTitle: L("复制图像"), action: #selector(copyImage), keyEquivalent: "").target = self
         NSMenu.popUpContextMenu(menu, with: event, for: self)
     }
 
@@ -288,7 +288,7 @@ final class AnnotationCanvasView: NSView {
         let hostPoint = convert(point, to: host)
 
         let field = NSTextField(frame: .zero)
-        field.placeholderString = "输入文字，回车确认"
+        field.placeholderString = L("输入文字，回车确认")
         field.isBordered = true
         field.isBezeled = true
         field.bezelStyle = .roundedBezel

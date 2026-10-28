@@ -40,11 +40,11 @@ struct PermissionView: View {
                 HStack(spacing: 12) {
                     SnapIconWell(.permission, side: 44, iconSize: .hero, cornerRadius: 12)
                     VStack(alignment: .leading, spacing: 4) {
-                        Text(needsRelaunch ? "权限已打开，需要重启" : (Permissions.needsReauthorizationAfterUpdate() ? "需要重新授权" : "无法截取屏幕"))
+                        Text(needsRelaunch ? L("权限已打开，需要重启") : (Permissions.needsReauthorizationAfterUpdate() ? L("需要重新授权") : L("无法截取屏幕")))
                             .font(.system(size: 20, weight: .bold))
                             .foregroundStyle(theme.textPrimary)
                         Text(needsRelaunch
-                             ? "系统已授权，但必须完全重启后 ScreenCaptureKit 才会生效"
+                             ? L("系统已授权，但必须完全重启后 ScreenCaptureKit 才会生效")
                              : Permissions.permissionIssueSummary())
                             .font(.subheadline)
                             .foregroundStyle(theme.textSecondary)
@@ -59,22 +59,22 @@ struct PermissionView: View {
                 }
 
                 VStack(alignment: .leading, spacing: 10) {
-                    step(1, "点击「打开系统设置」")
-                    step(2, "找到「屏幕与系统音频录制」→ \(FlareBrand.name)，打开开关")
+                    step(1, L("点击「打开系统设置」"))
+                    step(2, L("找到「屏幕与系统音频录制」→ %@，打开开关", FlareBrand.name))
                     step(3, needsRelaunch
-                         ? "回到这里点「重启」；或等自动重启"
-                         : "打开开关后回到这里；检测到授权会自动重启")
+                         ? L("回到这里点「重启」；或等自动重启")
+                         : L("打开开关后回到这里；检测到授权会自动重启"))
                 }
                 .padding(14)
                 .flareGlass(cornerRadius: 10)
 
                 HStack(spacing: 10) {
-                    statusDot(livePreflight, "系统已记录授权")
-                    statusDot(liveReady, "截屏已可用")
+                    statusDot(livePreflight, L("系统已记录授权"))
+                    statusDot(liveReady, L("截屏已可用"))
                 }
 
                 if !fromApps {
-                    Text("当前不是从「应用程序」启动（\(runningPath)）。请只授权 /Applications/Flare Pro.app，否则开关无效。")
+                    Text(L("当前不是从「应用程序」启动（%@）。请只授权 /Applications/Flare Pro.app，否则开关无效。", runningPath))
                         .font(.caption)
                         .foregroundStyle(theme.warning)
                         .fixedSize(horizontal: false, vertical: true)
@@ -92,14 +92,14 @@ struct PermissionView: View {
                     .fixedSize(horizontal: false, vertical: true)
 
                 if Permissions.needsReauthorizationAfterUpdate() {
-                    Text("若系统设置里已有开关：先点 − 删除所有 Flare Pro，再重新打开开关，然后 ⌘Q 完全退出并重启本应用。")
+                    Text(L("若系统设置里已有开关：先点 − 删除所有 Flare Pro，再重新打开开关，然后 ⌘Q 完全退出并重启本应用。"))
                         .font(.caption)
                         .foregroundStyle(theme.warning)
                         .fixedSize(horizontal: false, vertical: true)
                 }
 
                 if Permissions.isAdHocSigned() {
-                    Text("当前是临时签名：每次重新安装系统都会当成新应用，必须删除旧条目再勾选。请用 Scripts/install.sh 以开发者证书签名。")
+                    Text(L("当前是临时签名：每次重新安装系统都会当成新应用，必须删除旧条目再勾选。请用 Scripts/install.sh 以开发者证书签名。"))
                         .font(.caption)
                         .foregroundStyle(theme.warning)
                         .fixedSize(horizontal: false, vertical: true)
@@ -111,14 +111,14 @@ struct PermissionView: View {
                     Button {
                         Permissions.openScreenRecordingSettings()
                     } label: {
-                        labelButton("打开系统设置", .settings, primary: !needsRelaunch)
+                        labelButton(L("打开系统设置"), .settings, primary: !needsRelaunch)
                     }
                     .buttonStyle(.plain)
 
                     Button {
                         requestAndCheck()
                     } label: {
-                        labelButton(checking ? "检测中…" : "重新检测", .refresh, primary: false)
+                        labelButton(checking ? L("检测中…") : L("重新检测"), .refresh, primary: false)
                     }
                     .buttonStyle(.plain)
                     .disabled(checking)
@@ -126,7 +126,7 @@ struct PermissionView: View {
                     Button {
                         Permissions.relaunchApp()
                     } label: {
-                        labelButton("重启 \(FlareBrand.name)", .relaunch, primary: needsRelaunch)
+                        labelButton(L("重启 %@", FlareBrand.name), .relaunch, primary: needsRelaunch)
                     }
                     .buttonStyle(.plain)
                 }
@@ -145,9 +145,9 @@ struct PermissionView: View {
             liveReady = state == "granted"
             needsRelaunch = state == "needsRelaunch"
             if state == "granted" {
-                statusText = "授权成功"
+                statusText = L("授权成功")
             } else if state == "needsRelaunch" {
-                statusText = "权限已打开，正在重启…"
+                statusText = L("权限已打开，正在重启…")
             }
         }
     }
@@ -158,22 +158,22 @@ struct PermissionView: View {
             livePreflight = true
             liveReady = true
             needsRelaunch = false
-            statusText = "已就绪"
+            statusText = L("已就绪")
         case .needsRelaunch:
             livePreflight = true
             liveReady = false
             needsRelaunch = true
-            statusText = "权限已打开，请重启生效"
+            statusText = L("权限已打开，请重启生效")
         case .denied:
             livePreflight = false
             liveReady = false
             needsRelaunch = false
-            statusText = "请在系统设置中打开 \(FlareBrand.name) 的屏幕录制开关"
+            statusText = L("请在系统设置中打开 %@ 的屏幕录制开关", FlareBrand.name)
         case .unknown:
             livePreflight = true
             liveReady = false
             needsRelaunch = false
-            statusText = "正在确认权限…"
+            statusText = L("正在确认权限…")
         }
     }
 
@@ -243,14 +243,14 @@ struct PermissionView: View {
                 applyState(state)
                 switch state {
                 case .granted:
-                    ToastController.shared.show("授权成功")
+                    ToastController.shared.show(L("授权成功"))
                     dismissSheet()
                 case .needsRelaunch:
-                    statusText = "权限已打开，请完全退出后重新打开 Flare Pro"
+                    statusText = L("权限已打开，请完全退出后重新打开 Flare Pro")
                 case .denied, .unknown:
                     statusText = ok
-                        ? "请再试一次截图"
-                        : "仍未授权：请打开开关（若有灰色旧条目，先 − 删除再勾选）"
+                        ? L("请再试一次截图")
+                        : L("仍未授权：请打开开关（若有灰色旧条目，先 − 删除再勾选）")
                 }
             }
         }

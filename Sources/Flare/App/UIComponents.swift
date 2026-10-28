@@ -16,9 +16,7 @@ struct FlareCardButtonStyle: ButtonStyle {
 struct FlareChipButtonStyle: ButtonStyle {
     func makeBody(configuration: Configuration) -> some View {
         configuration.label
-            .opacity(configuration.isPressed ? 0.75 : 1)
-            .scaleEffect(configuration.isPressed ? 0.97 : 1)
-            .animation(.easeOut(duration: 0.1), value: configuration.isPressed)
+            .opacity(configuration.isPressed ? 0.72 : 1)
     }
 }
 
@@ -231,7 +229,7 @@ struct WindowOpacitySlider: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 10) {
             HStack {
-                Text("窗口透明度")
+                Text(L("窗口透明度"))
                     .font(.system(size: 12, weight: .medium))
                     .foregroundStyle(theme.textPrimary)
                 Spacer()
@@ -248,7 +246,7 @@ struct WindowOpacitySlider: View {
                 step: 0.02
             )
             .tint(theme.accent)
-            Text("数值越低越通透；接近 100% 时为实色窗口。")
+            Text(L("数值越低越通透；接近 100% 时为实色窗口。"))
                 .font(.system(size: 10))
                 .foregroundStyle(theme.textMuted)
         }
@@ -305,10 +303,6 @@ struct HistoryThumbnailView: View {
 
 extension View {
     func flareTabTransition() -> some View {
-        self
-            .transition(.asymmetric(
-                insertion: .opacity.combined(with: .move(edge: .trailing)).combined(with: .offset(x: 8)),
-                removal: .opacity.combined(with: .offset(x: -6))
-            ))
+        self.transition(.opacity)
     }
 }
