@@ -41,7 +41,7 @@ struct PermissionView: View {
                     SnapIconWell(.permission, side: 44, iconSize: .hero, cornerRadius: 12)
                     VStack(alignment: .leading, spacing: 4) {
                         Text(needsRelaunch ? "权限已打开，需要重启" : (Permissions.needsReauthorizationAfterUpdate() ? "需要重新授权" : "无法截取屏幕"))
-                            .font(.system(size: 22, weight: .bold, design: .serif))
+                            .font(.system(size: 20, weight: .bold))
                             .foregroundStyle(theme.textPrimary)
                         Text(needsRelaunch
                              ? "系统已授权，但必须完全重启后 ScreenCaptureKit 才会生效"
@@ -66,12 +66,7 @@ struct PermissionView: View {
                          : "打开开关后回到这里；检测到授权会自动重启")
                 }
                 .padding(14)
-                .background(theme.fill)
-                .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
-                .overlay(
-                    RoundedRectangle(cornerRadius: 12, style: .continuous)
-                        .strokeBorder(theme.stroke, lineWidth: 1)
-                )
+                .flareGlass(cornerRadius: 10)
 
                 HStack(spacing: 10) {
                     statusDot(livePreflight, "系统已记录授权")
@@ -190,7 +185,7 @@ struct PermissionView: View {
     private func step(_ n: Int, _ text: String) -> some View {
         HStack(alignment: .top, spacing: 10) {
             Text("\(n)")
-                .font(.system(size: 11, weight: .bold, design: .rounded))
+                .font(.system(size: 11, weight: .semibold))
                 .foregroundStyle(theme.inverseText)
                 .frame(width: 20, height: 20)
                 .background(theme.inverseFill)
@@ -229,9 +224,11 @@ struct PermissionView: View {
         }
         .padding(.horizontal, 12)
         .padding(.vertical, 9)
-        .background(primary ? theme.inverseFill : theme.fillStrong)
+        .background(primary ? theme.inverseFill : theme.card, in: Capsule())
         .foregroundStyle(primary ? theme.inverseText : theme.textPrimary)
-        .clipShape(RoundedRectangle(cornerRadius: 8, style: .continuous))
+        .overlay(
+            Capsule().strokeBorder(primary ? Color.clear : theme.stroke, lineWidth: 1)
+        )
     }
 
     private func requestAndCheck() {

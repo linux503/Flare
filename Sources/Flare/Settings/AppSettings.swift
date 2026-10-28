@@ -1,6 +1,7 @@
 import Foundation
 import Carbon
 import AppKit
+import NaturalLanguage
 
 final class AppSettings {
     static let shared = AppSettings()
@@ -61,6 +62,12 @@ final class AppSettings {
         set { defaults.set(newValue, forKey: "showMagnifier"); notify() }
     }
 
+    /// 截图复制 / 保存 / 钉住时叠加高级水印；工具栏可当场开关
+    var watermarkEnabled: Bool {
+        get { defaults.object(forKey: "watermarkEnabled") as? Bool ?? true }
+        set { defaults.set(newValue, forKey: "watermarkEnabled"); notify() }
+    }
+
     var showInDock: Bool {
         get { defaults.object(forKey: "showInDock") as? Bool ?? false }
         set { defaults.set(newValue, forKey: "showInDock"); notify() }
@@ -74,6 +81,33 @@ final class AppSettings {
     var afterCaptureAction: AfterCaptureAction {
         get { AfterCaptureAction(rawValue: defaults.string(forKey: "afterCaptureAction") ?? "editor") ?? .editor }
         set { defaults.set(newValue.rawValue, forKey: "afterCaptureAction"); notify() }
+    }
+
+    /// 截图翻译的目标语言；原文语言由 OCR 自动识别
+    var translateTargetLanguage: TranslateTargetLanguage {
+        get {
+            TranslateTargetLanguage(rawValue: defaults.string(forKey: "translateTargetLanguage") ?? "") ?? .zhHans
+        }
+        set { defaults.set(newValue.rawValue, forKey: "translateTargetLanguage"); notify() }
+    }
+
+    var translateAPIBaseURL: String {
+        TranslateSecrets.payload()?.apiBaseURL ?? ""
+    }
+
+    var translateAPIKey: String {
+        TranslateSecrets.payload()?.apiKey ?? ""
+    }
+
+    var translateAPIModel: String {
+        TranslateSecrets.payload()?.model ?? ""
+    }
+
+    var translateAPIEndpoint: URL? {
+        var base = translateAPIBaseURL.trimmingCharacters(in: .whitespacesAndNewlines)
+        while base.hasSuffix("/") { base.removeLast() }
+        guard !base.isEmpty else { return nil }
+        return URL(string: base + "/chat/completions")
     }
 
     /// 历史记录保留时长；到期后自动清理应用管理的截图
@@ -103,7 +137,7 @@ final class AppSettings {
     /// 静默写入，避免拖动滑块时反复重注册热键 / 重建菜单
     var windowOpacity: Double {
         get {
-            let v = defaults.object(forKey: "windowOpacity") as? Double ?? 0.94
+            let v = defaults.object(forKey: "windowOpacity") as? Double ?? 1.0
             return min(1, max(0.72, v))
         }
         set {
@@ -159,7 +193,7 @@ final class AppSettings {
         set { defaults.set(newValue, forKey: "recordFPS"); notify() }
     }
 
-    /// 默认录屏范围：全屏 / 区域
+    /// 默认录屏范围：全屏 / 区域 / 窗口
     var recordMode: RecordCaptureMode {
         get {
             let raw = defaults.string(forKey: "recordMode") ?? RecordCaptureMode.fullScreen.rawValue
@@ -318,6 +352,7 @@ final class AppSettings {
     }
 
     func load() {
+        TranslateSecrets.bootstrap()
         migrateDefaultLogoIfNeeded()
         migrateLegacyHotkeysIfNeeded()
         sanitizeHotkeysIfNeeded()
@@ -368,6 +403,57 @@ enum ImageFormat: String, CaseIterable, Identifiable {
         }
     }
     var fileExtension: String { rawValue }
+}
+
+enum TranslateTargetLanguage: String, CaseIterable, Identifiable {
+    case zhHans = "zh-Hans"
+    case zhHant = "zh-Hant"
+    case en = "en"
+    case ja = "ja"
+    case ko = "ko"
+    case fr = "fr"
+    case de = "de"
+    case es = "es"
+    case ru = "ru"
+    case pt = "pt"
+    case it = "it"
+    case vi = "vi"
+    case th = "th"
+    case ar = "ar"
+
+    var id: String { rawValue }
+
+    var displayName: String {
+        switch self {
+        case .zhHans: return "简体中文"
+        case .zhHant: return "繁体中文"
+        case .en: return "英语"
+        case .ja: return "日语"
+        case .ko: return "韩语"
+        case .fr: return "法语"
+        case .de: return "德语"
+        case .es: return "西班牙语"
+        case .ru: return "俄语"
+        case .pt: return "葡萄牙语"
+        case .it: return "意大利语"
+        case .vi: return "越南语"
+        case .th: return "泰语"
+        case .ar: return "阿拉伯语"
+        }
+    }
+
+    func matches(_ language: NLLanguage?) -> Bool {
+        guard let language, language != .undetermined else { return false }
+        return language.rawValue.caseInsensitiveCompare(rawValue) == .orderedSame
+    }
+
+    static func displayName(for language: NLLanguage?) -> String {
+        guard let language, language != .undetermined else { return "自动识别" }
+        if let match = TranslateTargetLanguage.allCases.first(where: { $0.matches(language) }) {
+            return match.displayName
+        }
+        return Locale.current.localizedString(forIdentifier: language.rawValue) ?? language.rawValue
+    }
 }
 
 enum AfterCaptureAction: String, CaseIterable, Identifiable {
@@ -451,6 +537,7 @@ enum RecordAudioSource: String, CaseIterable, Identifiable {
 enum RecordCaptureMode: String, CaseIterable, Identifiable {
     case fullScreen
     case area
+    case window
 
     var id: String { rawValue }
 
@@ -458,6 +545,23 @@ enum RecordCaptureMode: String, CaseIterable, Identifiable {
         switch self {
         case .fullScreen: return "全屏"
         case .area: return "区域"
+        case .window: return "窗口"
+        }
+    }
+
+    var hint: String {
+        switch self {
+        case .fullScreen: return "录当前显示器"
+        case .area: return "拖选一块画面"
+        case .window: return "单击要录的窗口"
+        }
+    }
+
+    var glyph: SnapGlyph {
+        switch self {
+        case .fullScreen: return .screen
+        case .area: return .area
+        case .window: return .window
         }
     }
 }

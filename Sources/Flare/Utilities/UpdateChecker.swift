@@ -60,10 +60,9 @@ enum UpdateChecker {
                 return .failed("服务器返回 \(http.statusCode)")
             }
             let remote = try JSONDecoder().decode(RemoteVersion.self, from: data)
-            if isNewer(remote.version, than: currentVersion) {
-                return .updateAvailable(remote: remote)
-            }
-            if let build = remote.build, build > currentBuild {
+            let newerVersion = isNewer(remote.version, than: currentVersion)
+            let newerBuild = (remote.build ?? 0) > currentBuild
+            if (newerVersion || newerBuild), isOSCompatible(remote.minOS) {
                 return .updateAvailable(remote: remote)
             }
             return .upToDate(current: currentVersion)
@@ -83,6 +82,24 @@ enum UpdateChecker {
             if a != b { return a > b }
         }
         return false
+    }
+
+    /// 低于远程 minOS 时不当成可更新，避免装上打不开。
+    static func isOSCompatible(_ minOS: String?) -> Bool {
+        guard let minOS, !minOS.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else {
+            return true
+        }
+        let needed = minOS.split(separator: ".").compactMap { Int($0) }
+        guard !needed.isEmpty else { return true }
+        let v = ProcessInfo.processInfo.operatingSystemVersion
+        let local = [v.majorVersion, v.minorVersion, v.patchVersion]
+        let n = max(needed.count, local.count)
+        for i in 0..<n {
+            let a = i < local.count ? local[i] : 0
+            let b = i < needed.count ? needed[i] : 0
+            if a != b { return a >= b }
+        }
+        return true
     }
 
     @MainActor

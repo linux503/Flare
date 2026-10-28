@@ -19,7 +19,9 @@ struct SettingsPane: View {
     @State private var copyClipboard = AppSettings.shared.copyToClipboard
     @State private var playSound = AppSettings.shared.playSound
     @State private var showMagnifier = AppSettings.shared.showMagnifier
+    @State private var watermarkEnabled = AppSettings.shared.watermarkEnabled
     @State private var afterAction = AppSettings.shared.afterCaptureAction
+    @State private var translateTarget = AppSettings.shared.translateTargetLanguage
     @State private var historyRetention = AppSettings.shared.historyRetention
     @State private var savePath = AppSettings.shared.saveDirectory.path
     @State private var documentPath = AppSettings.shared.documentDirectory.path
@@ -32,6 +34,7 @@ struct SettingsPane: View {
     @State private var screen = AppSettings.shared.shortcut(for: .screen)
     @State private var delay = AppSettings.shared.shortcut(for: .delay)
     @State private var longShot = AppSettings.shared.shortcut(for: .longShot)
+    @State private var translate = AppSettings.shared.shortcut(for: .translate)
     @State private var record = AppSettings.shared.shortcut(for: .record)
     @State private var history = AppSettings.shared.shortcut(for: .history)
     @State private var hotkeyError: String?
@@ -88,11 +91,7 @@ struct SettingsPane: View {
                                         .padding(10)
                                         .background(
                                             RoundedRectangle(cornerRadius: 10, style: .continuous)
-                                                .fill(afterAction == action ? theme.accent.opacity(0.16) : theme.fill)
-                                        )
-                                        .overlay(
-                                            RoundedRectangle(cornerRadius: 10, style: .continuous)
-                                                .stroke(afterAction == action ? theme.accent.opacity(0.55) : theme.stroke, lineWidth: 1)
+                                                .fill(afterAction == action ? theme.accentSoft : theme.fill)
                                         )
                                     }
                                     .buttonStyle(.plain)
@@ -142,11 +141,41 @@ struct SettingsPane: View {
                             labeledToggle("显示放大镜与取色", isOn: $showMagnifier) {
                                 AppSettings.shared.showMagnifier = $0
                             }
+                            labeledToggle("截图加水印", isOn: $watermarkEnabled) {
+                                AppSettings.shared.watermarkEnabled = $0
+                                ToastController.shared.show($0 ? "已加水印" : "已取消水印")
+                            }
                             labeledToggle("在程序坞显示图标", isOn: $showInDock) { newValue in
                                 AppSettings.shared.showInDock = newValue
                                 NSApp.setActivationPolicy(newValue ? .regular : .accessory)
                             }
                         }
+                    }
+                }
+
+                settingsBlock(title: "截图翻译", subtitle: "自动识别截图文字的语言，再译到你选择的目标语言") {
+                    VStack(alignment: .leading, spacing: 10) {
+                        HStack {
+                            Text("目标语言")
+                                .font(.system(size: 12, weight: .semibold))
+                                .foregroundStyle(theme.textPrimary)
+                            Spacer()
+                            Picker("", selection: $translateTarget) {
+                                ForEach(TranslateTargetLanguage.allCases) { language in
+                                    Text(language.displayName).tag(language)
+                                }
+                            }
+                            .labelsHidden()
+                            .frame(width: 140)
+                            .onChange(of: translateTarget) { _, newValue in
+                                AppSettings.shared.translateTargetLanguage = newValue
+                                ToastController.shared.show("翻译目标：\(newValue.displayName)")
+                            }
+                        }
+                        Text("任务栏、菜单「翻译」、编辑器和历史里的翻译都会先识字、判断原文语言，再译到这里设置的语言。")
+                            .font(.system(size: 10))
+                            .foregroundStyle(theme.textMuted)
+                            .fixedSize(horizontal: false, vertical: true)
                     }
                 }
 
@@ -198,6 +227,7 @@ struct SettingsPane: View {
                         KeyRecorderButton(title: "全屏截图", shortcut: $screen) { save(.screen, $0) }
                         KeyRecorderButton(title: "延时截图", shortcut: $delay) { save(.delay, $0) }
                         KeyRecorderButton(title: "长截图", shortcut: $longShot) { save(.longShot, $0) }
+                        KeyRecorderButton(title: "翻译", shortcut: $translate) { save(.translate, $0) }
                         KeyRecorderButton(title: "屏幕录制", shortcut: $record) { save(.record, $0) }
                         KeyRecorderButton(title: "历史记录", shortcut: $history) { save(.history, $0) }
 
@@ -255,7 +285,7 @@ struct SettingsPane: View {
                 settingsBlock(title: "关于", subtitle: FlareBrand.tagline) {
                     VStack(alignment: .leading, spacing: 12) {
                         HStack(spacing: 12) {
-                            FlareBrandMark(size: 40, cornerRadius: 10)
+                            FlareBrandMark(size: 32, cornerRadius: 8)
                             VStack(alignment: .leading, spacing: 3) {
                                 Text(FlareBrand.name)
                                     .font(.system(size: 14, weight: .semibold))
@@ -300,7 +330,7 @@ struct SettingsPane: View {
             }
             .padding(.horizontal, 28)
             .padding(.top, 40)
-            .padding(.bottom, 40)
+            .padding(.bottom, 32)
             .foregroundStyle(theme.textPrimary)
         }
         .onAppear { reloadShortcuts() }
@@ -311,10 +341,12 @@ struct SettingsPane: View {
         .onReceive(NotificationCenter.default.publisher(for: .flareSettingsChanged)) { _ in
             reloadShortcuts()
             afterAction = AppSettings.shared.afterCaptureAction
+            translateTarget = AppSettings.shared.translateTargetLanguage
             format = AppSettings.shared.imageFormat
             copyClipboard = AppSettings.shared.copyToClipboard
             playSound = AppSettings.shared.playSound
             showMagnifier = AppSettings.shared.showMagnifier
+            watermarkEnabled = AppSettings.shared.watermarkEnabled
             historyRetention = AppSettings.shared.historyRetention
             savePath = AppSettings.shared.saveDirectory.path
             documentPath = AppSettings.shared.documentDirectory.path
@@ -462,7 +494,7 @@ struct SettingsPane: View {
 
     private func save(_ action: HotKeyAction, _ shortcut: HotKeyShortcut) {
         let others: [(HotKeyAction, HotKeyShortcut)] = [
-            (.area, area), (.window, window), (.screen, screen), (.delay, delay), (.longShot, longShot), (.record, record), (.history, history)
+            (.area, area), (.window, window), (.screen, screen), (.delay, delay), (.longShot, longShot), (.translate, translate), (.record, record), (.history, history)
         ]
         if let conflict = others.first(where: { $0.0 != action && $0.1 == shortcut }) {
             hotkeyError = "与「\(conflict.0.title)」冲突，请换一组快捷键"
@@ -484,6 +516,7 @@ struct SettingsPane: View {
         screen = AppSettings.shared.shortcut(for: .screen)
         delay = AppSettings.shared.shortcut(for: .delay)
         longShot = AppSettings.shared.shortcut(for: .longShot)
+        translate = AppSettings.shared.shortcut(for: .translate)
         record = AppSettings.shared.shortcut(for: .record)
         history = AppSettings.shared.shortcut(for: .history)
     }
@@ -573,21 +606,23 @@ private struct LogoPickerRow: View {
 
     private func logoThumb(_ image: NSImage?, selected: Bool, placeholder: String? = nil) -> some View {
         ZStack {
-            RoundedRectangle(cornerRadius: 12, style: .continuous)
-                .fill(Color(red: 0.12, green: 0.12, blue: 0.13))
             if let image {
                 Image(nsImage: image)
                     .resizable()
                     .interpolation(.high)
                     .aspectRatio(contentMode: .fit)
-                    .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
-            } else if let placeholder {
-                Text(placeholder)
-                    .font(.system(size: 10, weight: .semibold))
-                    .foregroundStyle(.white.opacity(0.7))
+            } else {
+                RoundedRectangle(cornerRadius: 12, style: .continuous)
+                    .fill(Color(red: 0.12, green: 0.12, blue: 0.13))
+                if let placeholder {
+                    Text(placeholder)
+                        .font(.system(size: 10, weight: .semibold))
+                        .foregroundStyle(.white.opacity(0.7))
+                }
             }
         }
-        .frame(width: 52, height: 52)
+        .frame(width: 40, height: 40)
+        .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
         .overlay(
             RoundedRectangle(cornerRadius: 12, style: .continuous)
                 .strokeBorder(selected ? theme.accent : theme.stroke, lineWidth: selected ? 2 : 1)

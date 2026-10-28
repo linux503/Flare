@@ -32,14 +32,14 @@ struct HistoryPane: View {
             }
             .padding(.horizontal, 28)
             .padding(.top, 40)
-            .padding(.bottom, 8)
+            .padding(.bottom, 6)
 
             if store.items.isEmpty {
                 VStack(spacing: 14) {
                     SnapIcon(.history, size: .display, opacity: 0.45)
                     Text("还没有截图")
-                        .font(.system(size: 16, weight: .semibold, design: .serif))
-                        .foregroundStyle(theme.textSecondary)
+                        .font(.system(size: 13, weight: .semibold))
+                        .foregroundStyle(theme.textPrimary)
                     Text("使用快捷键或侧栏「截图」开始")
                         .font(.caption)
                         .foregroundStyle(theme.textMuted)
@@ -57,7 +57,7 @@ struct HistoryPane: View {
                         }
                     }
                     .padding(.horizontal, 28)
-                    .padding(.bottom, 28)
+                    .padding(.bottom, 32)
                 }
             }
         }
@@ -128,6 +128,12 @@ struct HistoryCard: View {
                             TextFileService.reveal(url)
                         }
                     }
+                }
+            }
+            Button("截图翻译") {
+                guard let image = store.image(for: item) else { return }
+                Task { @MainActor in
+                    await PrivacyGuard.presentTranslate(from: image)
                 }
             }
             Button("删除", role: .destructive) {

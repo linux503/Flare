@@ -112,6 +112,10 @@ struct FlarePalette {
     var nsAppearance: NSAppearance? {
         NSAppearance(named: isDark ? .darkAqua : .aqua)
     }
+    var card: Color { isDark ? Color.white.opacity(0.06) : Color.white }
+    var accentSoft: Color { accent.opacity(isDark ? 0.16 : 0.10) }
+    var cardShadow: Color { isDark ? Color.black.opacity(0.35) : Color.black.opacity(0.08) }
+    var separator: Color { stroke }
 }
 
 private struct FlareThemeKey: EnvironmentKey {
@@ -220,6 +224,41 @@ struct ThemeCanvas: View {
             }
         }
         .ignoresSafeArea()
+    }
+}
+
+enum FlareWindowChrome {
+    static func apply(_ window: NSWindow) {
+        let palette = ThemeController.shared.palette
+        let opacity = CGFloat(ThemeController.shared.windowOpacity)
+        window.appearance = palette.nsAppearance
+        window.hasShadow = true
+        window.titlebarAppearsTransparent = true
+        if opacity < 0.995 {
+            window.isOpaque = false
+            window.backgroundColor = palette.windowNS.withAlphaComponent(opacity)
+        } else {
+            window.isOpaque = true
+            window.backgroundColor = palette.windowNS
+        }
+    }
+}
+
+struct FlareGlassPlate: View {
+    var cornerRadius: CGFloat = 16
+    var blur: Bool = false
+    @Environment(\.flareTheme) private var theme
+
+    var body: some View {
+        let shape = RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
+        shape.fill(theme.fill)
+            .overlay(shape.strokeBorder(theme.stroke, lineWidth: 1))
+    }
+}
+
+extension View {
+    func flareGlass(cornerRadius: CGFloat = 14) -> some View {
+        background { FlareGlassPlate(cornerRadius: cornerRadius) }
     }
 }
 

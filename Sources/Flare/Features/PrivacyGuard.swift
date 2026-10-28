@@ -19,16 +19,29 @@ enum PrivacyGuard {
         return ask(image: image, findings: findings)
     }
 
+    /// 翻译前过隐私闸门：本地拦截或改走脱敏图，避免把密钥原文送出去。
+    static func presentTranslate(from image: NSImage) async {
+        switch await plan(for: image) {
+        case .original:
+            TranslateWindowController.shared.present(image: image)
+        case .redacted(let redacted):
+            ToastController.shared.show("已用脱敏图翻译，原图未上传")
+            TranslateWindowController.shared.present(image: redacted)
+        case .localOnly:
+            ToastController.shared.show("已取消翻译，原图请只留在本机")
+        }
+    }
+
     /// 复制到剪贴板。返回 false 表示用户选择了仅本地保存。
     @discardableResult
     static func copyIfAllowed(_ image: NSImage, localOnlyMessage: String = "已取消分享，原图请只保存在本机") async -> Bool {
         switch await plan(for: image) {
         case .original:
-            ImageExporter.copyToClipboard(image)
+            ImageExporter.copyToClipboard(ScreenshotWatermark.applyIfNeeded(image))
             ToastController.shared.show("已复制到剪贴板")
             return true
         case .redacted(let redacted):
-            ImageExporter.copyToClipboard(redacted)
+            ImageExporter.copyToClipboard(ScreenshotWatermark.applyIfNeeded(redacted))
             ToastController.shared.show("已脱敏复制，原图未分享")
             return true
         case .localOnly:

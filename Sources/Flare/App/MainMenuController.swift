@@ -35,7 +35,9 @@ final class MainMenuController: NSObject {
             m.addItem(hotItem("全屏截图", .screen, #selector(captureScreen)))
             m.addItem(hotItem("延时截图", .delay, #selector(captureDelay)))
             m.addItem(hotItem("长截图", .longShot, #selector(captureLong)))
+            m.addItem(hotItem("翻译", .translate, #selector(captureTranslate)))
             m.addItem(item("网页证据快照…", #selector(showEvidence), key: "", glyph: .link))
+            m.addItem(item("临时邮箱", #selector(showMailbox), key: "", glyph: .mail))
             m.addItem(.separator())
             m.addItem(item("打开主面板", #selector(showHome), key: "o", glyph: .home))
             m.addItem(hotItem("历史记录", .history, #selector(showHistory)))
@@ -61,9 +63,12 @@ final class MainMenuController: NSObject {
                 m.addItem(item("取消倒计时", #selector(stopRecord), key: "", glyph: .close))
             } else {
                 // 与设置中心「屏幕录制」快捷键一致
-                m.addItem(hotItem("全屏录屏", .record, #selector(startRecordFull), glyph: .record))
+                m.addItem(hotItem("开始录屏", .record, #selector(startRecord), glyph: .record))
+                m.addItem(item("立即开始", #selector(startRecordNow), key: "", glyph: .play))
+                m.addItem(.separator())
+                m.addItem(item("全屏录屏", #selector(startRecordFull), key: "", glyph: .screen))
                 m.addItem(item("区域录屏", #selector(startRecordArea), key: "", glyph: .area))
-                m.addItem(item("立即开始（全屏）", #selector(startRecordNow), key: "", glyph: .play))
+                m.addItem(item("窗口录屏", #selector(startRecordWindow), key: "", glyph: .window))
             }
             m.addItem(.separator())
             m.addItem(item("打开录制面板", #selector(showRecord), key: "r", modifiers: [.command, .shift], glyph: .record))
@@ -85,6 +90,16 @@ final class MainMenuController: NSObject {
             return m
         }()
         main.addItem(newItem)
+
+        let toolsItem = NSMenuItem()
+        toolsItem.submenu = {
+            let m = NSMenu(title: "工具")
+            m.addItem(hotItem("翻译", .translate, #selector(captureTranslate)))
+            m.addItem(item("临时邮箱", #selector(showMailbox), key: "", glyph: .mail))
+            m.addItem(item("网页证据快照…", #selector(showEvidence), key: "", glyph: .link))
+            return m
+        }()
+        main.addItem(toolsItem)
 
         let windowItem = NSMenuItem()
         let windowMenu = NSMenu(title: "窗口")
@@ -146,10 +161,14 @@ final class MainMenuController: NSObject {
     @objc private func captureScreen() { CaptureCoordinator.shared.startFullScreenCapture() }
     @objc private func captureDelay() { CaptureCoordinator.shared.startDelayedCapture(seconds: 3) }
     @objc private func captureLong() { CaptureCoordinator.shared.startLongAreaCapture() }
+    @objc private func captureTranslate() { CaptureCoordinator.shared.startTranslateCapture() }
     @objc private func showEvidence() { EvidenceWindowController.shared.show() }
+    @objc private func startRecord() { ScreenRecorder.shared.start() }
     @objc private func startRecordFull() { ScreenRecorder.shared.startFullScreen() }
     @objc private func startRecordArea() { ScreenRecorder.shared.startArea() }
-    @objc private func startRecordNow() { ScreenRecorder.shared.startFullScreen(countdown: false) }
+    @objc private func startRecordWindow() { ScreenRecorder.shared.startWindow() }
+    @objc private func startRecordNow() { ScreenRecorder.shared.start(countdown: false) }
+    @objc private func showMailbox() { HomeWindowController.shared.showMailbox() }
     @objc private func stopRecord() { ScreenRecorder.shared.stop() }
     @objc private func discardRecord() { ScreenRecorder.shared.cancelAndDiscard() }
     @objc private func togglePauseRecord() { ScreenRecorder.shared.togglePause() }

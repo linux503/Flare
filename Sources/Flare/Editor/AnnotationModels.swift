@@ -26,7 +26,7 @@ enum AnnotationTool: String, CaseIterable, Identifiable {
         case .rect: return "矩形"
         case .ellipse: return "椭圆"
         case .text: return "文字"
-        case .blur: return "马赛克"
+        case .blur: return "打码"
         case .number: return "序号"
         case .step: return "步骤"
         }
@@ -269,8 +269,18 @@ final class AnnotationDocument: ObservableObject {
 
     func renderedImage() -> NSImage {
         let size = baseImage.size
-        let pixelW = max(Int(size.width * 2), 1)
-        let pixelH = max(Int(size.height * 2), 1)
+        let nativeScale: CGFloat = {
+            if let cg = baseImage.cgImage(forProposedRect: nil, context: nil, hints: nil) {
+                return max(CGFloat(cg.width) / max(size.width, 1), 1)
+            }
+            if let rep = baseImage.representations.max(by: { $0.pixelsWide < $1.pixelsWide }),
+               rep.pixelsWide > 0 {
+                return max(CGFloat(rep.pixelsWide) / max(size.width, 1), 1)
+            }
+            return NSScreen.main?.backingScaleFactor ?? 2
+        }()
+        let pixelW = max(Int((size.width * nativeScale).rounded()), 1)
+        let pixelH = max(Int((size.height * nativeScale).rounded()), 1)
         guard let rep = NSBitmapImageRep(
             bitmapDataPlanes: nil,
             pixelsWide: pixelW,
@@ -451,9 +461,10 @@ enum AnnotationRenderer {
 
     private static func drawPixelate(baseImage: NSImage, rect: CGRect) {
         guard rect.width > 1, rect.height > 1 else { return }
-        let block: CGFloat = 10
+        let shortest = min(rect.width, rect.height)
+        let block = max(16, min(28, (shortest / 5).rounded(.down)))
         NSGraphicsContext.saveGraphicsState()
-        NSBezierPath(rect: rect).addClip()
+        NSBezierPath(roundedRect: rect, xRadius: 3, yRadius: 3).addClip()
 
         var y = rect.minY
         while y < rect.maxY {
@@ -467,6 +478,8 @@ enum AnnotationRenderer {
             }
             y += block
         }
+        NSColor.black.withAlphaComponent(0.18).setFill()
+        NSBezierPath(rect: rect).fill()
         NSGraphicsContext.restoreGraphicsState()
     }
 

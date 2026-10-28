@@ -23,8 +23,8 @@ DOCS = ROOT / "docs"
 STYLES: dict[str, dict[str, tuple[float, float, float] | str]] = {
     "spark": {
         "label": "墨黑闪光",
-        "bg": (16, 16, 18),
-        "mark": (245, 246, 248),
+        "bg": (14, 15, 18),
+        "mark": (248, 249, 252),
         "accent": (255, 255, 255),
     },
     "iris": {
@@ -121,29 +121,25 @@ def frame_mask(nx: float, ny: float, thick: float = 0.09) -> float:
     return smoothstep(0.014, -0.010, ring)
 
 
-def spark_mask(nx: float, ny: float) -> float:
-    """八芒闪光：粗壮、贴满外框内侧。"""
-    def arms(x: float, y: float, reach: float, thick: float) -> float:
-        ax, ay = abs(x), abs(y)
-        th_h = thick * max(0.22, 1.0 - ax * (0.95 / reach))
-        dh = ay - th_h if ax < reach else 1e9
-        th_v = thick * max(0.22, 1.0 - ay * (0.95 / reach))
-        dv = ax - th_v if ay < reach else 1e9
-        return min(dh, dv)
+def cover(sdf: float, aa: float = 0.012) -> float:
+    return smoothstep(aa, -aa, sdf)
 
-    # 主臂几乎碰到外框内缘（框约在 0.79 内沿）
-    plus = arms(nx, ny, 0.78, 0.155)
-    s = 0.70710678
-    rx = nx * s - ny * s
-    ry = nx * s + ny * s
-    cross = arms(rx, ry, 0.68, 0.11)
-    core = sd_circle(nx, ny, 0.18)
-    diamond = abs(nx) + abs(ny) - 0.28
-    m = smoothstep(0.014, -0.012, plus)
-    m = max(m, smoothstep(0.012, -0.010, cross))
-    m = max(m, smoothstep(0.018, -0.012, core))
-    m = max(m, smoothstep(0.016, -0.012, diamond) * 0.9)
-    return min(1.0, m)
+
+def spark_arm(px: float, py: float, reach: float, thick: float) -> float:
+    """沿 X 轴的尖臂：根部厚、尖端收成针，不再平头截断。"""
+    ax, ay = abs(px), abs(py)
+    t = ax / max(reach, 1e-6)
+    if t >= 1.0:
+        return math.hypot(ax - reach, ay)
+    half = thick * (1.0 - t) ** 1.12
+    return ay - half
+
+
+def spark_mask(nx: float, ny: float, aa: float = 0.012) -> float:
+    """四角星芒：十字四臂，尖端收细，尽量铺满图标。"""
+    plus = min(spark_arm(nx, ny, 0.82, 0.155), spark_arm(ny, nx, 0.82, 0.155))
+    core = sd_circle(nx, ny, 0.09)
+    return cover(min(plus, core), aa)
 
 
 def iris_mark(nx: float, ny: float) -> float:
@@ -226,12 +222,12 @@ def style_mask(style: str, nx: float, ny: float) -> float:
 def mix_bg(style: str, gloss: float, vignette: float) -> tuple[float, float, float]:
     spec = STYLES[style]
     br, bg, bb = spec["bg"]  # type: ignore[misc]
-    lift = gloss * 14 - vignette * 10
-    edge = vignette * 6
+    lift = gloss * 18 - vignette * 8
+    edge = vignette * 5
     return (
         max(0, min(255, br + lift - edge)),
-        max(0, min(255, bg + lift * 0.85 - edge)),
-        max(0, min(255, bb + lift * 0.7 - edge * 0.8)),
+        max(0, min(255, bg + lift * 0.88 - edge)),
+        max(0, min(255, bb + lift * 0.78 - edge * 0.7)),
     )
 
 
@@ -248,29 +244,59 @@ def paint_mark_rgb(style: str, strength: float) -> tuple[float, float, float]:
     )
 
 
-def render(size: int = 1024, style: str = "spark") -> bytes:
+def downsample_box(src: bytes, src_size: int, factor: int) -> bytes:
+    dst = src_size // factor
+    out = bytearray(dst * dst * 4)
+    n = factor * factor
+    for y in range(dst):
+        for x in range(dst):
+            r = g = b = a = 0
+            for oy in range(factor):
+                for ox in range(factor):
+                    i = ((y * factor + oy) * src_size + (x * factor + ox)) * 4
+                    r += src[i]
+                    g += src[i + 1]
+                    b += src[i + 2]
+                    a += src[i + 3]
+            j = (y * dst + x) * 4
+            out[j] = r // n
+            out[j + 1] = g // n
+            out[j + 2] = b // n
+            out[j + 3] = a // n
+    return bytes(out)
+
+
+def render_pixels(size: int, style: str) -> bytes:
     rgba = bytearray(size * size * 4)
+    aa = 2.2 / size
+    edge_aa = 2.4 / size
     for y in range(size):
         py = 1.0 - (y + 0.5) / size * 2
         for x in range(size):
             px = (x + 0.5) / size * 2 - 1
-            sdf = squircle_sdf(px * 1.012, py * 1.012, n=5.2)
-            alpha = 1.0 - smoothstep(-0.030, 0.010, sdf)
+            sdf = squircle_sdf(px * 1.008, py * 1.008, n=5.4)
+            alpha = 1.0 - smoothstep(-edge_aa, edge_aa, sdf)
             if alpha < 0.002:
                 continue
 
-            gloss = smoothstep(-0.12, 0.95, py)
-            vignette = smoothstep(0.25, 1.15, math.hypot(px, py))
+            gloss = smoothstep(-0.08, 0.96, py)
+            vignette = smoothstep(0.28, 1.18, math.hypot(px, py))
             r, g, b = mix_bg(style, gloss, vignette)
+            rim = smoothstep(0.016, 0.0, abs(sdf + 0.010)) * (0.40 + gloss * 0.35)
+            r += rim * 14
+            g += rim * 14
+            b += rim * 16
 
-            mark = style_mask(style, px, py)
             if style == "spark":
-                spark = spark_mask(px, py)
+                spark = spark_mask(px, py, aa)
+                bloom = spark_mask(px, py, aa * 6.0) * 0.18
                 sr, sg, sb = paint_mark_rgb(style, spark)
-                r = r + (sr - r) * spark + spark * 12
-                g = g + (sg - g) * spark + spark * 12
-                b = b + (sb - b) * spark + spark * 12
+                sheen = max(0.0, 1.0 - math.hypot(px + 0.16, py - 0.22) * 1.8) * spark
+                r = r + (sr - r) * spark + bloom * 28 + sheen * 18
+                g = g + (sg - g) * spark + bloom * 28 + sheen * 18
+                b = b + (sb - b) * spark + bloom * 32 + sheen * 22
             else:
+                mark = style_mask(style, px, py)
                 mr, mg, mb = paint_mark_rgb(style, mark)
                 r = r + (mr - r) * mark
                 g = g + (mg - g) * mark
@@ -282,6 +308,14 @@ def render(size: int = 1024, style: str = "spark") -> bytes:
             rgba[i + 2] = int(max(0, min(255, b)))
             rgba[i + 3] = int(max(0, min(255, alpha * 255)))
     return bytes(rgba)
+
+
+def render(size: int = 1024, style: str = "spark", ssaa: int = 1) -> bytes:
+    factor = 2 if ssaa >= 2 else 1
+    pixels = render_pixels(size * factor, style)
+    if factor == 1:
+        return pixels
+    return downsample_box(pixels, size * factor, factor)
 
 
 def render_status_template(size: int = 128) -> bytes:
@@ -338,9 +372,9 @@ def export_web(master: Path) -> None:
 
 def main() -> None:
     print("==> Rendering Flare Pro logos (menu-bar tuned squircles)…")
-    write_png(OUT_PNG, 1024, 1024, render(1024, "spark"))
+    write_png(OUT_PNG, 1024, 1024, render(1024, "spark", ssaa=2))
     print(f"    PNG: {OUT_PNG}")
-    write_png(OUT_PLAIN, 256, 256, render(256, "spark"))
+    write_png(OUT_PLAIN, 256, 256, render(256, "spark", ssaa=2))
     for style, name in (
         ("spark", "LogoSpark"),
         ("iris", "LogoIris"),
@@ -349,9 +383,9 @@ def main() -> None:
         ("coral", "LogoCoral"),
     ):
         path = ROOT / "Resources" / f"{name}.png"
-        write_png(path, 512, 512, render(512, style))
+        write_png(path, 1024, 1024, render(1024, style, ssaa=2 if style == "spark" else 1))
         print(f"    Preset {name} ({STYLES[style]['label']}): {path}")
-    write_png(OUT_STATUS, 128, 128, render_status_template(128))
+    write_png(OUT_STATUS, 256, 256, render(256, "spark", ssaa=2))
     print(f"    StatusBar: {OUT_STATUS}")
     build_iconset(OUT_PNG)
     print(f"    ICNS: {OUT_ICNS}")

@@ -6,6 +6,7 @@ enum CaptureMode {
     case window
     case longArea
     case recordArea
+    case translate
 }
 
 /// 选区确认后的去向（工具栏按钮可覆盖默认设置）
@@ -16,6 +17,7 @@ enum CaptureFinishAction: Equatable {
     case save
     case pin
     case ocr
+    case translate
 
     static func from(after action: AfterCaptureAction) -> CaptureFinishAction {
         switch action {
@@ -38,7 +40,7 @@ final class CaptureOverlayController {
     var onAreaSelected: ((CGImage, CGFloat, CaptureFinishAction) -> Void)?
     var onLongAreaSelected: ((CGDirectDisplayID, CGRect, CGRect, CGFloat) -> Void)? // displayID, displayBounds, selectionRect, selectionScale
     var onWindowSelected: ((CGWindowID) -> Void)?
-    var onRecordAreaConfirmed: ((CGRect) -> Void)?
+    var onRecordAreaConfirmed: ((CGRect, CGWindowID?) -> Void)?
 
     private let window: NSWindow
     private let overlayView: CaptureOverlayView
@@ -89,8 +91,8 @@ final class CaptureOverlayController {
         overlay.onWindowSelected = { [weak self] id in
             self?.onWindowSelected?(id)
         }
-        overlay.onRecordAreaConfirmed = { [weak self] rect in
-            self?.onRecordAreaConfirmed?(rect)
+        overlay.onRecordAreaConfirmed = { [weak self] rect, windowID in
+            self?.onRecordAreaConfirmed?(rect, windowID)
         }
     }
 
@@ -115,7 +117,7 @@ final class CaptureOverlayView: NSView {
     var onAreaSelected: ((CGImage, CGFloat, CaptureFinishAction) -> Void)?
     var onLongAreaSelected: ((CGDirectDisplayID, CGRect, CGRect, CGFloat) -> Void)?
     var onWindowSelected: ((CGWindowID) -> Void)?
-    var onRecordAreaConfirmed: ((CGRect) -> Void)?
+    var onRecordAreaConfirmed: ((CGRect, CGWindowID?) -> Void)?
 
     private enum Handle: CaseIterable {
         case n, s, e, w, ne, nw, se, sw
@@ -140,18 +142,20 @@ final class CaptureOverlayView: NSView {
     private let mode: CaptureMode
     private let windows: [WindowCapturer.WindowInfo]
 
-    private var isAreaLike: Bool { mode == .area || mode == .longArea || mode == .recordArea }
+    private var isAreaLike: Bool { mode == .area || mode == .longArea || mode == .recordArea || mode == .translate }
 
     private var dragSession: DragSession?
     private var frozenSelection: CGRect?
     private var hoverWindow: WindowCapturer.WindowInfo?
     /// 双击吸附到系统窗口时，按窗口圆角裁切；手动画的矩形保持直角
     private var clipCropAsWindow = false
+    private var selectedWindowID: CGWindowID?
     private var mouseLocation: CGPoint = .zero
     private var tracking: NSTrackingArea?
     private var didComplete = false
     private var lastOverlayDraw = Date.distantPast
     private var actionBar: NSView?
+    private weak var watermarkButton: NSButton?
     private var hoverHandle: Handle?
 
     /// 就地标注：在选区内直接画，不跳独立编辑器
@@ -220,6 +224,13 @@ final class CaptureOverlayView: NSView {
         path.fill()
 
         if let selection {
+            if frozenSelection != nil, mode == .area {
+                ScreenshotWatermark.drawPreview(
+                    in: selection,
+                    sourceCG: captured.image,
+                    viewBounds: bounds
+                )
+            }
             accent.setStroke()
             let border = NSBezierPath(rect: selection)
             border.lineWidth = 2
@@ -230,12 +241,22 @@ final class CaptureOverlayView: NSView {
 
         if mode == .window, let hover = hoverWindow {
             drawWindowHighlight(hover)
-        } else if isAreaLike, frozenSelection == nil, dragSession == nil, let hover = hoverWindow {
-            drawWindowHighlight(hover)
-            drawHint("双击识别窗口")
+        } else if isAreaLike, frozenSelection == nil, dragSession == nil {
+            if let hover = hoverWindow {
+                drawWindowHighlight(hover)
+                let hint: String
+                switch mode {
+                case .translate: hint = "双击窗口后翻译"
+                case .recordArea: hint = "单击选择窗口 · 双击开始录制"
+                default: hint = "单击或双击识别窗口"
+                }
+                drawHint(hint)
+            } else if mode == .recordArea {
+                drawHint("单击窗口或拖动框选")
+            }
         }
 
-        if (mode == .area || mode == .longArea), AppSettings.shared.showMagnifier, frozenSelection == nil, dragSession == nil {
+        if (mode == .area || mode == .longArea || mode == .translate), AppSettings.shared.showMagnifier, frozenSelection == nil, dragSession == nil {
             drawMagnifier(at: mouseLocation)
         }
     }
@@ -531,11 +552,16 @@ final class CaptureOverlayView: NSView {
                frozen.insetBy(dx: -6, dy: -6).contains(point) {
                 if mode == .recordArea { commitRecordArea() }
                 else if mode == .longArea { commitLongSelection() }
+                else if mode == .translate { commitSelection(.translate) }
                 else if event.clickCount >= 3 {
                     commitSelection(.editor)
                 } else {
                     confirmSelectionFromDoubleClick()
                 }
+                return
+            }
+            if mode == .recordArea, snapSelectionToWindow(at: point, showBar: false) {
+                commitRecordArea()
                 return
             }
             if snapSelectionToWindow(at: point) { return }
@@ -548,7 +574,7 @@ final class CaptureOverlayView: NSView {
                 pendingSelectionTap = nil
                 hideActionBar()
                 dragSession = .resize(handle: handle, startRect: frozen, anchor: point)
-                clipCropAsWindow = false
+                clearWindowSnap()
                 return
             }
             if frozen.contains(point) {
@@ -563,7 +589,7 @@ final class CaptureOverlayView: NSView {
         pendingSelectionTap = nil
         hideActionBar()
         frozenSelection = nil
-        clipCropAsWindow = false
+        clearWindowSnap()
         dragSession = .create(start: point)
         needsDisplay = true
     }
@@ -579,7 +605,7 @@ final class CaptureOverlayView: NSView {
             if hypot(dx, dy) > 4 {
                 selectionTapMoved = true
                 dragSession = .move(startRect: pending.startRect, anchor: pending.anchor)
-                clipCropAsWindow = false
+                clearWindowSnap()
                 pendingSelectionTap = nil
                 NSCursor.arrow.set()
             } else {
@@ -626,7 +652,8 @@ final class CaptureOverlayView: NSView {
             dragSession = nil
             guard rect.width > 4, rect.height > 4 else {
                 // 无选区时单击：尝试吸附当前悬停窗口
-                if mode == .area, hypot(point.x - start.x, point.y - start.y) < 4,
+                if (mode == .area || mode == .translate || mode == .recordArea || mode == .longArea),
+                   hypot(point.x - start.x, point.y - start.y) < 4,
                    snapSelectionToWindow(at: point) {
                     return
                 }
@@ -680,6 +707,10 @@ final class CaptureOverlayView: NSView {
                 case "c": finishInlineAnnotate(.clipboard); return
                 case "s": finishInlineAnnotate(.save); return
                 case "p": finishInlineAnnotate(.pin); return
+                case "t": finishInlineAnnotate(.translate); return
+                case "w":
+                    if event.modifierFlags.contains(.shift) { toggleWatermark() }
+                    return
                 case "z":
                     if event.modifierFlags.contains(.shift) {
                         annotateDocument?.redo()
@@ -704,21 +735,43 @@ final class CaptureOverlayView: NSView {
             return
         }
 
-        if frozenSelection != nil, mode == .area {
+        if frozenSelection != nil, mode == .area || mode == .translate {
             let chars = event.charactersIgnoringModifiers ?? ""
             if event.modifierFlags.contains(.command) {
                 switch chars {
-                case "c": commitSelection(.clipboard); return
-                case "s": commitSelection(.save); return
+                case "c":
+                    if mode == .area { commitSelection(.clipboard) }
+                    return
+                case "s":
+                    if mode == .area { commitSelection(.save) }
+                    return
                 case "e":
-                    if event.modifierFlags.contains(.shift) {
-                        commitSelection(.editor)
-                    } else {
-                        enterInlineAnnotate()
+                    if mode == .area {
+                        if event.modifierFlags.contains(.shift) {
+                            commitSelection(.editor)
+                        } else {
+                            enterInlineAnnotate(tool: .line)
+                        }
                     }
                     return
-                case "p": commitSelection(.pin); return
-                case "t": commitSelection(.ocr); return
+                case "b":
+                    if mode == .area { enterInlineAnnotate(tool: .blur) }
+                    return
+                case "w":
+                    if mode == .area, event.modifierFlags.contains(.shift) {
+                        toggleWatermark()
+                    }
+                    return
+                case "p":
+                    if mode == .area { commitSelection(.pin) }
+                    return
+                case "t":
+                    if event.modifierFlags.contains(.shift) || mode == .translate {
+                        commitSelection(.translate)
+                    } else {
+                        commitSelection(.ocr)
+                    }
+                    return
                 default: break
                 }
             }
@@ -730,8 +783,10 @@ final class CaptureOverlayView: NSView {
                 commitRecordArea()
             } else if mode == .longArea {
                 commitLongSelection()
+            } else if mode == .translate {
+                commitSelection(.translate)
             } else if mode == .area, AppSettings.shared.afterCaptureAction == .editor {
-                enterInlineAnnotate()
+                enterInlineAnnotate(tool: .line)
             } else {
                 commitSelection(.useSettings)
             }
@@ -764,6 +819,7 @@ final class CaptureOverlayView: NSView {
         rect.origin.x = min(max(0, rect.origin.x), bounds.width - rect.width)
         rect.origin.y = min(max(0, rect.origin.y), bounds.height - rect.height)
         frozenSelection = rect
+        clearWindowSnap()
         needsDisplay = true
         if frozenSelection != nil {
             showActionBar(near: frozenSelection!)
@@ -776,7 +832,8 @@ final class CaptureOverlayView: NSView {
         guard !didComplete, let rect = frozenSelection ?? activeSelectionRect(), rect.width > 4, rect.height > 4 else { return }
         hideActionBar()
         didComplete = true
-        onRecordAreaConfirmed?(rect)
+        let windowID = clipCropAsWindow ? selectedWindowID : nil
+        onRecordAreaConfirmed?(rect, windowID)
     }
 
     private func commitLongSelection() {
@@ -795,7 +852,7 @@ final class CaptureOverlayView: NSView {
     private func confirmSelectionFromDoubleClick() {
         switch AppSettings.shared.afterCaptureAction {
         case .editor:
-            enterInlineAnnotate()
+            enterInlineAnnotate(tool: .line)
         case .clipboard:
             commitSelection(.clipboard)
         case .save:
@@ -832,11 +889,38 @@ final class CaptureOverlayView: NSView {
             bar.layer?.cornerCurve = .continuous
         }
 
-        if mode == .recordArea {
-            let start = makeBarButton(title: "开始录屏", glyph: .record, primary: true) { [weak self] in
+        if mode == .translate {
+            let start = makeBarButton(title: "翻译", glyph: .translate, primary: true) { [weak self] in
+                self?.commitSelection(.translate)
+            }
+            start.toolTip = "识别文字并翻译（双击选区 / 回车 / ⌘T）"
+            bar.addArrangedSubview(start)
+
+            addBarDivider(to: bar)
+
+            let again = makeBarButton(title: "重选", glyph: nil, primary: false) { [weak self] in
+                self?.barReselect()
+            }
+            again.toolTip = "清除选区重新框选"
+            bar.addArrangedSubview(again)
+
+            let cancel = makeBarButton(title: "取消", glyph: .close, primary: false) { [weak self] in
+                self?.barCancel()
+            }
+            cancel.toolTip = "退出 (Esc)"
+            bar.addArrangedSubview(cancel)
+        } else if mode == .recordArea {
+            let windowPick = selectedWindowID != nil
+            let start = makeBarButton(
+                title: windowPick ? "录制窗口" : "开始录屏",
+                glyph: windowPick ? .window : .record,
+                primary: true
+            ) { [weak self] in
                 self?.commitRecordArea()
             }
-            start.toolTip = "录制当前选区（双击选区 / 回车）"
+            start.toolTip = windowPick
+                ? "录制当前窗口（双击窗口可直接开始）"
+                : "录制当前选区（双击选区 / 回车）；单击窗口可吸附"
             bar.addArrangedSubview(start)
 
             addBarDivider(to: bar)
@@ -876,37 +960,55 @@ final class CaptureOverlayView: NSView {
         } else {
         let preferred = AppSettings.shared.afterCaptureAction
 
-        let annotate = makeBarButton(title: "标注", glyph: .edit, primary: preferred == .editor) { [weak self] in
-            self?.enterInlineAnnotate()
+        let annotate = makeBarButton(title: "标注", glyph: .edit, primary: true) { [weak self] in
+            self?.enterInlineAnnotate(tool: .line)
         }
-        annotate.toolTip = preferred == .editor ? "选区内快速标注（双击选区 / ⌘E）" : "选区内快速标注（⌘E）"
+        annotate.toolTip = preferred == .editor
+            ? "划线 / 箭头 / 文字（双击选区 / ⌘E）"
+            : "划线 / 箭头 / 文字（⌘E）"
         bar.addArrangedSubview(annotate)
 
-        let editor = makeBarButton(title: "编辑器", glyph: .edit, primary: false) { [weak self] in
-            self?.commitSelection(.editor)
+        let redact = makeBarButton(title: "打码", glyph: .toolBlur, primary: false, accent: true) { [weak self] in
+            self?.enterInlineAnnotate(tool: .blur)
         }
-        editor.toolTip = "打开完整编辑窗口（⌘⇧E）"
-        bar.addArrangedSubview(editor)
+        redact.toolTip = "拖选区域打马赛克（⌘B）"
+        bar.addArrangedSubview(redact)
+
+        let watermark = makeBarButton(title: "水印", glyph: .watermark, primary: false) { [weak self] in
+            self?.toggleWatermark()
+        }
+        watermark.toolTip = "开关高级水印（⌘⇧W）"
+        styleWatermarkButton(watermark)
+        watermarkButton = watermark
+        bar.addArrangedSubview(watermark)
+
+        let translate = makeBarButton(title: "翻译", glyph: .translate, primary: false) { [weak self] in
+            self?.commitSelection(.translate)
+        }
+        translate.toolTip = "识别语言并翻译 (⌘⇧T)"
+        bar.addArrangedSubview(translate)
 
         addBarDivider(to: bar)
 
-        let items: [(String, SnapGlyph, CaptureFinishAction, String)] = [
-            ("复制", .copy, .clipboard, preferred == .clipboard ? "复制到剪贴板（双击选区 / ⌘C）" : "复制到剪贴板 (⌘C)"),
-            ("保存", .save, .save, "保存到文件 (⌘S)"),
-            ("钉住", .pin, .pin, "钉在屏幕上 (⌘P)"),
-            ("OCR", .ocr, .ocr, "识别文字并保存 TXT (⌘T)")
-        ]
-
-        for (title, glyph, action, tip) in items {
-            let primary = (action == .clipboard && preferred == .clipboard)
-                || (action == .save && preferred == .save)
-                || (action == .pin && preferred == .pin)
-            let button = makeBarButton(title: title, glyph: glyph, primary: primary) { [weak self] in
-                self?.commitSelection(action)
-            }
-            button.toolTip = tip
-            bar.addArrangedSubview(button)
+        let copy = makeBarButton(
+            title: "复制",
+            glyph: .copy,
+            primary: preferred == .clipboard
+        ) { [weak self] in
+            self?.commitSelection(.clipboard)
         }
+        copy.toolTip = preferred == .clipboard ? "复制到剪贴板（双击选区 / ⌘C）" : "复制到剪贴板 (⌘C)"
+        bar.addArrangedSubview(copy)
+
+        let save = makeBarButton(
+            title: "保存",
+            glyph: .save,
+            primary: preferred == .save
+        ) { [weak self] in
+            self?.commitSelection(.save)
+        }
+        save.toolTip = "保存到文件 (⌘S)"
+        bar.addArrangedSubview(save)
 
         addBarDivider(to: bar)
 
@@ -953,9 +1055,39 @@ final class CaptureOverlayView: NSView {
     private func hideActionBar() {
         actionBar?.removeFromSuperview()
         actionBar = nil
+        watermarkButton = nil
     }
 
-    private func makeBarButton(title: String, glyph: SnapGlyph?, primary: Bool, compact: Bool = false, handler: @escaping () -> Void) -> NSButton {
+    private func toggleWatermark() {
+        AppSettings.shared.watermarkEnabled.toggle()
+        if let watermarkButton {
+            styleWatermarkButton(watermarkButton)
+        }
+        annotateCanvas?.showWatermark = AppSettings.shared.watermarkEnabled
+        annotateCanvas?.needsDisplay = true
+        needsDisplay = true
+        ToastController.shared.show(AppSettings.shared.watermarkEnabled ? "已加水印" : "已取消水印")
+    }
+
+    private func styleWatermarkButton(_ button: NSButton) {
+        let on = AppSettings.shared.watermarkEnabled
+        if on {
+            button.layer?.backgroundColor = NSColor(calibratedRed: 0.86, green: 0.72, blue: 0.46, alpha: 0.95).cgColor
+            button.contentTintColor = NSColor.black.withAlphaComponent(0.88)
+        } else {
+            button.layer?.backgroundColor = NSColor.white.withAlphaComponent(0.10).cgColor
+            button.contentTintColor = .white
+        }
+    }
+
+    private func makeBarButton(
+        title: String,
+        glyph: SnapGlyph?,
+        primary: Bool,
+        compact: Bool = false,
+        accent: Bool = false,
+        handler: @escaping () -> Void
+    ) -> NSButton {
         let b = ClosureButton(title: title, handler: handler)
         b.bezelStyle = .inline
         b.isBordered = false
@@ -965,8 +1097,16 @@ final class CaptureOverlayView: NSView {
         if #available(macOS 10.15, *) {
             b.layer?.cornerCurve = .continuous
         }
-        b.layer?.backgroundColor = (primary ? NSColor.white : NSColor.white.withAlphaComponent(0.10)).cgColor
-        b.contentTintColor = primary ? NSColor.black.withAlphaComponent(0.88) : .white
+        if accent {
+            b.layer?.backgroundColor = NSColor.systemOrange.withAlphaComponent(0.95).cgColor
+            b.contentTintColor = NSColor.black.withAlphaComponent(0.88)
+        } else if primary {
+            b.layer?.backgroundColor = NSColor.white.cgColor
+            b.contentTintColor = NSColor.black.withAlphaComponent(0.88)
+        } else {
+            b.layer?.backgroundColor = NSColor.white.withAlphaComponent(0.10).cgColor
+            b.contentTintColor = .white
+        }
         b.font = .systemFont(ofSize: compact ? 11 : 12, weight: .semibold)
         let iconSize: CGFloat = compact ? 10 : 11
         if let glyph, let img = FlareBrand.menuSymbol(glyph, pointSize: iconSize) {
@@ -977,10 +1117,10 @@ final class CaptureOverlayView: NSView {
         let width: CGFloat
         let height: CGFloat
         if compact {
-            width = title.count >= 3 ? 56 : (title.count >= 2 ? 48 : 40)
+            width = title.count >= 3 ? 56 : (title == "水印" || title == "翻译" ? 52 : (title.count >= 2 ? 48 : 40))
             height = 24
         } else {
-            width = title.count >= 3 ? 72 : (title == "OCR" ? 58 : (title.count >= 2 ? 64 : 52))
+            width = title.count >= 3 ? 72 : (title == "OCR" ? 58 : (title == "翻译" || title == "打码" || title == "水印" ? 68 : (title.count >= 2 ? 64 : 52)))
             height = 28
         }
         NSLayoutConstraint.activate([
@@ -991,8 +1131,13 @@ final class CaptureOverlayView: NSView {
     }
 
     private func makeAnnotateToolButton(tool: AnnotationTool, selected: Bool, handler: @escaping () -> Void) -> NSButton {
-        let isText = tool == .text
-        let b = ClosureButton(title: isText ? "文字" : "", handler: handler)
+        let label: String?
+        switch tool {
+        case .text: label = "文字"
+        case .blur: label = "打码"
+        default: label = nil
+        }
+        let b = ClosureButton(title: label ?? "", handler: handler)
         b.bezelStyle = .inline
         b.isBordered = false
         b.wantsLayer = true
@@ -1001,18 +1146,25 @@ final class CaptureOverlayView: NSView {
         if #available(macOS 10.15, *) {
             b.layer?.cornerCurve = .continuous
         }
-        b.layer?.backgroundColor = (selected ? NSColor.white : NSColor.white.withAlphaComponent(0.10)).cgColor
-        b.contentTintColor = selected ? NSColor.black.withAlphaComponent(0.88) : .white
-        if isText {
+        if tool == .blur, selected {
+            b.layer?.backgroundColor = NSColor.systemOrange.withAlphaComponent(0.95).cgColor
+            b.contentTintColor = NSColor.black.withAlphaComponent(0.88)
+        } else {
+            b.layer?.backgroundColor = (selected ? NSColor.white : NSColor.white.withAlphaComponent(0.10)).cgColor
+            b.contentTintColor = selected ? NSColor.black.withAlphaComponent(0.88) : .white
+        }
+        if label != nil {
             b.font = .systemFont(ofSize: 10, weight: .semibold)
-            b.image = nil
-            b.imagePosition = .noImage
+            b.image = FlareBrand.menuSymbol(tool.glyph, pointSize: 10)
+            b.imagePosition = .imageLeading
+            b.imageHugsTitle = true
         } else {
             b.image = FlareBrand.menuSymbol(tool.glyph, pointSize: 12)
             b.imagePosition = .imageOnly
         }
+        let width: CGFloat = tool == .blur ? 52 : (label == nil ? 28 : 36)
         NSLayoutConstraint.activate([
-            b.widthAnchor.constraint(equalToConstant: isText ? 36 : 28),
+            b.widthAnchor.constraint(equalToConstant: width),
             b.heightAnchor.constraint(equalToConstant: 28)
         ])
         return b
@@ -1022,7 +1174,7 @@ final class CaptureOverlayView: NSView {
         exitInlineAnnotate(keepSelection: false)
         hideActionBar()
         frozenSelection = nil
-        clipCropAsWindow = false
+        clearWindowSnap()
         dragSession = nil
         needsDisplay = true
         NSCursor.crosshair.set()
@@ -1036,7 +1188,7 @@ final class CaptureOverlayView: NSView {
 
     // MARK: - Inline annotate
 
-    private func enterInlineAnnotate() {
+    private func enterInlineAnnotate(tool: AnnotationTool = .line) {
         guard !didComplete, !isAnnotating, mode == .area,
               let rect = frozenSelection, rect.width > 8, rect.height > 8,
               let cropped = cropSelection(rect)
@@ -1048,12 +1200,13 @@ final class CaptureOverlayView: NSView {
 
         let base = ImageExporter.nsImage(from: cropped, scale: captured.scale)
         let doc = AnnotationDocument(image: base)
-        doc.tool = .line
+        doc.tool = tool
         annotateDocument = doc
 
         let canvas = AnnotationCanvasView(frame: rect)
         canvas.autoresizingMask = []
         canvas.document = doc
+        canvas.showWatermark = AppSettings.shared.watermarkEnabled
         canvas.wantsLayer = true
         canvas.layer?.cornerRadius = 2
         canvas.layer?.masksToBounds = true
@@ -1066,7 +1219,11 @@ final class CaptureOverlayView: NSView {
 
         showAnnotateBar(near: rect)
         needsDisplay = true
-        ToastController.shared.show("选区内标注 · 单击选文字 · Esc 返回")
+        if tool == .blur {
+            ToastController.shared.show("拖选区域打码 · Esc 返回")
+        } else {
+            ToastController.shared.show("选区内标注 · 单击选文字 · Esc 返回")
+        }
     }
 
     private func exitInlineAnnotate(keepSelection: Bool) {
@@ -1108,7 +1265,7 @@ final class CaptureOverlayView: NSView {
             (.pen, "画笔"),
             (.rect, "矩形"),
             (.text, "文字"),
-            (.blur, "马赛克")
+            (.blur, "打码：拖选区域打马赛克")
         ]
         for (tool, tip) in tools {
             let primary = tool == (annotateDocument?.tool ?? .line)
@@ -1175,6 +1332,20 @@ final class CaptureOverlayView: NSView {
 
         addBarDivider(to: bar)
 
+        let watermark = makeBarButton(title: "水印", glyph: .watermark, primary: false, compact: true) { [weak self] in
+            self?.toggleWatermark()
+        }
+        watermark.toolTip = "开关高级水印（⌘⇧W）"
+        styleWatermarkButton(watermark)
+        watermarkButton = watermark
+        bar.addArrangedSubview(watermark)
+
+        let translate = makeBarButton(title: "翻译", glyph: .translate, primary: false, compact: true) { [weak self] in
+            self?.finishInlineAnnotate(.translate)
+        }
+        translate.toolTip = "识别文字并翻译（⌘T）"
+        bar.addArrangedSubview(translate)
+
         let preferred = AppSettings.shared.afterCaptureAction
         let copy = makeBarButton(title: "复制", glyph: .copy, primary: preferred == .clipboard, compact: true) { [weak self] in
             self?.finishInlineAnnotate(.clipboard)
@@ -1188,19 +1359,7 @@ final class CaptureOverlayView: NSView {
         save.toolTip = "保存到文件 (⌘S)"
         bar.addArrangedSubview(save)
 
-        let pin = makeBarButton(title: "钉住", glyph: .pin, primary: preferred == .pin, compact: true) { [weak self] in
-            self?.finishInlineAnnotate(.pin)
-        }
-        pin.toolTip = "钉在屏幕上 (⌘P)"
-        bar.addArrangedSubview(pin)
-
-        let editor = makeBarButton(title: "编辑器", glyph: .edit, primary: preferred == .editor, compact: true) { [weak self] in
-            self?.finishInlineAnnotate(.editor)
-        }
-        editor.toolTip = "打开完整编辑窗口"
-        bar.addArrangedSubview(editor)
-
-        let done = makeBarButton(title: "完成", glyph: .success, primary: false, compact: true) { [weak self] in
+        let done = makeBarButton(title: "完成", glyph: .success, primary: preferred == .editor || preferred == .pin, compact: true) { [weak self] in
             self?.finishInlineAnnotate(.from(after: AppSettings.shared.afterCaptureAction))
         }
         done.toolTip = "按设置默认动作完成（回车）"
@@ -1252,7 +1411,12 @@ final class CaptureOverlayView: NSView {
         onAreaSelected?(cg, scale, action)
     }
 
-    private func snapSelectionToWindow(at point: CGPoint) -> Bool {
+    private func clearWindowSnap() {
+        clipCropAsWindow = false
+        selectedWindowID = nil
+    }
+
+    private func snapSelectionToWindow(at point: CGPoint, showBar: Bool = true) -> Bool {
         updateHoverWindow(at: point)
         guard let hover = hoverWindow else { return false }
         var local = convertFromScreenTopLeft(hover.bounds).intersection(bounds)
@@ -1262,8 +1426,11 @@ final class CaptureOverlayView: NSView {
         dragSession = nil
         frozenSelection = local
         clipCropAsWindow = true
+        selectedWindowID = hover.id
         needsDisplay = true
-        showActionBar(near: local)
+        if showBar {
+            showActionBar(near: local)
+        }
         updateCursor(at: point)
         return true
     }

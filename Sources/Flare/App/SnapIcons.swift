@@ -33,6 +33,7 @@ enum SnapGlyph: String, CaseIterable {
     case save
     case pin
     case ocr
+    case translate
     case close
     case plus
     case power
@@ -45,6 +46,8 @@ enum SnapGlyph: String, CaseIterable {
     case link
     case update
     case about
+    case mail
+    case more
     // 标注工具
     case toolSelect
     case toolPen
@@ -57,6 +60,7 @@ enum SnapGlyph: String, CaseIterable {
     case toolBlur
     case toolNumber
     case toolStep
+    case watermark
 
     /// 优先用系统符号；macOS 14–15 没有新符号时自动回退，避免空白图标
     var systemName: String { symbolCandidates[0] }
@@ -93,6 +97,7 @@ enum SnapGlyph: String, CaseIterable {
         case .save: return ["square.and.arrow.down"]
         case .pin: return ["pin"]
         case .ocr: return ["text.viewfinder", "doc.text.magnifyingglass", "text.magnifyingglass", "doc.text"]
+        case .translate: return ["translate", "character.bubble", "globe", "text.bubble"]
         case .close: return ["xmark"]
         case .plus: return ["plus.circle"]
         case .power, .quit: return ["power"]
@@ -104,6 +109,8 @@ enum SnapGlyph: String, CaseIterable {
         case .link: return ["link"]
         case .update: return ["arrow.down.circle"]
         case .about: return ["info.circle"]
+        case .mail: return ["envelope", "envelope.fill", "tray"]
+        case .more: return ["ellipsis.circle", "ellipsis"]
         case .toolSelect: return ["arrow.up.left.and.arrow.down.right", "arrow.up.left.and.down.right.magnifyingglass", "cursorarrow"]
         case .toolPen: return ["pencil.tip", "pencil"]
         case .toolHighlight: return ["highlighter", "pencil.tip"]
@@ -115,6 +122,7 @@ enum SnapGlyph: String, CaseIterable {
         case .toolBlur: return ["checkerboard.rectangle", "square.grid.3x3", "square.grid.2x2"]
         case .toolNumber: return ["number.circle", "number"]
         case .toolStep: return ["list.number", "list.bullet"]
+        case .watermark: return ["seal", "checkmark.seal", "signature", "sparkles"]
         }
     }
 
@@ -127,6 +135,52 @@ enum SnapGlyph: String, CaseIterable {
         return "circle"
     }
 
+    /// iOS 设置 App 那种彩色图标底
+    var iosTint: Color {
+        switch self {
+        case .area, .brand: return Color(red: 0.35, green: 0.34, blue: 0.84)
+        case .window: return Color(red: 0.35, green: 0.78, blue: 0.98)
+        case .screen: return Color(red: 0.35, green: 0.78, blue: 0.98)
+        case .delay: return Color(red: 1, green: 0.584, blue: 0)
+        case .longShot: return Color(red: 0.69, green: 0.32, blue: 0.87)
+        case .record, .stop: return Color(red: 1, green: 0.231, blue: 0.188)
+        case .play: return Color(red: 0.204, green: 0.78, blue: 0.349)
+        case .pause: return Color(red: 1, green: 0.584, blue: 0)
+        case .mic: return Color(red: 1, green: 0.231, blue: 0.188)
+        case .history: return Color(red: 1, green: 0.584, blue: 0)
+        case .settings: return Color(red: 0.557, green: 0.557, blue: 0.576)
+        case .documents, .txt: return Color(red: 0.557, green: 0.557, blue: 0.576)
+        case .word: return Color(red: 0.18, green: 0.46, blue: 0.85)
+        case .powerpoint: return Color(red: 0.87, green: 0.37, blue: 0.23)
+        case .spreadsheet: return Color(red: 0.20, green: 0.63, blue: 0.38)
+        case .folder: return Color(red: 0.039, green: 0.518, blue: 1)
+        case .permission: return Color(red: 0.204, green: 0.78, blue: 0.349)
+        case .success: return Color(red: 0.204, green: 0.78, blue: 0.349)
+        case .warning: return Color(red: 1, green: 0.584, blue: 0)
+        case .tip: return Color(red: 1, green: 0.80, blue: 0)
+        case .trash: return Color(red: 1, green: 0.231, blue: 0.188)
+        case .copy: return Color(red: 0.557, green: 0.557, blue: 0.576)
+        case .edit: return Color(red: 1, green: 0.80, blue: 0)
+        case .save: return Color(red: 0.039, green: 0.518, blue: 1)
+        case .pin: return Color(red: 1, green: 0.231, blue: 0.188)
+        case .ocr: return Color(red: 0.35, green: 0.34, blue: 0.84)
+        case .translate: return Color(red: 0.039, green: 0.518, blue: 1)
+        case .close: return Color(red: 0.557, green: 0.557, blue: 0.576)
+        case .plus: return Color(red: 0.204, green: 0.78, blue: 0.349)
+        case .power, .quit: return Color(red: 0.557, green: 0.557, blue: 0.576)
+        case .refresh, .relaunch, .update: return Color(red: 0.039, green: 0.518, blue: 1)
+        case .undo, .redo: return Color(red: 0.557, green: 0.557, blue: 0.576)
+        case .stroke: return Color(red: 1, green: 0.80, blue: 0)
+        case .link: return Color(red: 0.557, green: 0.557, blue: 0.576)
+        case .about: return Color(red: 0.039, green: 0.518, blue: 1)
+        case .mail, .more: return Color(red: 0.039, green: 0.518, blue: 1)
+        case .home: return Color(red: 0.35, green: 0.34, blue: 0.84)
+        case .watermark: return Color(red: 0.86, green: 0.72, blue: 0.46)
+        case .toolSelect, .toolPen, .toolHighlight, .toolArrow, .toolLine, .toolRect, .toolEllipse, .toolText, .toolBlur, .toolNumber, .toolStep:
+            return Color(red: 0.039, green: 0.518, blue: 1)
+        }
+    }
+
     static func forCapture(_ action: HotKeyAction) -> SnapGlyph {
         switch action {
         case .area: return .area
@@ -134,6 +188,7 @@ enum SnapGlyph: String, CaseIterable {
         case .screen: return .screen
         case .delay: return .delay
         case .longShot: return .longShot
+        case .translate: return .translate
         case .record: return .record
         case .history: return .history
         }
@@ -191,7 +246,6 @@ struct SnapIcon: View {
     }
 }
 
-/// 玻璃底图标槽：卡片 / 主按钮统一容器
 struct SnapIconWell: View {
     let glyph: SnapGlyph
     var side: CGFloat = 48

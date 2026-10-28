@@ -131,6 +131,28 @@ struct FlareSecondaryButton: View {
     }
 }
 
+struct FlareChevron: View {
+    @Environment(\.flareTheme) private var theme
+    var body: some View {
+        Image(systemName: "chevron.right")
+            .font(.system(size: 11, weight: .semibold))
+            .foregroundStyle(theme.textMuted)
+    }
+}
+
+struct FlareSectionCard<Content: View>: View {
+    var padding: CGFloat = 12
+    var cornerRadius: CGFloat = 14
+    @ViewBuilder var content: () -> Content
+
+    var body: some View {
+        content()
+            .padding(padding)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .flareGlass(cornerRadius: cornerRadius)
+    }
+}
+
 struct ThemePickerGrid: View {
     @ObservedObject private var themeController = ThemeController.shared
     @Environment(\.flareTheme) private var theme

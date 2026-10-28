@@ -21,7 +21,7 @@ struct RecordPane: View {
                     title: "屏幕录制",
                     subtitle: recorder.isRecording
                         ? (recorder.isPaused ? "已暂停 · \(format(recorder.elapsedSeconds))" : "录制中 · \(format(recorder.elapsedSeconds))")
-                        : "全屏 / 区域 · H.264 MOV · 快捷键 \(AppSettings.shared.shortcut(for: .record).displayString)"
+                        : "全屏 / 区域 / 窗口 · H.264 MOV · 快捷键 \(AppSettings.shared.shortcut(for: .record).displayString)"
                 )
 
                 heroCard
@@ -90,11 +90,14 @@ struct RecordPane: View {
                     FlareSecondaryButton(title: "区域录屏", glyph: .area) {
                         ScreenRecorder.shared.startArea()
                     }
+                    FlareSecondaryButton(title: "窗口录屏", glyph: .window) {
+                        ScreenRecorder.shared.startWindow()
+                    }
                     FlareSecondaryButton(title: "立即开始", glyph: .play) {
-                        if recordMode == .area {
-                            ScreenRecorder.shared.startArea(countdown: false)
-                        } else {
-                            ScreenRecorder.shared.startFullScreen(countdown: false)
+                        switch recordMode {
+                        case .area: ScreenRecorder.shared.startArea(countdown: false)
+                        case .window: ScreenRecorder.shared.startWindow(countdown: false)
+                        case .fullScreen: ScreenRecorder.shared.startFullScreen(countdown: false)
                         }
                     }
                 }
@@ -233,7 +236,7 @@ struct RecordPane: View {
             let audio = AppSettings.shared.recordAudioSource.toastHint
             return "浮动条可停止 · MOV\(audio)"
         }
-        return "全屏录当前显示器，或框选区域录制"
+        return "全屏、框选区域，或点选窗口录制"
     }
 
     private func tipChip(_ key: String, _ label: String) -> some View {

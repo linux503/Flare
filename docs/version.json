@@ -1,22 +1,24 @@
 {
-  "version": "1.3.22",
-  "build": 36,
-  "notes": "截图选区箭头光标；默认划线；编辑工具栏精简。",
+  "version": "1.3.23",
+  "build": 37,
+  "notes": "请立即升级：临时邮箱、截图翻译、窗口录屏，以及多项稳定性修复。",
   "changelog": [
-    "选区内部光标改为箭头（不再用手型）",
-    "标注默认工具改为划线",
-    "截图内编辑与编辑器工具栏精简为常用项",
-    "延续 1.3.21 的 Logo、菜单与更新提醒"
+    "临时邮箱：验证码自动出现，复制地址一键可用",
+    "截图工具栏可直接翻译，敏感信息先过隐私闸门",
+    "录屏可选全屏 / 区域 / 窗口，开始前可改默认范围",
+    "窗口透明度与毛玻璃恢复可用",
+    "修复连点录屏、邮件串台、翻译结果被旧请求覆盖"
   ],
   "changelogEn": [
-    "Selection cursor is now an arrow instead of a hand",
-    "Default annotation tool is line (划线)",
-    "Capture and editor toolbars trimmed to essentials",
-    "Keeps 1.3.21 logo, menu, and update banner work"
+    "Temporary mailbox: codes appear automatically, one-tap copy",
+    "Translate from the capture toolbar, with privacy gating first",
+    "Record full screen, region, or a window; pick the default first",
+    "Window opacity and glass restored",
+    "Fixes for double-start recording, mailbox races, and stale translations"
   ],
-  "downloadURL": "https://linux503.github.io/Flare/downloads/Flare-Pro-1.3.22-Universal.dmg",
+  "downloadURL": "https://linux503.github.io/Flare/downloads/Flare-Pro-1.3.23-Universal.dmg",
   "windowsURL": "https://github.com/linux503/Flare/releases/download/v1.3.19/Flare-Windows-x64.exe",
   "androidURL": "https://linux503.github.io/Flare/downloads/Flare-Android.apk",
   "minOS": "14.0",
-  "publishedAt": "2026-09-09"
+  "publishedAt": "2026-10-29"
 }

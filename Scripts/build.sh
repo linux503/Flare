@@ -20,10 +20,16 @@ rm -rf "$BUILD_DIR" "$APP_DIR"
 rm -rf "$ROOT/dist/Snap.app"
 mkdir -p "$BUILD_DIR" "$MACOS" "$RESOURCES"
 
+# Downloads / iCloud 会在编译中改文件时间，先快照再编
+SNAP="/tmp/flare-build-$$"
+trap 'rm -rf "$SNAP"' EXIT
+mkdir -p "$SNAP/Sources"
+rsync -a "$ROOT/Sources/Flare/" "$SNAP/Sources/Flare/"
+
 SOURCES=()
 while IFS= read -r f; do
   SOURCES+=("$f")
-done < <(find "$ROOT/Sources/Flare" -name '*.swift' | sort)
+done < <(find "$SNAP/Sources/Flare" -name '*.swift' | sort)
 
 build_arch_main() {
   local arch="$1"
@@ -39,12 +45,16 @@ build_arch_main() {
     -framework SwiftUI \
     -framework ScreenCaptureKit \
     -framework Vision \
+    -framework NaturalLanguage \
+    -framework CryptoKit \
+    -Xlinker -weak_framework -Xlinker Translation \
     -framework WebKit \
     -framework PDFKit \
     -framework Security \
     -framework AVFoundation \
     -framework Carbon \
     -framework CoreGraphics \
+    -framework CoreImage \
     -framework QuartzCore \
     -framework UniformTypeIdentifiers \
     -o "$out" \
@@ -95,14 +105,15 @@ elif [[ -f "$ROOT/Resources/FlareIcon.png" ]]; then
   sips -z 128 128 "$ROOT/Resources/FlareIcon.png" --out "$RESOURCES/StatusBarIcon.png" >/dev/null
 fi
 if [[ -f "$ROOT/Resources/FlareIcon.png" ]]; then
-  # 缩到 256 边长再打包，兼顾清晰度与体积
-  sips -z 256 256 "$ROOT/Resources/FlareIcon.png" --out "$RESOURCES/FlareIcon.png" >/dev/null
+  cp "$ROOT/Resources/FlareIcon.png" "$RESOURCES/FlareIcon.png"
 fi
 for logo in LogoSpark LogoIris LogoBolt LogoDusk LogoCoral; do
   if [[ -f "$ROOT/Resources/${logo}.png" ]]; then
-    sips -z 256 256 "$ROOT/Resources/${logo}.png" --out "$RESOURCES/${logo}.png" >/dev/null
+    cp "$ROOT/Resources/${logo}.png" "$RESOURCES/${logo}.png"
   fi
 done
+
+"$ROOT/Scripts/embed_translate_vault.sh" "$RESOURCES/FlareVault.dat"
 
 xattr -cr "$APP_DIR" 2>/dev/null || true
 

@@ -25,6 +25,14 @@ final class CaptureCoordinator: ObservableObject {
         }
     }
 
+    /// 框选截图 → 自动识字、判断语言，再译到设置中的目标语言
+    func startTranslateCapture() {
+        beginCapture {
+            let frames = try await ScreenCapturer.captureActiveDisplay()
+            await MainActor.run { self.presentTranslateOverlays(frames: frames) }
+        }
+    }
+
     /// 长截图：自动滚动 + 多段拼接
     func startLongAreaCapture() {
         beginCapture {
@@ -237,6 +245,20 @@ final class CaptureCoordinator: ObservableObject {
         }
     }
 
+    private func presentTranslateOverlays(frames: [CapturedFrame]) {
+        dismissOverlays()
+        let windows = WindowCapturer.listWindows()
+        overlayControllers = frames.map { frame in
+            let controller = CaptureOverlayController(frame: frame, mode: .translate, windows: windows)
+            controller.onCancel = { [weak self] in self?.cancelCapture() }
+            controller.onAreaSelected = { [weak self] image, scale, _ in
+                self?.completeArea(cgImage: image, scale: scale, action: .translate)
+            }
+            controller.show()
+            return controller
+        }
+    }
+
     private func presentLongOverlays(frames: [CapturedFrame]) {
         dismissOverlays()
         let windows = WindowCapturer.listWindows()
@@ -384,7 +406,16 @@ final class CaptureCoordinator: ObservableObject {
         case .clipboard: resolved = .clipboard
         case .save: resolved = .save
         case .pin: resolved = .pin
-        case .ocr: resolved = .editor
+        case .ocr, .translate: resolved = .editor
+        }
+
+        if action == .translate {
+            HistoryStore.shared.add(image: image)
+            DispatchQueue.main.async { StatusBarController.shared?.reloadMenu() }
+            Task { @MainActor in
+                await PrivacyGuard.presentTranslate(from: image)
+            }
+            return
         }
 
         if action == .ocr {
@@ -438,12 +469,12 @@ final class CaptureCoordinator: ObservableObject {
         switch resolved {
         case .editor:
             if let outbound, AppSettings.shared.copyToClipboard {
-                ImageExporter.copyToClipboard(outbound)
+                ImageExporter.copyToClipboard(ScreenshotWatermark.applyIfNeeded(outbound))
             }
             EditorWindowController.shared.present(image: outbound ?? local)
         case .clipboard:
             if let outbound {
-                ImageExporter.copyToClipboard(outbound)
+                ImageExporter.copyToClipboard(ScreenshotWatermark.applyIfNeeded(outbound))
                 if case .redacted = plan {
                     ToastController.shared.show("已脱敏复制，原图仅保存在本地历史", fontSize: 11)
                 } else {
@@ -454,9 +485,9 @@ final class CaptureCoordinator: ObservableObject {
             }
         case .save:
             do {
-                let url = try ImageExporter.save(local)
+                let url = try ImageExporter.save(ScreenshotWatermark.applyIfNeeded(local))
                 if let outbound, AppSettings.shared.copyToClipboard {
-                    ImageExporter.copyToClipboard(outbound)
+                    ImageExporter.copyToClipboard(ScreenshotWatermark.applyIfNeeded(outbound))
                 }
                 if case .redacted = plan {
                     ToastController.shared.show("原图已保存，剪贴板为脱敏图")
@@ -474,7 +505,7 @@ final class CaptureCoordinator: ObservableObject {
             return
         case .pin:
             if let outbound {
-                PinWindowController.shared.pin(image: outbound)
+                PinWindowController.shared.pin(image: ScreenshotWatermark.applyIfNeeded(outbound))
                 if case .redacted = plan {
                     ToastController.shared.show("已钉出脱敏图，原图仅在本地历史")
                 }

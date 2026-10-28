@@ -111,11 +111,19 @@ final class StatusBarController: NSObject {
             menu.addItem(hot("区域截图", .area, #selector(captureArea)))
             menu.addItem(hot("窗口截图", .window, #selector(captureWindow)))
             menu.addItem(hot("全屏截图", .screen, #selector(captureScreen)))
+            menu.addItem(hot("翻译", .translate, #selector(captureTranslate)))
             menu.addItem(FlareMenu.separator())
-            menu.addItem(hot("开始录屏", .record, #selector(startRecordFull), glyph: .record))
+            menu.addItem(hot("开始录屏", .record, #selector(startRecord), glyph: .record))
+            menu.addItem(item("全屏录屏", .screen, "", [], #selector(startRecordFull)))
+            menu.addItem(item("区域录屏", .area, "", [], #selector(startRecordArea)))
+            menu.addItem(item("窗口录屏", .window, "", [], #selector(startRecordWindow)))
         }
 
         menu.addItem(FlareMenu.separator())
+        if rec.isRecording || rec.isCountingDown {
+            menu.addItem(hot("翻译", .translate, #selector(captureTranslate)))
+        }
+        menu.addItem(item("临时邮箱", .mail, "", [], #selector(showMailbox)))
         menu.addItem(item("打开主面板", .home, "", [], #selector(showHome)))
         menu.addItem(item("偏好设置…", .settings, ",", [.command], #selector(showSettings)))
         menu.addItem(item("退出 \(FlareBrand.name)", .quit, "q", [.command], #selector(quit)))
@@ -145,7 +153,12 @@ final class StatusBarController: NSObject {
     @objc private func captureArea() { onCaptureArea() }
     @objc private func captureWindow() { onCaptureWindow() }
     @objc private func captureScreen() { onCaptureScreen() }
+    @objc private func captureTranslate() { CaptureCoordinator.shared.startTranslateCapture() }
+    @objc private func startRecord() { ScreenRecorder.shared.start() }
     @objc private func startRecordFull() { ScreenRecorder.shared.startFullScreen() }
+    @objc private func startRecordArea() { ScreenRecorder.shared.startArea() }
+    @objc private func startRecordWindow() { ScreenRecorder.shared.startWindow() }
+    @objc private func showMailbox() { HomeWindowController.shared.showMailbox() }
     @objc private func stopRecord() { ScreenRecorder.shared.stop() }
     @objc private func discardRecord() { ScreenRecorder.shared.cancelAndDiscard() }
     @objc private func togglePauseRecord() { ScreenRecorder.shared.togglePause() }

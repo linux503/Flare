@@ -12,6 +12,8 @@ final class ScreenRecorder: NSObject, ObservableObject {
     @Published private(set) var isPaused = false
     @Published private(set) var isCountingDown = false
     @Published private(set) var elapsedSeconds: Int = 0
+    private var isStarting = false
+    private var hiddenWindows: [NSWindow] = []
 
     private var stream: SCStream?
     private var writer: AVAssetWriter?
@@ -49,6 +51,7 @@ final class ScreenRecorder: NSObject, ObservableObject {
         let pointWidth: CGFloat
         let pointHeight: CGFloat
         let isArea: Bool
+        let windowID: CGWindowID?
     }
 
     private override init() {
@@ -63,6 +66,8 @@ final class ScreenRecorder: NSObject, ObservableObject {
     func toggle() {
         if isRecording || isCountingDown {
             stop()
+        } else if isStarting {
+            return
         } else {
             start()
         }
@@ -74,6 +79,8 @@ final class ScreenRecorder: NSObject, ObservableObject {
             startFullScreen(countdown: countdown)
         case .area:
             startArea(countdown: countdown)
+        case .window:
+            startWindow(countdown: countdown)
         }
     }
 
@@ -86,27 +93,33 @@ final class ScreenRecorder: NSObject, ObservableObject {
     }
 
     func startArea(countdown: Bool? = nil) {
+        beginPickedRecord(windowOnly: false, countdown: countdown)
+    }
+
+    func startWindow(countdown: Bool? = nil) {
+        beginPickedRecord(windowOnly: true, countdown: countdown)
+    }
+
+    private func beginPickedRecord(windowOnly: Bool, countdown: Bool?) {
         guard Permissions.prepareForCapture() else { return }
-        guard !isRecording, !isCountingDown else { return }
+        guard !isRecording, !isCountingDown, !isStarting else { return }
         guard !CaptureCoordinator.shared.isCapturing else {
             ToastController.shared.show("请先结束截图再录屏")
             return
         }
-        RecordAreaPicker.pick(
-            onPicked: { [weak self] selection in
-                guard let self else { return }
-                self.pendingPlan = RecordPlan(
-                    displayID: selection.displayID,
-                    sourceRect: selection.sourceRect,
-                    displayScale: selection.scale,
-                    pointWidth: selection.sourceRect.width,
-                    pointHeight: selection.sourceRect.height,
-                    isArea: true
-                )
-                self.startOnMain(countdown: countdown)
-            },
-            onCancel: {}
-        )
+        RecordAreaPicker.pick(windowOnly: windowOnly, onPicked: { [weak self] selection in
+            guard let self else { return }
+            self.pendingPlan = RecordPlan(
+                displayID: selection.displayID,
+                sourceRect: selection.sourceRect,
+                displayScale: selection.scale,
+                pointWidth: max(selection.sourceRect.width, 1),
+                pointHeight: max(selection.sourceRect.height, 1),
+                isArea: !windowOnly,
+                windowID: selection.windowID
+            )
+            self.startOnMain(countdown: countdown)
+        }, onCancel: {})
     }
 
     func stop() {
@@ -151,7 +164,7 @@ final class ScreenRecorder: NSObject, ObservableObject {
     // MARK: - Private
 
     private func startOnMain(countdown: Bool?) {
-        guard !isRecording, !isCountingDown else { return }
+        guard !isRecording, !isCountingDown, !isStarting else { return }
         guard !CaptureCoordinator.shared.isCapturing else {
             ToastController.shared.show("请先结束截图再录屏")
             return
@@ -164,11 +177,13 @@ final class ScreenRecorder: NSObject, ObservableObject {
             return
         }
 
+        isStarting = true
         Task {
             do {
                 try await beginRecording()
             } catch {
                 await MainActor.run {
+                    self.isStarting = false
                     Permissions.handleCaptureFailure(error: error)
                     ToastController.shared.show("无法开始录屏：\(error.localizedDescription)")
                     self.cleanup(failed: true)
@@ -187,11 +202,13 @@ final class ScreenRecorder: NSObject, ObservableObject {
             guard let self else { return }
             self.isCountingDown = false
             self.pendingCountdown = false
+            self.isStarting = true
             Task {
                 do {
                     try await self.beginRecording()
                 } catch {
                     await MainActor.run {
+                        self.isStarting = false
                         Permissions.handleCaptureFailure(error: error)
                         ToastController.shared.show("无法开始录屏：\(error.localizedDescription)")
                         self.cleanup(failed: true)
@@ -235,7 +252,8 @@ final class ScreenRecorder: NSObject, ObservableObject {
                 displayScale: scale,
                 pointWidth: pointW,
                 pointHeight: pointH,
-                isArea: false
+                isArea: false,
+                windowID: nil
             )
         }
 
@@ -243,9 +261,16 @@ final class ScreenRecorder: NSObject, ObservableObject {
             throw RecorderError.noDisplay
         }
 
+        let scWindow = plan.windowID.flatMap { id in
+            content.windows.first(where: { $0.windowID == id })
+        }
+        let recordingWindow = scWindow != nil
+        let pointWidth = max(scWindow?.frame.width ?? plan.pointWidth, 1)
+        let pointHeight = max(scWindow?.frame.height ?? plan.pointHeight, 1)
+
         let quality = AppSettings.shared.recordQuality
-        let rawPixelW = Int((plan.pointWidth * plan.displayScale * quality.resolutionScale).rounded())
-        let rawPixelH = Int((plan.pointHeight * plan.displayScale * quality.resolutionScale).rounded())
+        let rawPixelW = Int((pointWidth * plan.displayScale * quality.resolutionScale).rounded())
+        let rawPixelH = Int((pointHeight * plan.displayScale * quality.resolutionScale).rounded())
         let width = evenDimension(rawPixelW)
         let height = evenDimension(rawPixelH)
 
@@ -256,7 +281,7 @@ final class ScreenRecorder: NSObject, ObservableObject {
             f.dateFormat = "yyyy-MM-dd HH.mm.ss"
             return f.string(from: Date())
         }()
-        let kind = plan.isArea ? "区域录屏" : "录屏"
+        let kind = recordingWindow ? "窗口录屏" : (plan.isArea ? "区域录屏" : "录屏")
         let url = dir.appendingPathComponent("\(FlareBrand.name) \(kind) \(stamp).mov")
         if FileManager.default.fileExists(atPath: url.path) {
             try FileManager.default.removeItem(at: url)
@@ -349,14 +374,16 @@ final class ScreenRecorder: NSObject, ObservableObject {
         timelineLock.unlock()
 
         let filter: SCContentFilter
-        if AppSettings.shared.recordExcludeFlare,
+        if let scWindow {
+            filter = SCContentFilter(desktopIndependentWindow: scWindow)
+        } else if AppSettings.shared.recordExcludeFlare,
            let app = content.applications.first(where: { $0.bundleIdentifier == Bundle.main.bundleIdentifier }) {
             filter = SCContentFilter(display: display, excludingApplications: [app], exceptingWindows: [])
         } else {
             filter = SCContentFilter(display: display, excludingWindows: [])
         }
         let config = SCStreamConfiguration()
-        if let rect = plan.sourceRect {
+        if !recordingWindow, let rect = plan.sourceRect {
             config.sourceRect = rect
         }
         config.width = width
@@ -375,7 +402,10 @@ final class ScreenRecorder: NSObject, ObservableObject {
 
         await MainActor.run {
             if AppSettings.shared.recordHideFlareWindows {
-                NSApp.windows.filter { $0.isVisible && $0.level != .statusBar }.forEach { $0.orderOut(nil) }
+                self.hiddenWindows = NSApp.windows.filter {
+                    $0.isVisible && $0.level != .statusBar && $0.level != .screenSaver
+                }
+                self.hiddenWindows.forEach { $0.orderOut(nil) }
             }
         }
 
@@ -393,13 +423,20 @@ final class ScreenRecorder: NSObject, ObservableObject {
             if #available(macOS 15.0, *) {
                 // 麦克风走 ScreenCaptureKit，与画面同一时钟
             } else {
-                try await MainActor.run {
-                    try self.startMicrophoneEngine()
+                do {
+                    try await MainActor.run {
+                        try self.startMicrophoneEngine()
+                    }
+                } catch {
+                    try? await stream.stopCapture()
+                    self.stream = nil
+                    throw error
                 }
             }
         }
 
         await MainActor.run {
+            self.isStarting = false
             self.isRecording = true
             self.isPaused = false
             self.isCountingDown = false
@@ -411,7 +448,8 @@ final class ScreenRecorder: NSObject, ObservableObject {
             RecordingHUDController.shared.show()
             self.startTimer()
             let audioHint = AppSettings.shared.recordAudioSource.toastHint
-            ToastController.shared.show("录屏中\(audioHint) · ⌘⌥R 停止 · Esc 停止")
+            let scope = recordingWindow ? "正在录制窗口" : "录屏中"
+            ToastController.shared.show("\(scope)\(audioHint) · ⌘⌥R 停止 · Esc 停止")
             StatusBarController.shared?.refreshRecordingAppearance()
             MainMenuController.shared?.reload()
         }
@@ -504,16 +542,24 @@ final class ScreenRecorder: NSObject, ObservableObject {
                     ToastController.shared.show(finishResult.2?.localizedDescription ?? "录屏保存失败")
                 }
             }
-            // 恢复被隐藏的窗口
-            if AppSettings.shared.recordHideFlareWindows {
-                HomeWindowController.shared.show(tab: .record)
-            }
+            self.restoreHiddenWindows(showRecord: AppSettings.shared.recordHideFlareWindows)
             StatusBarController.shared?.refreshRecordingAppearance()
             MainMenuController.shared?.reload()
         }
     }
 
+    private func restoreHiddenWindows(showRecord: Bool) {
+        for window in hiddenWindows {
+            window.orderFront(nil)
+        }
+        hiddenWindows.removeAll()
+        if showRecord {
+            HomeWindowController.shared.show(tab: .record)
+        }
+    }
+
     private func cleanup(failed: Bool) {
+        isStarting = false
         stream = nil
         writer = nil
         videoInput = nil
@@ -538,9 +584,9 @@ final class ScreenRecorder: NSObject, ObservableObject {
             try? FileManager.default.removeItem(at: url)
         }
         outputURL = nil
-        if failed, AppSettings.shared.recordHideFlareWindows {
+        if failed {
             DispatchQueue.main.async {
-                HomeWindowController.shared.show(tab: .record)
+                self.restoreHiddenWindows(showRecord: AppSettings.shared.recordHideFlareWindows)
             }
         }
     }

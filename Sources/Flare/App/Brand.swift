@@ -5,7 +5,7 @@ enum FlareBrand {
     /// 对外品牌名
     static let name = "Flare Pro"
     static let tagline = "一拍即得"
-    static let version = "1.3.22"
+    static let version = "1.3.23"
 
     /// 官网 / 下载 / 更新源（GitHub Pages）
     static let websiteURL = "https://linux503.github.io/Flare/"
@@ -64,30 +64,25 @@ enum FlareBrand {
 struct FlareBrandMark: View {
     var size: CGFloat = 36
     var cornerRadius: CGFloat = 9
-    @Environment(\.flareTheme) private var theme
     @State private var stamp = 0
 
     var body: some View {
-        ZStack {
-            RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
-                .fill(Color(red: 0.12, green: 0.12, blue: 0.13))
-            Group {
-                if let image = FlareBrand.appMarkImage() {
-                    Image(nsImage: image)
-                        .resizable()
-                        .interpolation(.high)
-                        .aspectRatio(contentMode: .fit)
-                } else {
+        Group {
+            if let image = FlareBrand.appMarkImage() {
+                Image(nsImage: image)
+                    .resizable()
+                    .interpolation(.high)
+                    .aspectRatio(contentMode: .fit)
+            } else {
+                ZStack {
+                    RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
+                        .fill(Color(red: 0.12, green: 0.12, blue: 0.13))
                     SnapIcon(.brand, size: .title, opacity: 1, tint: .white)
                 }
             }
         }
         .frame(width: size, height: size)
         .clipShape(RoundedRectangle(cornerRadius: cornerRadius, style: .continuous))
-        .overlay(
-            RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
-                .strokeBorder(theme.strokeStrong, lineWidth: 1)
-        )
         .id(stamp)
         .onReceive(NotificationCenter.default.publisher(for: .flareSettingsChanged)) { _ in
             stamp += 1

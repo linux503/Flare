@@ -91,6 +91,9 @@ build_one() {
     -framework SwiftUI \
     -framework ScreenCaptureKit \
     -framework Vision \
+    -framework NaturalLanguage \
+    -framework CryptoKit \
+    -Xlinker -weak_framework -Xlinker Translation \
     -framework AVFoundation \
     -framework Carbon \
     -framework CoreGraphics \
@@ -123,13 +126,15 @@ if [[ -f "$ROOT/Resources/StatusBarIcon.png" ]]; then
   cp "$ROOT/Resources/StatusBarIcon.png" "$APP/Contents/Resources/StatusBarIcon.png"
 fi
 if [[ -f "$ROOT/Resources/FlareIcon.png" ]]; then
-  sips -z 256 256 "$ROOT/Resources/FlareIcon.png" --out "$APP/Contents/Resources/FlareIcon.png" >/dev/null
+  cp "$ROOT/Resources/FlareIcon.png" "$APP/Contents/Resources/FlareIcon.png"
 fi
 for logo in LogoSpark LogoIris LogoBolt LogoDusk LogoCoral; do
   if [[ -f "$ROOT/Resources/${logo}.png" ]]; then
-    sips -z 256 256 "$ROOT/Resources/${logo}.png" --out "$APP/Contents/Resources/${logo}.png" >/dev/null
+    cp "$ROOT/Resources/${logo}.png" "$APP/Contents/Resources/${logo}.png"
   fi
 done
+
+"$ROOT/Scripts/embed_translate_vault.sh" "$APP/Contents/Resources/FlareVault.dat"
 
 xattr -cr "$APP" 2>/dev/null || true
 

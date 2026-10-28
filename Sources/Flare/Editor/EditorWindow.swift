@@ -21,9 +21,7 @@ final class EditorWindowController {
 
     private func applyWindowChrome() {
         guard let window, window.isVisible else { return }
-        let theme = ThemeController.shared.palette
-        window.appearance = theme.nsAppearance
-        window.backgroundColor = theme.windowNS
+        FlareWindowChrome.apply(window)
     }
 
     func present(image: NSImage) {
@@ -37,6 +35,7 @@ final class EditorWindowController {
             onSave: { [weak self] in self?.save() },
             onPin: { [weak self] in self?.pin() },
             onOCR: { [weak self] in self?.runOCR() },
+            onTranslate: { [weak self] in self?.runTranslate() },
             onClose: { [weak self] in self?.close() }
         )
         .environment(\.flareTheme, theme)
@@ -67,8 +66,7 @@ final class EditorWindowController {
             self.window = window
             window.makeKeyAndOrderFront(nil)
         }
-        window?.appearance = theme.nsAppearance
-        window?.backgroundColor = theme.windowNS
+        applyWindowChrome()
         NSApp.activate(ignoringOtherApps: true)
     }
 
@@ -96,7 +94,8 @@ final class EditorWindowController {
     }
 
     private func save() {
-        guard let image = document?.renderedImage() else { return }
+        guard let rendered = document?.renderedImage() else { return }
+        let image = ScreenshotWatermark.applyIfNeeded(rendered)
         let panel = NSSavePanel()
         panel.allowedContentTypes = [.png, .jpeg, .tiff]
         panel.nameFieldStringValue = "\(FlareBrand.name) \(formattedDate()).png"
@@ -126,14 +125,21 @@ final class EditorWindowController {
         Task { @MainActor in
             switch await PrivacyGuard.plan(for: image) {
             case .original:
-                PinWindowController.shared.pin(image: image)
+                PinWindowController.shared.pin(image: ScreenshotWatermark.applyIfNeeded(image))
                 ToastController.shared.show("已钉在屏幕上")
             case .redacted(let redacted):
-                PinWindowController.shared.pin(image: redacted)
+                PinWindowController.shared.pin(image: ScreenshotWatermark.applyIfNeeded(redacted))
                 ToastController.shared.show("已钉出脱敏图")
             case .localOnly:
                 ToastController.shared.show("已取消钉出，原图请只留在本机")
             }
+        }
+    }
+
+    private func runTranslate() {
+        guard let image = document?.renderedImage() else { return }
+        Task { @MainActor in
+            await PrivacyGuard.presentTranslate(from: image)
         }
     }
 
@@ -177,7 +183,9 @@ struct EditorRootView: View {
     let onSave: () -> Void
     let onPin: () -> Void
     let onOCR: () -> Void
+    let onTranslate: () -> Void
     let onClose: () -> Void
+    @State private var watermarkOn = AppSettings.shared.watermarkEnabled
 
     private var theme: FlarePalette { themeController.palette }
 
@@ -208,7 +216,7 @@ struct EditorRootView: View {
                 HStack(spacing: 8) {
                     FlareBrandMark(size: 22, cornerRadius: 6)
                     Text(FlareBrand.name)
-                        .font(.system(size: 14, weight: .bold, design: .rounded))
+                        .font(.system(size: 13, weight: .semibold))
                         .foregroundStyle(theme.textPrimary)
                 }
 
@@ -300,11 +308,11 @@ struct EditorRootView: View {
 
     private var canvasArea: some View {
         ZStack {
-            CanvasHost(document: document)
+            CanvasHost(document: document, showWatermark: watermarkOn)
                 .padding(18)
                 .background(
                     RoundedRectangle(cornerRadius: 12, style: .continuous)
-                        .fill(theme.fill)
+                        .fill(theme.card)
                         .padding(10)
                 )
         }
@@ -314,7 +322,31 @@ struct EditorRootView: View {
     private var bottomBar: some View {
         HStack(spacing: 10) {
             actionButton("OCR 识字", glyph: .ocr, action: onOCR)
+            actionButton("翻译", glyph: .translate, action: onTranslate)
             actionButton("钉在屏幕", glyph: .pin, action: onPin)
+            Button {
+                watermarkOn.toggle()
+                AppSettings.shared.watermarkEnabled = watermarkOn
+                ToastController.shared.show(watermarkOn ? "已加水印" : "已取消水印")
+            } label: {
+                HStack(spacing: 5) {
+                    SnapIcon(
+                        .watermark,
+                        size: .caption,
+                        opacity: 0.9,
+                        tint: watermarkOn ? Color(nsColor: ScreenshotWatermark.gold) : theme.textPrimary
+                    )
+                    Text(watermarkOn ? "水印开" : "水印关")
+                        .font(.system(size: 12, weight: .medium))
+                }
+                .padding(.horizontal, 8)
+                .padding(.vertical, 5)
+                .background(watermarkOn ? Color(nsColor: ScreenshotWatermark.gold.withAlphaComponent(0.22)) : theme.fillStrong)
+                .foregroundStyle(watermarkOn ? Color(nsColor: ScreenshotWatermark.gold) : theme.textPrimary)
+                .clipShape(RoundedRectangle(cornerRadius: 7, style: .continuous))
+            }
+            .buttonStyle(.plain)
+            .help("复制 / 保存 / 钉住时叠加高级水印")
             Spacer()
             actionButton("复制", glyph: .copy, action: onCopy)
             Button(action: onSave) {
@@ -325,9 +357,8 @@ struct EditorRootView: View {
                 }
                 .padding(.horizontal, 14)
                 .padding(.vertical, 8)
-                .background(theme.inverseFill)
+                .background(theme.inverseFill, in: Capsule())
                 .foregroundStyle(theme.inverseText)
-                .clipShape(RoundedRectangle(cornerRadius: 8, style: .continuous))
             }
             .buttonStyle(.plain)
             .keyboardShortcut("s", modifiers: .command)
@@ -343,15 +374,31 @@ struct EditorRootView: View {
 
     private func toolButton(_ tool: AnnotationTool) -> some View {
         let selected = document.tool == tool
-        let isText = tool == .text
+        let labeled: String? = {
+            switch tool {
+            case .text: return "文字"
+            case .blur: return "打码"
+            default: return nil
+            }
+        }()
+        let selectedFill = tool == .blur ? Color.orange.opacity(0.95) : theme.inverseFill
+        let selectedTint: Color = tool == .blur ? Color.black.opacity(0.88) : theme.inverseText
         return Button {
             document.tool = tool
         } label: {
             Group {
-                if isText {
-                    Text("文字")
-                        .font(.system(size: 10, weight: .semibold))
-                        .foregroundStyle(selected ? theme.inverseText : theme.textSecondary)
+                if let labeled {
+                    HStack(spacing: 3) {
+                        SnapIcon(
+                            tool.glyph,
+                            size: .caption,
+                            opacity: 1,
+                            tint: selected ? selectedTint : theme.textSecondary
+                        )
+                        Text(labeled)
+                            .font(.system(size: 10, weight: .semibold))
+                            .foregroundStyle(selected ? selectedTint : theme.textSecondary)
+                    }
                 } else {
                     SnapIcon(
                         tool.glyph,
@@ -361,10 +408,10 @@ struct EditorRootView: View {
                     )
                 }
             }
-            .frame(width: isText ? 36 : 28, height: 28)
+            .frame(width: tool == .blur ? 52 : (labeled == nil ? 28 : 36), height: 28)
             .background(
-                RoundedRectangle(cornerRadius: 6, style: .continuous)
-                    .fill(selected ? theme.inverseFill : theme.fill)
+                RoundedRectangle(cornerRadius: 7, style: .continuous)
+                    .fill(selected ? selectedFill : theme.fillStrong)
             )
             .help(tool.title)
         }
@@ -397,10 +444,11 @@ struct EditorRootView: View {
 
 struct EditorBackground: View {
     @Environment(\.flareTheme) private var theme
+    @ObservedObject private var themeController = ThemeController.shared
 
     var body: some View {
         ZStack {
-            ThemeCanvas(palette: theme, opacity: 1)
+            ThemeCanvas(palette: theme, opacity: themeController.windowOpacity)
             Canvas { context, size in
                 let step: CGFloat = 16
                 let a = theme.isDark ? 0.035 : 0.045
@@ -423,6 +471,7 @@ struct EditorBackground: View {
 
 struct CanvasHost: NSViewRepresentable {
     @ObservedObject var document: AnnotationDocument
+    var showWatermark = false
 
     func makeNSView(context: Context) -> NSScrollView {
         let scroll = NSScrollView()
@@ -433,6 +482,7 @@ struct CanvasHost: NSViewRepresentable {
 
         let canvas = AnnotationCanvasView(frame: NSRect(origin: .zero, size: document.baseImage.size))
         canvas.document = document
+        canvas.showWatermark = showWatermark
         canvas.onRequestOCRToTXT = {
             let image = document.renderedImage()
             Task {
@@ -458,6 +508,7 @@ struct CanvasHost: NSViewRepresentable {
 
     func updateNSView(_ scroll: NSScrollView, context: Context) {
         context.coordinator.canvas?.document = document
+        context.coordinator.canvas?.showWatermark = showWatermark
         context.coordinator.canvas?.frame = NSRect(origin: .zero, size: document.baseImage.size)
         context.coordinator.canvas?.needsDisplay = true
     }

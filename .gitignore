@@ -16,3 +16,8 @@ android/FlareAndroid/**/build/
 .mas
 __pycache__/
 .playwright-cli/
+# 翻译接口密钥，禁止入库
+Secrets/
+**/*translate-secrets.json
+.flare/
+Resources/FlareVault.dat

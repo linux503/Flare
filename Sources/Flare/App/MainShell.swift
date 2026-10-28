@@ -2,12 +2,13 @@ import AppKit
 import SwiftUI
 
 enum MainTab: String, CaseIterable, Identifiable {
-    case home, record, documents, history, settings
+    case home, record, mailbox, documents, history, settings
     var id: String { rawValue }
     var title: String {
         switch self {
         case .home: return "截图"
         case .record: return "录制"
+        case .mailbox: return "临时邮箱"
         case .documents: return "新建"
         case .history: return "历史"
         case .settings: return "设置"
@@ -17,6 +18,7 @@ enum MainTab: String, CaseIterable, Identifiable {
         switch self {
         case .home: return .area
         case .record: return .record
+        case .mailbox: return .mail
         case .documents: return .documents
         case .history: return .history
         case .settings: return .settings
@@ -100,6 +102,7 @@ final class HomeWindowController {
     func showHistory() { show(tab: .history) }
     func showDocuments() { show(tab: .documents) }
     func showRecord() { show(tab: .record) }
+    func showMailbox() { show(tab: .mailbox) }
 
     func presentPermissionSheet(preflight: Bool, works: Bool) {
         show(tab: .home)
@@ -204,6 +207,10 @@ struct MainShellView: View {
                             RecordPane()
                                 .flareTabTransition()
                                 .id(MainTab.record)
+                        case .mailbox:
+                            MailboxPane()
+                                .flareTabTransition()
+                                .id(MainTab.mailbox)
                         case .documents:
                             DocumentsPane()
                                 .flareTabTransition()

@@ -7,7 +7,7 @@
 
   const defaults = {
     mac: {
-      href: "./downloads/Flare-Pro-1.3.22-Universal.dmg",
+      href: "./downloads/Flare-Pro-1.3.23-Universal.dmg",
       file: "DMG · Universal",
       titleKey: "dl.macTitle",
       download: true,
@@ -136,6 +136,25 @@
   });
 
   const reduce = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+
+  const liveCards = document.querySelectorAll(".feature-card, .scenario-card, .dl-main, .platform-card, .cta-btn, .pill.large");
+  liveCards.forEach((el) => {
+    el.classList.add("fx-live");
+    if (reduce) return;
+    el.addEventListener("pointermove", (event) => {
+      const box = el.getBoundingClientRect();
+      const x = ((event.clientX - box.left) / box.width) * 100;
+      const y = ((event.clientY - box.top) / box.height) * 100;
+      el.style.setProperty("--mx", `${x.toFixed(1)}%`);
+      el.style.setProperty("--my", `${y.toFixed(1)}%`);
+      el.style.setProperty("--tilt-x", `${((50 - y) / 18).toFixed(2)}deg`);
+      el.style.setProperty("--tilt-y", `${((x - 50) / 16).toFixed(2)}deg`);
+    });
+    el.addEventListener("pointerleave", () => {
+      el.style.setProperty("--tilt-x", "0deg");
+      el.style.setProperty("--tilt-y", "0deg");
+    });
+  });
   const reveal = () => {
     const items = Array.from(document.querySelectorAll("[data-reveal]"));
     if (!items.length) return;
@@ -199,9 +218,12 @@
   let index = 0;
   let timer = 0;
 
-  const show = (i) => {
+  const show = (i, dir = 1) => {
     index = (i + frames.length) % frames.length;
-    frames.forEach((el, n) => el.classList.toggle("on", n === index));
+    root.style.setProperty("--slide", dir < 0 ? "-1" : "1");
+    frames.forEach((el, n) => {
+      el.classList.toggle("on", n === index);
+    });
     tabs.forEach((el, n) => {
       const on = n === index;
       el.classList.toggle("on", on);
@@ -212,15 +234,18 @@
   const arm = () => {
     if (reduce || frames.length < 2) return;
     clearInterval(timer);
-    timer = setInterval(() => show(index + 1), 5200);
+    timer = setInterval(() => show(index + 1, 1), 5200);
   };
 
   tabs.forEach((btn) => {
     btn.addEventListener("click", () => {
-      show(Number(btn.getAttribute("data-goto") || 0));
+      const next = Number(btn.getAttribute("data-goto") || 0);
+      show(next, next < index ? -1 : 1);
       arm();
     });
   });
+  root.addEventListener("pointerenter", () => clearInterval(timer));
+  root.addEventListener("pointerleave", arm);
   show(0);
   arm();
 })();

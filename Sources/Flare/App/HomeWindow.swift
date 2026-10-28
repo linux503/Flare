@@ -135,35 +135,50 @@ struct HomePane: View {
                 railItem("延时 3s", .delay, .delay) { CaptureCoordinator.shared.startDelayedCapture(seconds: 3) }
                 railItem("长截图", .longShot, .longShot) { CaptureCoordinator.shared.startLongAreaCapture() }
             }
-            Button {
+            featureRow(
+                title: "网页证据快照",
+                subtitle: "报价 · 订单 · 链上页面留档",
+                glyph: .link
+            ) {
                 EvidenceWindowController.shared.show()
-            } label: {
-                HStack(spacing: 9) {
-                    SnapIcon(.link, size: .body, opacity: 0.9, tint: theme.textPrimary)
-                    VStack(alignment: .leading, spacing: 2) {
-                        Text("网页证据快照")
-                            .font(.system(size: 12, weight: .semibold))
-                            .foregroundStyle(theme.textPrimary)
-                        Text("报价 · 订单 · 链上页面留档")
-                            .font(.system(size: 10, weight: .medium))
-                            .foregroundStyle(theme.textMuted)
-                    }
-                    Spacer(minLength: 0)
-                }
-                .padding(.horizontal, 10)
-                .padding(.vertical, 9)
-                .frame(maxWidth: .infinity, alignment: .leading)
-                .background(
-                    RoundedRectangle(cornerRadius: 12, style: .continuous)
-                        .fill(theme.fill)
-                        .overlay(
-                            RoundedRectangle(cornerRadius: 12, style: .continuous)
-                                .strokeBorder(theme.stroke, lineWidth: 1)
-                        )
-                )
             }
-            .buttonStyle(.plain)
+            featureRow(
+                title: "临时邮箱",
+                subtitle: "收验证码 · 无需注册",
+                glyph: .mail
+            ) {
+                HomeWindowController.shared.showMailbox()
+            }
         }
+    }
+
+    private func featureRow(title: String, subtitle: String, glyph: SnapGlyph, action: @escaping () -> Void) -> some View {
+        Button(action: action) {
+            HStack(spacing: 9) {
+                SnapIcon(glyph, size: .body, opacity: 0.9, tint: theme.textPrimary)
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(title)
+                        .font(.system(size: 12, weight: .semibold))
+                        .foregroundStyle(theme.textPrimary)
+                    Text(subtitle)
+                        .font(.system(size: 10, weight: .medium))
+                        .foregroundStyle(theme.textMuted)
+                }
+                Spacer(minLength: 0)
+            }
+            .padding(.horizontal, 10)
+            .padding(.vertical, 9)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .background(
+                RoundedRectangle(cornerRadius: 12, style: .continuous)
+                    .fill(theme.fill)
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 12, style: .continuous)
+                            .strokeBorder(theme.stroke, lineWidth: 1)
+                    )
+            )
+        }
+        .buttonStyle(.plain)
     }
 
     private func railItem(_ title: String, _ glyph: SnapGlyph, _ action: HotKeyAction, run: @escaping () -> Void) -> some View {

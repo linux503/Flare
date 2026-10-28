@@ -126,7 +126,7 @@ enum ScreenCapturer {
         let content = try await shareableContent()
         if let scWindow = content.windows.first(where: { $0.windowID == id }) {
             let filter = SCContentFilter(desktopIndependentWindow: scWindow)
-            let scale = NSScreen.main?.backingScaleFactor ?? 2.0
+            let scale = backingScale(intersecting: scWindow.frame)
             let pixelW = max(Int((scWindow.frame.width * scale).rounded()), 1)
             let pixelH = max(Int((scWindow.frame.height * scale).rounded()), 1)
             let config = SCStreamConfiguration()
@@ -149,6 +149,20 @@ enum ScreenCapturer {
             return (WindowCornerClipper.roundIfNeeded(image, scale: scale), scale)
         }
         throw CaptureError.windowNotFound
+    }
+
+    private static func backingScale(intersecting rect: CGRect) -> CGFloat {
+        var best: NSScreen?
+        var bestArea: CGFloat = 0
+        for screen in NSScreen.screens {
+            let hit = screen.frame.intersection(rect)
+            let area = max(0, hit.width) * max(0, hit.height)
+            if area > bestArea {
+                bestArea = area
+                best = screen
+            }
+        }
+        return (best ?? NSScreen.main)?.backingScaleFactor ?? 2.0
     }
 
     enum CaptureError: LocalizedError {

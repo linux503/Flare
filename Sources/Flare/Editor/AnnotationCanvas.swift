@@ -7,6 +7,9 @@ final class AnnotationCanvasView: NSView {
 
     var onRequestOCRToTXT: (() -> Void)?
     var onEscape: (() -> Void)?
+    var showWatermark = false {
+        didSet { needsDisplay = true }
+    }
 
     private var dragStart: CGPoint?
     private var dragCurrent: CGPoint?
@@ -28,15 +31,34 @@ final class AnnotationCanvasView: NSView {
         document.baseImage.draw(in: bounds)
         AnnotationRenderer.draw(items: document.items, in: bounds, baseImage: document.baseImage)
 
-        if let start = dragStart, let current = dragCurrent, let kind = draftingShape {
-            AnnotationRenderer.draw(
-                items: [.shape(id: UUID(), kind: kind, start: start, end: current, style: document.style)],
-                in: bounds,
-                baseImage: document.baseImage
-            )
+        if let start = dragStart, let current = dragCurrent {
+            if let kind = draftingShape {
+                AnnotationRenderer.draw(
+                    items: [.shape(id: UUID(), kind: kind, start: start, end: current, style: document.style)],
+                    in: bounds,
+                    baseImage: document.baseImage
+                )
+            } else if document.tool == .blur {
+                let rect = CGRect(
+                    x: min(start.x, current.x),
+                    y: min(start.y, current.y),
+                    width: abs(current.x - start.x),
+                    height: abs(current.y - start.y)
+                )
+                if rect.width > 4, rect.height > 4 {
+                    AnnotationRenderer.draw(
+                        items: [.blur(id: UUID(), rect: rect)],
+                        in: bounds,
+                        baseImage: document.baseImage
+                    )
+                }
+            }
         }
         if let id = document.selectedID, let item = document.items.first(where: { $0.id == id }) {
             AnnotationRenderer.drawSelection(for: item)
+        }
+        if showWatermark {
+            ScreenshotWatermark.drawPreview(in: bounds, source: document.baseImage)
         }
     }
 
@@ -187,10 +209,20 @@ final class AnnotationCanvasView: NSView {
                 needsDisplay = true
                 return
             case "c":
-                copyImage()
+                if onEscape != nil {
+                    nextResponder?.keyDown(with: event)
+                } else {
+                    copyImage()
+                }
                 return
-            default: break
+            default:
+                nextResponder?.keyDown(with: event)
+                return
             }
+        }
+        if event.keyCode == 36 || event.keyCode == 76 {
+            nextResponder?.keyDown(with: event)
+            return
         }
         if event.keyCode == 51 || event.keyCode == 117 {
             if document?.selectedID != nil {

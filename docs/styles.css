@@ -342,6 +342,9 @@ main { position: relative; z-index: 1; }
   color: var(--ink);
   background: rgba(12, 92, 77, 0.08);
 }
+.nav-links > a:active {
+  transform: scale(0.97);
+}
 
 .nav-tools {
   display: flex;
@@ -2144,11 +2147,18 @@ main { position: relative; z-index: 1; }
   position: absolute;
   inset: 0;
   opacity: 0;
-  transition: opacity 0.55s var(--ease);
+  transform: translateX(calc(var(--slide, 1) * 18px)) scale(0.985);
+  filter: blur(4px);
+  transition: opacity 0.55s var(--ease), transform 0.55s var(--ease), filter 0.55s var(--ease);
   pointer-events: none;
   z-index: 1;
 }
-.proof-frame.on { opacity: 1; z-index: 2; }
+.proof-frame.on {
+  opacity: 1;
+  z-index: 2;
+  transform: none;
+  filter: none;
+}
 .proof-frame img,
 .showcase .stage .proof-frame img {
   position: absolute;
@@ -2954,5 +2964,99 @@ main { position: relative; z-index: 1; }
   .get-card aside {
     border-top: 0;
     margin-top: 0.5rem;
+  }
+}
+
+/* ── Live pointer interaction ── */
+.fx-live {
+  --mx: 50%;
+  --my: 50%;
+  --tilt-x: 0deg;
+  --tilt-y: 0deg;
+}
+.feature-card.fx-live,
+.scenario-card.fx-live,
+.platform-card.fx-live,
+.dl-main.fx-live,
+.cta-btn.fx-live,
+.pill.large.fx-live {
+  transform: perspective(920px) rotateX(var(--tilt-x)) rotateY(var(--tilt-y));
+  transition:
+    transform 0.35s var(--ease),
+    box-shadow 0.35s ease,
+    background 0.25s ease;
+}
+.feature-card.fx-live:hover,
+.scenario-card.fx-live:hover,
+.platform-card.fx-live:hover {
+  transform: perspective(920px) rotateX(var(--tilt-x)) rotateY(var(--tilt-y)) translateY(-4px);
+  box-shadow: 0 20px 44px rgba(14, 20, 28, 0.12);
+}
+.dl-main.fx-live:hover,
+.cta-btn.fx-live:hover,
+.pill.large.fx-live:hover {
+  transform: perspective(920px) rotateX(var(--tilt-x)) rotateY(var(--tilt-y)) translateY(-2px);
+}
+.feature-card.fx-live:active,
+.scenario-card.fx-live:active,
+.platform-card.fx-live:active,
+.dl-main.fx-live:active,
+.cta-btn.fx-live:active,
+.pill.large.fx-live:active {
+  transform: perspective(920px) rotateX(var(--tilt-x)) rotateY(var(--tilt-y)) scale(0.985);
+  transition-duration: 0.12s;
+}
+.feature-card.fx-live > *,
+.dl-main.fx-live > *,
+.platform-card.fx-live > * {
+  position: relative;
+  z-index: 2;
+}
+.feature-card.fx-live::after,
+.dl-main.fx-live::after,
+.platform-card.fx-live::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  border-radius: inherit;
+  background: radial-gradient(240px circle at var(--mx) var(--my), rgba(255,255,255,0.42), transparent 48%);
+  opacity: 0;
+  transition: opacity 0.25s ease;
+  z-index: 0;
+}
+.feature-card.fx-live:hover::after,
+.dl-main.fx-live:hover::after,
+.platform-card.fx-live:hover::after {
+  opacity: 1;
+}
+.dl-tabs button,
+.switcher button {
+  transition: background 0.25s var(--ease), color 0.25s ease, transform 0.2s var(--ease);
+}
+.dl-tabs button:active,
+.switcher button:active {
+  transform: scale(0.96);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .feature-card.fx-live,
+  .scenario-card.fx-live,
+  .platform-card.fx-live,
+  .dl-main.fx-live,
+  .cta-btn.fx-live,
+  .pill.large.fx-live,
+  .feature-card.fx-live:hover,
+  .scenario-card.fx-live:hover,
+  .platform-card.fx-live:hover,
+  .dl-main.fx-live:hover,
+  .cta-btn.fx-live:hover,
+  .pill.large.fx-live:hover {
+    transform: none;
+  }
+  .proof-frame {
+    transform: none;
+    filter: none;
+    transition: opacity 0.2s ease;
   }
 }

@@ -49,7 +49,7 @@ file "$BIN" | grep -q "arm64" && ok "file 识别 arm64 切片" || bad "file 未�
 plutil -extract CFBundleDisplayName raw "$APP/Contents/Info.plist" | grep -q "Flare Pro" && ok "显示名 Flare Pro" || bad "显示名错误"
 plutil -extract CFBundleExecutable raw "$APP/Contents/Info.plist" | grep -q "FlarePro" && ok "可执行名 FlarePro" || bad "可执行名错误"
 plutil -extract CFBundleIdentifier raw "$APP/Contents/Info.plist" | grep -q "app.flare.screenshot" && ok "Bundle ID 保持稳定" || bad "Bundle ID 被改动"
-plutil -extract LSUIElement raw "$APP/Contents/Info.plist" 2>/dev/null | grep -q "false\|0" && ok "程序坞可见" || bad "程序坞被隐藏"
+plutil -extract LSUIElement raw "$APP/Contents/Info.plist" 2>/dev/null | grep -q "true\|1" && ok "菜单栏后台应用 (LSUIElement)" || bad "LSUIElement 配置异常"
 plutil -extract LSMinimumSystemVersion raw "$APP/Contents/Info.plist" | grep -q "14" && ok "最低系统 macOS 14" || bad "最低系统版本异常"
 
 [[ -f "$APP/Contents/Resources/AppIcon.icns" ]] && ok "AppIcon.icns 已打包" || bad "缺少图标"
