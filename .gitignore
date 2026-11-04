@@ -14,6 +14,8 @@ windows/**/obj/
 android/FlareAndroid/.gradle/
 android/FlareAndroid/**/build/
 .mas
+.build-mas/
+*.provisionprofile
 __pycache__/
 .playwright-cli/
 # 翻译接口密钥，禁止入库

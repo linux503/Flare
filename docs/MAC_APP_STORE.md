@@ -71,7 +71,7 @@ Resources/Flare_MacAppStore.provisionprofile
 - **副标题 / 描述**：说明截图、录屏、OCR、长截图等
 - **关键词**
 - **支持 URL**：`https://linux503.github.io/Flare/`
-- **隐私政策 URL**（没有的话需先加一页隐私政策到官网）
+- **隐私政策 URL**：`https://linux503.github.io/Flare/privacy.html`（源文件 `docs/privacy.html`）
 - **截图**：至少 1 张 Mac 截图（1280×800 或按后台要求尺寸）
 - **App 分级**
 - **出口合规**：本工程已在 Info.plist 写了 `ITSAppUsesNonExemptEncryption = false`（仅 HTTPS）

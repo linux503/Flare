@@ -148,7 +148,7 @@ PROVISION=""
 for cand in \
   "$ROOT/Resources/Flare_MacAppStore.provisionprofile" \
   "$ROOT/Resources/embedded.provisionprofile" \
-  "$HOME/Library/Developer/Xcode/UserData/Provisioning Profiles"/*.provisionprofile
+  "$HOME/Library/Developer/Xcode/UserData/Provisioning Profiles"/*.provisionprofile(N)
 do
   if [[ -f "$cand" ]]; then
     # 粗检是否含 bundle id

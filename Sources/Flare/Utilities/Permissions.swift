@@ -279,6 +279,9 @@ enum Permissions {
 
     @discardableResult
     static func relocateToApplicationsIfNeeded() -> Bool {
+        #if FLARE_MAS
+        return false
+        #else
         let apps = URL(fileURLWithPath: applicationsPath)
         guard FileManager.default.fileExists(atPath: apps.path) else { return false }
         guard !runningFromApplications() else { return false }
@@ -286,6 +289,7 @@ enum Permissions {
         ToastController.shared.show(L("正在切换到「应用程序」中的 %@…", FlareBrand.name))
         relaunchApp(at: apps)
         return true
+        #endif
     }
 
     static func relaunchApp() {
@@ -472,6 +476,22 @@ enum Permissions {
         let path = appURL.path
         appendLog("relaunch pid=\(pid) url=\(path) current=\(Bundle.main.bundlePath)")
 
+        #if FLARE_MAS
+        // 沙盒内不能派生 shell；用 LaunchServices 起一个新实例再退出自己
+        let config = NSWorkspace.OpenConfiguration()
+        config.createsNewApplicationInstance = true
+        config.arguments = ["--relaunch"]
+        NSWorkspace.shared.openApplication(at: appURL, configuration: config) { _, error in
+            DispatchQueue.main.async {
+                if let error {
+                    appendLog("relaunch open failed: \(error.localizedDescription)")
+                    ToastController.shared.show("请按 ⌘Q 完全退出后重新打开")
+                    return
+                }
+                NSApp.terminate(nil)
+            }
+        }
+        #else
         // 不能对正在运行的自己调 NSWorkspace.openApplication：系统往往只是激活当前实例，
         // 随后 terminate 就把唯一进程杀掉，看起来像「重启了但没回来」。
         // 先拉起一个脱离会话的助手，等本进程退出后再 open。
@@ -503,6 +523,7 @@ enum Permissions {
             appendLog("relaunch spawn failed: \(error.localizedDescription)")
             ToastController.shared.show(L("请手动完全退出后，从「应用程序」重新打开"))
         }
+        #endif
     }
 
     private static func shellQuote(_ value: String) -> String {
@@ -563,6 +584,9 @@ enum Permissions {
 
     private static func codesignDump() -> String? {
         if let cached = cachedCodesignDump { return cached }
+        #if FLARE_MAS
+        return nil
+        #else
         let task = Process()
         task.executableURL = URL(fileURLWithPath: "/usr/bin/codesign")
         task.arguments = ["-dv", "--verbose=2", Bundle.main.bundleURL.path]
@@ -579,6 +603,7 @@ enum Permissions {
         } catch {
             return nil
         }
+        #endif
     }
 
     private static func codesignField(_ dump: String, _ key: String) -> String? {
