@@ -329,10 +329,12 @@ struct SettingsPane: View {
                         }
 
                         HStack(spacing: 8) {
-                            FlarePrimaryButton(title: checkingUpdate ? L("检查中…") : L("检查更新"), glyph: .refresh) {
-                                Task { await runUpdateCheck() }
+                            if !UpdateChecker.isMacAppStoreBuild {
+                                FlarePrimaryButton(title: checkingUpdate ? L("检查中…") : L("检查更新"), glyph: .refresh) {
+                                    Task { await runUpdateCheck() }
+                                }
+                                .disabled(checkingUpdate)
                             }
-                            .disabled(checkingUpdate)
 
                             FlareSecondaryButton(title: L("官网"), glyph: .home) {
                                 openURL(FlareBrand.websiteURL)
@@ -344,7 +346,9 @@ struct SettingsPane: View {
 
                         VStack(alignment: .leading, spacing: 6) {
                             linkRow(L("官方网站"), FlareBrand.websiteURL)
-                            linkRow(L("下载页面"), FlareBrand.downloadURL)
+                            if !UpdateChecker.isMacAppStoreBuild {
+                                linkRow(L("下载页面"), FlareBrand.downloadURL)
+                            }
                             linkRow(L("问题反馈"), FlareBrand.supportEmail)
                         }
                         .padding(.top, 4)

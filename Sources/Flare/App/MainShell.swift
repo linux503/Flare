@@ -333,12 +333,14 @@ struct MainShellView: View {
                         .font(.system(size: 11, weight: .medium, design: .monospaced))
                         .foregroundStyle(theme.textMuted.opacity(0.8))
                     Spacer()
-                    Button(L("检查更新")) {
-                        Task { await UpdateChecker.checkAndPrompt() }
+                    if !UpdateChecker.isMacAppStoreBuild {
+                        Button(L("检查更新")) {
+                            Task { await UpdateChecker.checkAndPrompt() }
+                        }
+                        .font(.system(size: 10, weight: .medium))
+                        .foregroundStyle(theme.textMuted)
+                        .buttonStyle(.plain)
                     }
-                    .font(.system(size: 10, weight: .medium))
-                    .foregroundStyle(theme.textMuted)
-                    .buttonStyle(.plain)
                 }
                 .padding(.horizontal, 14)
             }

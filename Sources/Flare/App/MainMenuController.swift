@@ -16,7 +16,9 @@ final class MainMenuController: NSObject {
         let appMenu = NSMenu()
         appMenu.addItem(item(L("关于 %@", FlareBrand.name), #selector(showAbout), key: "", glyph: .about))
         appMenu.addItem(.separator())
-        appMenu.addItem(item(L("检查更新…"), #selector(checkUpdate), key: "", glyph: .update))
+        if !UpdateChecker.isMacAppStoreBuild {
+            appMenu.addItem(item(L("检查更新…"), #selector(checkUpdate), key: "", glyph: .update))
+        }
         appMenu.addItem(item(L("偏好设置…"), #selector(showSettings), key: ",", glyph: .settings))
         appMenu.addItem(.separator())
         appMenu.addItem(item(L("隐藏 %@", FlareBrand.name), #selector(NSApplication.hide(_:)), key: "h", target: NSApp))
@@ -113,7 +115,9 @@ final class MainMenuController: NSObject {
         let helpItem = NSMenuItem()
         let helpMenu = NSMenu(title: L("帮助"))
         helpMenu.addItem(item(L("屏幕录制权限…"), #selector(openPermission), key: "", glyph: .permission))
-        helpMenu.addItem(item(L("检查更新…"), #selector(checkUpdate), key: "", glyph: .update))
+        if !UpdateChecker.isMacAppStoreBuild {
+            helpMenu.addItem(item(L("检查更新…"), #selector(checkUpdate), key: "", glyph: .update))
+        }
         helpMenu.addItem(.separator())
         helpMenu.addItem(item(L("官方网站"), #selector(openWebsite), key: "", glyph: .link))
         helpMenu.addItem(item(L("GitHub 仓库"), #selector(openGitHub), key: "", glyph: .link))

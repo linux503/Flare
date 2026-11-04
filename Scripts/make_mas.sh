@@ -140,6 +140,8 @@ for lproj in en.lproj zh-Hans.lproj; do
 done
 
 "$ROOT/Scripts/embed_translate_vault.sh" "$APP/Contents/Resources/FlareVault.dat"
+# App Store 以 root 身份安装，600 会导致普通用户读不到
+chmod 644 "$APP/Contents/Resources/FlareVault.dat"
 
 xattr -cr "$APP" 2>/dev/null || true
 
