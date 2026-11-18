@@ -133,3 +133,14 @@ cd /Users/a503/Downloads/Mac-soft/Flare
 3. 已在 App Store Connect 建好 App  
 
 我可以继续帮你：跑 `make_mas.sh`、检查签名、补隐私政策页、准备审核文案与截图尺寸清单。
+
+## 七、中国区合规问卷（2026 新增，常见卡审原因）
+
+提交审核前，打开 App Store Connect → Flare Pro → **App 信息** → **App 与合规信息 / 中国大陆合规**：
+
+1. **生成式 AI / 合成内容（AIGENERATEFD1DE）**  
+   Flare 的「截图翻译」会把 OCR 文本发给第三方 AI 翻译接口。需按苹果要求声明；若只做文本翻译、不做聊天/生图，按页面选项如实填写。
+2. **安全评估相关（SECURITYASF395E）**  
+   若页面要求上传安全评估材料，按提示补齐；否则选择不适用。
+
+未填完这两项时，API / Transporter 上传构建可以成功，但**无法提交审核**，会报 `NEW_APP_SUBMISSION_BLOCK`。
