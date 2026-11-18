@@ -21,6 +21,7 @@ final class ScreenRecorder: NSObject, ObservableObject {
     private var audioInput: AVAssetWriterInput?
     private var micInput: AVAssetWriterInput?
     private var adaptor: AVAssetWriterInputPixelBufferAdaptor?
+    private var watermarkOverlay: CGImage?
     private var outputURL: URL?
     private var sessionStarted = false
     private var sessionSourceTime = CMTime.invalid
@@ -367,6 +368,11 @@ final class ScreenRecorder: NSObject, ObservableObject {
         self.sessionSourceTime = .invalid
         self.capturesSystemAudio = useSystem
         self.capturesMicrophone = useMic
+        self.watermarkOverlay = ScreenshotWatermark.overlayImage(
+            pixelWidth: width,
+            pixelHeight: height,
+            date: Date()
+        )
         timelineLock.lock()
         dropSamples = false
         timelineOffset = .zero
@@ -566,6 +572,7 @@ final class ScreenRecorder: NSObject, ObservableObject {
         audioInput = nil
         micInput = nil
         adaptor = nil
+        watermarkOverlay = nil
         capturesSystemAudio = false
         capturesMicrophone = false
         sessionStarted = false
@@ -698,7 +705,14 @@ extension ScreenRecorder: SCStreamOutput {
             sessionSourceTime = outPTS
         }
         guard input.isReadyForMoreMediaData else { return }
-        _ = adaptor.append(pixelBuffer, withPresentationTime: outPTS)
+        let stamped: CVPixelBuffer
+        if let overlay = watermarkOverlay,
+           let out = ScreenshotWatermark.stamp(pixelBuffer: pixelBuffer, overlay: overlay, pool: adaptor.pixelBufferPool) {
+            stamped = out
+        } else {
+            stamped = pixelBuffer
+        }
+        _ = adaptor.append(stamped, withPresentationTime: outPTS)
     }
 
     private func micTrack() -> AVAssetWriterInput? {

@@ -68,6 +68,57 @@ final class AppSettings {
         set { defaults.set(newValue, forKey: "watermarkEnabled"); notify() }
     }
 
+    /// 录屏成片叠加水印
+    var watermarkRecordEnabled: Bool {
+        get { defaults.object(forKey: "watermarkRecordEnabled") as? Bool ?? false }
+        set { defaults.set(newValue, forKey: "watermarkRecordEnabled"); notify() }
+    }
+
+    var watermarkText: String {
+        get {
+            let raw = defaults.string(forKey: "watermarkText") ?? ""
+            return raw.isEmpty ? "FLARE PRO" : raw
+        }
+        set {
+            let trimmed = newValue.trimmingCharacters(in: .whitespacesAndNewlines)
+            defaults.set(trimmed.isEmpty ? "FLARE PRO" : String(trimmed.prefix(32)), forKey: "watermarkText")
+            notify()
+        }
+    }
+
+    var watermarkShowLogo: Bool {
+        get { defaults.object(forKey: "watermarkShowLogo") as? Bool ?? true }
+        set { defaults.set(newValue, forKey: "watermarkShowLogo"); notify() }
+    }
+
+    var watermarkShowDate: Bool {
+        get { defaults.object(forKey: "watermarkShowDate") as? Bool ?? true }
+        set { defaults.set(newValue, forKey: "watermarkShowDate"); notify() }
+    }
+
+    var watermarkPosition: WatermarkPosition {
+        get { WatermarkPosition(rawValue: defaults.string(forKey: "watermarkPosition") ?? "") ?? .bottomRight }
+        set { defaults.set(newValue.rawValue, forKey: "watermarkPosition"); notify() }
+    }
+
+    /// 0.7 … 1.4，默认 1.0
+    var watermarkScale: Double {
+        get {
+            let value = defaults.object(forKey: "watermarkScale") as? Double ?? 1.0
+            return min(1.4, max(0.7, value))
+        }
+        set { defaults.set(min(1.4, max(0.7, newValue)), forKey: "watermarkScale"); notify() }
+    }
+
+    /// 0.35 … 1.0，默认 0.92
+    var watermarkOpacity: Double {
+        get {
+            let value = defaults.object(forKey: "watermarkOpacity") as? Double ?? 0.92
+            return min(1.0, max(0.35, value))
+        }
+        set { defaults.set(min(1.0, max(0.35, newValue)), forKey: "watermarkOpacity"); notify() }
+    }
+
     /// 打码样式：马赛克 / 模糊 / 涂黑 / 黑条
     var redactKind: RedactKind {
         get { RedactKind(rawValue: defaults.string(forKey: "redactKind") ?? "") ?? .mosaic }
@@ -412,6 +463,19 @@ enum ImageFormat: String, CaseIterable, Identifiable {
         }
     }
     var fileExtension: String { rawValue }
+}
+
+enum WatermarkPosition: String, CaseIterable, Identifiable {
+    case bottomRight, bottomLeft, topRight, topLeft
+    var id: String { rawValue }
+    var displayName: String {
+        switch self {
+        case .bottomRight: return L("右下")
+        case .bottomLeft: return L("左下")
+        case .topRight: return L("右上")
+        case .topLeft: return L("左上")
+        }
+    }
 }
 
 enum TranslateTargetLanguage: String, CaseIterable, Identifiable {

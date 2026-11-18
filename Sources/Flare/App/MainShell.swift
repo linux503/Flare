@@ -398,6 +398,7 @@ private struct SidebarNavRow: View {
                     opacity: selected ? 1 : (hovering ? 0.85 : 0.55),
                     tint: selected ? theme.textPrimary : theme.textMuted
                 )
+                .frame(width: 22, height: 22)
                 Text(tab.title)
                     .font(.system(size: 13, weight: selected ? .semibold : .medium))
                 Spacer(minLength: 0)

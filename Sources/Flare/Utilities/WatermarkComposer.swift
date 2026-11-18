@@ -1,7 +1,8 @@
 import AppKit
 import CoreImage
+import CoreVideo
 
-/// 截图右下角高级玻璃水印：磨砂底、香槟金描边、品牌标 + 字标。
+/// 截图 / 录屏右下角高级玻璃水印：磨砂底、香槟金描边、品牌标 + 自定义字标。
 enum ScreenshotWatermark {
     static let gold = NSColor(calibratedRed: 0.86, green: 0.72, blue: 0.46, alpha: 1)
     static let goldSoft = NSColor(calibratedRed: 0.86, green: 0.72, blue: 0.46, alpha: 0.55)
@@ -13,7 +14,7 @@ enum ScreenshotWatermark {
         return stamped(image)
     }
 
-    static func stamped(_ image: NSImage) -> NSImage {
+    static func stamped(_ image: NSImage, date: Date = Date()) -> NSImage {
         let size = image.size
         guard size.width >= 72, size.height >= 72 else { return image }
 
@@ -50,7 +51,7 @@ enum ScreenshotWatermark {
         ctx.shouldAntialias = true
         let bounds = CGRect(origin: .zero, size: size)
         image.draw(in: bounds, from: bounds, operation: .copy, fraction: 1)
-        drawChrome(in: bounds, source: image, sourceFrame: bounds)
+        drawChrome(in: bounds, source: image, sourceFrame: bounds, date: date, frosted: true)
         NSGraphicsContext.restoreGraphicsState()
         let out = NSImage(size: size)
         out.addRepresentation(rep)
@@ -60,40 +61,174 @@ enum ScreenshotWatermark {
     /// 在当前图形上下文里画预览（选区 / 编辑器画布），坐标原点左下。
     static func drawPreview(in rect: CGRect, source: NSImage?) {
         guard AppSettings.shared.watermarkEnabled else { return }
-        guard rect.width >= 72, rect.height >= 72 else { return }
-        let covered = CGRect(origin: .zero, size: source?.size ?? rect.size)
-        drawChrome(in: rect, source: source, sourceFrame: covered)
+        drawConfigured(in: rect, source: source, date: Date(), frosted: true)
     }
 
     static func drawPreview(in rect: CGRect, sourceCG: CGImage, viewBounds: CGRect) {
         guard AppSettings.shared.watermarkEnabled else { return }
-        guard rect.width >= 72, rect.height >= 72 else { return }
         let ns = NSImage(cgImage: sourceCG, size: viewBounds.size)
-        drawChrome(in: rect, source: ns, sourceFrame: viewBounds)
+        drawConfigured(in: rect, source: ns, sourceFrame: viewBounds, date: Date(), frosted: true)
+    }
+
+    /// 设置页预览：不看开关，直接按当前样式绘制。
+    static func drawConfigured(
+        in rect: CGRect,
+        source: NSImage?,
+        sourceFrame: CGRect? = nil,
+        date: Date = Date(),
+        frosted: Bool = true
+    ) {
+        guard rect.width >= 72, rect.height >= 72 else { return }
+        let covered = sourceFrame ?? CGRect(origin: .zero, size: source?.size ?? rect.size)
+        drawChrome(in: rect, source: source, sourceFrame: covered, date: date, frosted: frosted)
+    }
+
+    /// 录屏用：透明底只含水印徽章的覆盖层（尺寸 = 视频像素尺寸）
+    static func overlayImage(pixelWidth: Int, pixelHeight: Int, date: Date) -> CGImage? {
+        guard AppSettings.shared.watermarkRecordEnabled else { return nil }
+        guard pixelWidth >= 160, pixelHeight >= 120 else { return nil }
+        guard let rep = NSBitmapImageRep(
+            bitmapDataPlanes: nil,
+            pixelsWide: pixelWidth,
+            pixelsHigh: pixelHeight,
+            bitsPerSample: 8,
+            samplesPerPixel: 4,
+            hasAlpha: true,
+            isPlanar: false,
+            colorSpaceName: .deviceRGB,
+            bytesPerRow: 0,
+            bitsPerPixel: 0
+        ) else { return nil }
+        let size = NSSize(width: pixelWidth, height: pixelHeight)
+        rep.size = size
+        NSGraphicsContext.saveGraphicsState()
+        guard let ctx = NSGraphicsContext(bitmapImageRep: rep) else {
+            NSGraphicsContext.restoreGraphicsState()
+            return nil
+        }
+        NSGraphicsContext.current = ctx
+        ctx.imageInterpolation = .high
+        ctx.shouldAntialias = true
+        let bounds = CGRect(origin: .zero, size: size)
+        NSColor.clear.setFill()
+        NSBezierPath(rect: bounds).fill()
+        drawChrome(in: bounds, source: nil, sourceFrame: bounds, date: date, frosted: false)
+        NSGraphicsContext.restoreGraphicsState()
+        return rep.cgImage
+    }
+
+    /// 把预渲染的水印叠到像素缓冲（尽量用 adaptor 的 pool）
+    static func stamp(pixelBuffer: CVPixelBuffer, overlay: CGImage, pool: CVPixelBufferPool?) -> CVPixelBuffer? {
+        var out: CVPixelBuffer?
+        if let pool {
+            CVPixelBufferPoolCreatePixelBuffer(nil, pool, &out)
+        }
+        if out == nil {
+            let w = CVPixelBufferGetWidth(pixelBuffer)
+            let h = CVPixelBufferGetHeight(pixelBuffer)
+            let attrs: [CFString: Any] = [
+                kCVPixelBufferPixelFormatTypeKey: Int(kCVPixelFormatType_32BGRA),
+                kCVPixelBufferWidthKey: w,
+                kCVPixelBufferHeightKey: h,
+                kCVPixelBufferIOSurfacePropertiesKey: [:] as CFDictionary
+            ]
+            CVPixelBufferCreate(nil, w, h, kCVPixelFormatType_32BGRA, attrs as CFDictionary, &out)
+        }
+        guard let dest = out else { return nil }
+        CVPixelBufferLockBaseAddress(dest, [])
+        defer { CVPixelBufferUnlockBaseAddress(dest, []) }
+        guard let base = CVPixelBufferGetBaseAddress(dest) else { return nil }
+        let width = CVPixelBufferGetWidth(dest)
+        let height = CVPixelBufferGetHeight(dest)
+        let bytesPerRow = CVPixelBufferGetBytesPerRow(dest)
+        guard let colorSpace = CGColorSpace(name: CGColorSpace.sRGB),
+              let ctx = CGContext(
+                data: base,
+                width: width,
+                height: height,
+                bitsPerComponent: 8,
+                bytesPerRow: bytesPerRow,
+                space: colorSpace,
+                bitmapInfo: CGImageAlphaInfo.premultipliedFirst.rawValue | CGBitmapInfo.byteOrder32Little.rawValue
+              ) else { return nil }
+        let rect = CGRect(x: 0, y: 0, width: width, height: height)
+        let ci = CIImage(cvPixelBuffer: pixelBuffer)
+        if let frame = ciContext.createCGImage(ci, from: ci.extent) {
+            ctx.draw(frame, in: rect)
+        }
+        ctx.draw(overlay, in: rect)
+        return dest
     }
 
     // MARK: - Layout
 
     private static func badgeRect(in rect: CGRect) -> CGRect? {
+        let settings = AppSettings.shared
         let minSide = min(rect.width, rect.height)
         guard minSide >= 72 else { return nil }
+        let scale = CGFloat(settings.watermarkScale)
         let pad = max(8, minSide * 0.02)
-        let height = min(40, max(26, minSide * 0.055))
-        let width = min(rect.width - pad * 2, max(height * 3.05, 128))
-        return CGRect(
-            x: rect.maxX - pad - width,
-            y: rect.minY + pad,
-            width: width,
-            height: height
-        )
+        let height = min(44, max(24, minSide * 0.055)) * scale
+        let text = settings.watermarkText
+        let showLogo = settings.watermarkShowLogo
+        let showDate = settings.watermarkShowDate
+        let hasText = !text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+        guard showLogo || hasText || showDate else { return nil }
+
+        var width = height * (showLogo ? 1.15 : 0.35)
+        if hasText {
+            let wordSize = max(8, height * 0.27)
+            let wordFont = roundedFont(size: wordSize, weight: .semibold)
+            let wordW = (text as NSString).size(withAttributes: [.font: wordFont]).width
+            width += wordW + height * 0.55
+        }
+        if showDate && !hasText {
+            width += height * 2.4
+        }
+        width = min(rect.width - pad * 2, max(height * (showLogo && !hasText ? 1.2 : 2.6), width))
+
+        let x: CGFloat
+        let y: CGFloat
+        switch settings.watermarkPosition {
+        case .bottomRight:
+            x = rect.maxX - pad - width
+            y = rect.minY + pad
+        case .bottomLeft:
+            x = rect.minX + pad
+            y = rect.minY + pad
+        case .topRight:
+            x = rect.maxX - pad - width
+            y = rect.maxY - pad - height
+        case .topLeft:
+            x = rect.minX + pad
+            y = rect.maxY - pad - height
+        }
+        return CGRect(x: x, y: y, width: width, height: height)
     }
 
-    private static func drawChrome(in rect: CGRect, source: NSImage?, sourceFrame: CGRect? = nil) {
+    private static func drawChrome(
+        in rect: CGRect,
+        source: NSImage?,
+        sourceFrame: CGRect?,
+        date: Date,
+        frosted: Bool
+    ) {
         guard let badge = badgeRect(in: rect) else { return }
-        drawBadge(badge, source: source, sourceFrame: sourceFrame)
+        let opacity = CGFloat(AppSettings.shared.watermarkOpacity)
+        NSGraphicsContext.saveGraphicsState()
+        NSGraphicsContext.current?.cgContext.setAlpha(opacity)
+        drawBadge(badge, source: source, sourceFrame: sourceFrame, date: date, frosted: frosted)
+        NSGraphicsContext.restoreGraphicsState()
     }
 
-    private static func drawBadge(_ badge: CGRect, source: NSImage?, sourceFrame: CGRect?) {
+    private static func drawBadge(
+        _ badge: CGRect,
+        source: NSImage?,
+        sourceFrame: CGRect?,
+        date: Date,
+        frosted: Bool
+    ) {
+        let settings = AppSettings.shared
         let radius = badge.height * 0.38
         let path = NSBezierPath(roundedRect: badge, xRadius: radius, yRadius: radius)
 
@@ -109,7 +244,12 @@ enum ScreenshotWatermark {
 
         NSGraphicsContext.saveGraphicsState()
         path.addClip()
-        drawFrost(in: badge, source: source, sourceFrame: sourceFrame)
+        if frosted {
+            drawFrost(in: badge, source: source, sourceFrame: sourceFrame)
+        } else {
+            NSColor.black.withAlphaComponent(0.52).setFill()
+            path.fill()
+        }
         NSColor.white.withAlphaComponent(0.10).setFill()
         path.fill()
         NSColor.black.withAlphaComponent(0.06).setFill()
@@ -130,51 +270,68 @@ enum ScreenshotWatermark {
         path.stroke()
 
         let inset = badge.height * 0.16
-        let logoSide = badge.height - inset * 2
-        let logoRect = CGRect(
-            x: badge.minX + inset * 1.05,
-            y: badge.minY + inset,
-            width: logoSide,
-            height: logoSide
-        )
-        drawLogo(in: logoRect)
+        var cursorX = badge.minX + inset * 1.05
+        let showLogo = settings.watermarkShowLogo
+        let text = settings.watermarkText.trimmingCharacters(in: .whitespacesAndNewlines)
+        let showDate = settings.watermarkShowDate
 
-        let dividerX = logoRect.maxX + inset * 0.5
-        gold.withAlphaComponent(0.22).setStroke()
-        let divider = NSBezierPath()
-        divider.move(to: CGPoint(x: dividerX, y: badge.minY + badge.height * 0.26))
-        divider.line(to: CGPoint(x: dividerX, y: badge.maxY - badge.height * 0.26))
-        divider.lineWidth = 0.5
-        divider.stroke()
+        if showLogo {
+            let logoSide = badge.height - inset * 2
+            let logoRect = CGRect(
+                x: cursorX,
+                y: badge.minY + inset,
+                width: logoSide,
+                height: logoSide
+            )
+            drawLogo(in: logoRect)
+            cursorX = logoRect.maxX + inset * 0.5
+            if !text.isEmpty || showDate {
+                gold.withAlphaComponent(0.22).setStroke()
+                let divider = NSBezierPath()
+                divider.move(to: CGPoint(x: cursorX, y: badge.minY + badge.height * 0.26))
+                divider.line(to: CGPoint(x: cursorX, y: badge.maxY - badge.height * 0.26))
+                divider.lineWidth = 0.5
+                divider.stroke()
+                cursorX += inset * 0.6
+            }
+        }
 
-        let textX = dividerX + inset * 0.6
-        let textWidth = max(8, badge.maxX - inset - textX)
+        let textWidth = max(8, badge.maxX - inset - cursorX)
         let wordSize = max(8, badge.height * 0.27)
         let wordFont = roundedFont(size: wordSize, weight: .semibold)
-        let word = NSAttributedString(
-            string: "FLARE PRO",
+        let word = text.isEmpty ? nil : NSAttributedString(
+            string: text,
             attributes: [
                 .font: wordFont,
                 .foregroundColor: NSColor.white.withAlphaComponent(0.72),
-                .kern: max(0.6, wordSize * 0.10)
+                .kern: max(0.4, wordSize * 0.08)
             ]
         )
-        let wordHeight = word.size().height
+        let wordHeight = word?.size().height ?? 0
         let subSize = max(6.5, badge.height * 0.17)
         let subFont = roundedFont(size: subSize, weight: .medium)
-        let sub = NSAttributedString(
-            string: stampDate(),
+        let sub = showDate ? NSAttributedString(
+            string: stampDate(date),
             attributes: [
                 .font: subFont,
                 .foregroundColor: gold.withAlphaComponent(0.55),
                 .kern: 0.45
             ]
-        )
-        let subHeight = sub.size().height
-        let stack = wordHeight + 1.5 + subHeight
-        let textY = badge.midY - stack / 2
-        word.draw(in: CGRect(x: textX, y: textY + subHeight + 1.5, width: textWidth, height: wordHeight))
-        sub.draw(in: CGRect(x: textX, y: textY, width: textWidth, height: subHeight))
+        ) : nil
+        let subHeight = sub?.size().height ?? 0
+
+        if let word, let sub {
+            let stack = wordHeight + 1.5 + subHeight
+            let textY = badge.midY - stack / 2
+            word.draw(in: CGRect(x: cursorX, y: textY + subHeight + 1.5, width: textWidth, height: wordHeight))
+            sub.draw(in: CGRect(x: cursorX, y: textY, width: textWidth, height: subHeight))
+        } else if let word {
+            let textY = badge.midY - wordHeight / 2
+            word.draw(in: CGRect(x: cursorX, y: textY, width: textWidth, height: wordHeight))
+        } else if let sub {
+            let textY = badge.midY - subHeight / 2
+            sub.draw(in: CGRect(x: cursorX, y: textY, width: textWidth, height: subHeight))
+        }
     }
 
     private static func drawLogo(in rect: CGRect) {
@@ -268,10 +425,10 @@ enum ScreenshotWatermark {
         return base
     }
 
-    private static func stampDate() -> String {
+    private static func stampDate(_ date: Date) -> String {
         let formatter = DateFormatter()
         formatter.locale = Locale(identifier: "en_US_POSIX")
         formatter.dateFormat = "yyyy.MM.dd  HH:mm"
-        return formatter.string(from: Date())
+        return formatter.string(from: date)
     }
 }

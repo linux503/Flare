@@ -12,6 +12,7 @@ struct RecordPane: View {
     @State private var fps = AppSettings.shared.recordFPS
     @State private var recordMode = AppSettings.shared.recordMode
     @State private var quality = AppSettings.shared.recordQuality
+    @State private var watermarkRecord = AppSettings.shared.watermarkRecordEnabled
     @State private var recordPath = AppSettings.shared.recordDirectory.path
 
     var body: some View {
@@ -34,6 +35,10 @@ struct RecordPane: View {
             .padding(.bottom, 32)
             .onAppear {
                 recordMode = AppSettings.shared.recordMode
+                watermarkRecord = AppSettings.shared.watermarkRecordEnabled
+            }
+            .onReceive(NotificationCenter.default.publisher(for: .flareSettingsChanged)) { _ in
+                watermarkRecord = AppSettings.shared.watermarkRecordEnabled
             }
         }
     }
@@ -192,6 +197,10 @@ struct RecordPane: View {
             rowDivider
             optionRow(L("开始时隐藏窗口")) {
                 alignedToggle($hideWindows) { AppSettings.shared.recordHideFlareWindows = $0 }
+            }
+            rowDivider
+            optionRow(L("录屏加水印")) {
+                alignedToggle($watermarkRecord) { AppSettings.shared.watermarkRecordEnabled = $0 }
             }
         }
         .padding(.horizontal, 18)

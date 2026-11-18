@@ -20,6 +20,13 @@ struct SettingsPane: View {
     @State private var playSound = AppSettings.shared.playSound
     @State private var showMagnifier = AppSettings.shared.showMagnifier
     @State private var watermarkEnabled = AppSettings.shared.watermarkEnabled
+    @State private var watermarkRecordEnabled = AppSettings.shared.watermarkRecordEnabled
+    @State private var watermarkText = AppSettings.shared.watermarkText
+    @State private var watermarkShowLogo = AppSettings.shared.watermarkShowLogo
+    @State private var watermarkShowDate = AppSettings.shared.watermarkShowDate
+    @State private var watermarkPosition = AppSettings.shared.watermarkPosition
+    @State private var watermarkScale = AppSettings.shared.watermarkScale
+    @State private var watermarkOpacity = AppSettings.shared.watermarkOpacity
     @State private var afterAction = AppSettings.shared.afterCaptureAction
     @State private var translateTarget = AppSettings.shared.translateTargetLanguage
     @State private var historyRetention = AppSettings.shared.historyRetention
@@ -164,15 +171,103 @@ struct SettingsPane: View {
                             labeledToggle(L("显示放大镜与取色"), isOn: $showMagnifier) {
                                 AppSettings.shared.showMagnifier = $0
                             }
-                            labeledToggle(L("截图加水印"), isOn: $watermarkEnabled) {
-                                AppSettings.shared.watermarkEnabled = $0
-                                ToastController.shared.show($0 ? L("已加水印") : L("已取消水印"))
-                            }
                             labeledToggle(L("在程序坞显示图标"), isOn: $showInDock) { newValue in
                                 AppSettings.shared.showInDock = newValue
                                 NSApp.setActivationPolicy(newValue ? .regular : .accessory)
                             }
                         }
+                    }
+                }
+
+                settingsBlock(title: L("水印"), subtitle: L("截图与录屏可叠加自定义品牌水印")) {
+                    VStack(alignment: .leading, spacing: 12) {
+                        labeledToggle(L("截图加水印"), isOn: $watermarkEnabled) {
+                            AppSettings.shared.watermarkEnabled = $0
+                            ToastController.shared.show($0 ? L("已加水印") : L("已取消水印"))
+                        }
+                        labeledToggle(L("录屏加水印"), isOn: $watermarkRecordEnabled) {
+                            AppSettings.shared.watermarkRecordEnabled = $0
+                            ToastController.shared.show($0 ? L("录屏将加水印") : L("录屏不加水印"))
+                        }
+
+                        Divider().overlay(theme.stroke)
+
+                        VStack(alignment: .leading, spacing: 6) {
+                            Text(L("文字"))
+                                .font(.system(size: 12, weight: .semibold))
+                                .foregroundStyle(theme.textPrimary)
+                            TextField(L("例如 FLARE PRO"), text: $watermarkText)
+                                .textFieldStyle(.roundedBorder)
+                                .onChange(of: watermarkText) { _, newValue in
+                                    AppSettings.shared.watermarkText = newValue
+                                }
+                        }
+
+                        HStack {
+                            Text(L("位置"))
+                                .font(.system(size: 12, weight: .semibold))
+                                .foregroundStyle(theme.textPrimary)
+                            Spacer()
+                            Picker("", selection: $watermarkPosition) {
+                                ForEach(WatermarkPosition.allCases) { position in
+                                    Text(position.displayName).tag(position)
+                                }
+                            }
+                            .labelsHidden()
+                            .frame(width: 120)
+                            .onChange(of: watermarkPosition) { _, newValue in
+                                AppSettings.shared.watermarkPosition = newValue
+                            }
+                        }
+
+                        labeledToggle(L("显示 Logo"), isOn: $watermarkShowLogo) {
+                            AppSettings.shared.watermarkShowLogo = $0
+                        }
+                        labeledToggle(L("显示时间"), isOn: $watermarkShowDate) {
+                            AppSettings.shared.watermarkShowDate = $0
+                        }
+
+                        VStack(alignment: .leading, spacing: 6) {
+                            HStack {
+                                Text(L("大小"))
+                                    .font(.system(size: 12, weight: .semibold))
+                                    .foregroundStyle(theme.textPrimary)
+                                Spacer()
+                                Text(String(format: "%.0f%%", watermarkScale * 100))
+                                    .font(.system(size: 11, design: .monospaced))
+                                    .foregroundStyle(theme.textMuted)
+                            }
+                            Slider(value: $watermarkScale, in: 0.7...1.4, step: 0.05)
+                                .tint(theme.accent)
+                                .onChange(of: watermarkScale) { _, newValue in
+                                    AppSettings.shared.watermarkScale = newValue
+                                }
+                        }
+
+                        VStack(alignment: .leading, spacing: 6) {
+                            HStack {
+                                Text(L("透明度"))
+                                    .font(.system(size: 12, weight: .semibold))
+                                    .foregroundStyle(theme.textPrimary)
+                                Spacer()
+                                Text(String(format: "%.0f%%", watermarkOpacity * 100))
+                                    .font(.system(size: 11, design: .monospaced))
+                                    .foregroundStyle(theme.textMuted)
+                            }
+                            Slider(value: $watermarkOpacity, in: 0.35...1.0, step: 0.05)
+                                .tint(theme.accent)
+                                .onChange(of: watermarkOpacity) { _, newValue in
+                                    AppSettings.shared.watermarkOpacity = newValue
+                                }
+                        }
+
+                        WatermarkPreviewCard()
+                            .frame(height: 96)
+                            .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
+                            .overlay(
+                                RoundedRectangle(cornerRadius: 10, style: .continuous)
+                                    .strokeBorder(theme.stroke, lineWidth: 1)
+                            )
                     }
                 }
 
@@ -374,6 +469,13 @@ struct SettingsPane: View {
             playSound = AppSettings.shared.playSound
             showMagnifier = AppSettings.shared.showMagnifier
             watermarkEnabled = AppSettings.shared.watermarkEnabled
+            watermarkRecordEnabled = AppSettings.shared.watermarkRecordEnabled
+            watermarkText = AppSettings.shared.watermarkText
+            watermarkShowLogo = AppSettings.shared.watermarkShowLogo
+            watermarkShowDate = AppSettings.shared.watermarkShowDate
+            watermarkPosition = AppSettings.shared.watermarkPosition
+            watermarkScale = AppSettings.shared.watermarkScale
+            watermarkOpacity = AppSettings.shared.watermarkOpacity
             historyRetention = AppSettings.shared.historyRetention
             savePath = AppSettings.shared.saveDirectory.path
             documentPath = AppSettings.shared.documentDirectory.path
@@ -580,6 +682,58 @@ struct SettingsPane: View {
             AppSettings.shared.documentDirectory = url
             documentPath = url.path
         }
+    }
+}
+
+private struct WatermarkPreviewCard: View {
+    @State private var tick = 0
+
+    var body: some View {
+        WatermarkPreviewRepresentable(tick: tick)
+            .background(
+                LinearGradient(
+                    colors: [
+                        Color(red: 0.12, green: 0.14, blue: 0.18),
+                        Color(red: 0.22, green: 0.26, blue: 0.32)
+                    ],
+                    startPoint: .topLeading,
+                    endPoint: .bottomTrailing
+                )
+            )
+            .overlay(alignment: .topLeading) {
+                Text(L("预览"))
+                    .font(.system(size: 10, weight: .medium))
+                    .foregroundStyle(.white.opacity(0.55))
+                    .padding(10)
+            }
+            .onReceive(NotificationCenter.default.publisher(for: .flareSettingsChanged)) { _ in
+                tick &+= 1
+            }
+    }
+}
+
+private struct WatermarkPreviewRepresentable: NSViewRepresentable {
+    let tick: Int
+
+    func makeNSView(context: Context) -> WatermarkPreviewView {
+        WatermarkPreviewView()
+    }
+
+    func updateNSView(_ nsView: WatermarkPreviewView, context: Context) {
+        nsView.needsDisplay = true
+    }
+}
+
+private final class WatermarkPreviewView: NSView {
+    override var isFlipped: Bool { false }
+
+    override func draw(_ dirtyRect: NSRect) {
+        super.draw(dirtyRect)
+        guard let ctx = NSGraphicsContext.current else { return }
+        ctx.saveGraphicsState()
+        ctx.imageInterpolation = .high
+        ScreenshotWatermark.drawConfigured(in: bounds, source: nil, frosted: false)
+        ctx.restoreGraphicsState()
     }
 }
 
